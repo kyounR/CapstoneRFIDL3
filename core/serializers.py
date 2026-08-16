@@ -85,6 +85,7 @@ class ManifestEntrySummarySerializer(serializers.ModelSerializer):
 
 class ManifestTripSerializer(serializers.ModelSerializer):
     cashier = serializers.PrimaryKeyRelatedField(read_only=True)
+    cashier_username = serializers.CharField(source='cashier.username', read_only=True)
     is_finalized = serializers.BooleanField(read_only=True)
     finalized_at = serializers.DateTimeField(read_only=True)
     total_passengers = serializers.IntegerField(read_only=True)

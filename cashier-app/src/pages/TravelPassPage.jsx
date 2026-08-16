@@ -212,7 +212,7 @@ function TravelPassPage() {
     [activePasses],
   )
   const selectedPassIndex = sortedActivePasses.findIndex((activePass) => activePass.id === manifest?.id)
-  const selectedPassLabel = selectedPassIndex === 0 ? 'Primary' : 'Overflow'
+  const selectedPassLabel = selectedPassIndex === 0 ? 'Primary' : `Next Vehicle (#${selectedPassIndex + 1})`
 
   const selectedVehicle = vehicles.find((vehicle) => vehicle.id === Number(manifest?.vehicle || vehicleId))
   const isFinalized = manifest?.is_finalized === true
@@ -237,7 +237,7 @@ function TravelPassPage() {
             return (
               <button key={activePass.id} type="button" onClick={() => selectManifest(activePass)} style={{ display: 'block', width: '100%', marginBottom: '10px', padding: '12px', textAlign: 'left' }}>
                 <strong>{vehicle?.plate_number || activePass.vehicle}</strong>
-                <span style={{ marginLeft: '8px', fontSize: '0.85em' }}>{index === 0 ? 'Primary' : 'Overflow'}</span>
+                <span style={{ marginLeft: '8px', fontSize: '0.85em' }}>{index === 0 ? 'Primary' : `Next Vehicle (#${index + 1})`}</span>
                 <span> - {activePass.date} - {activePass.total_passengers} passengers</span>
               </button>
             )

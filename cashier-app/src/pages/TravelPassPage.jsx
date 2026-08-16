@@ -302,6 +302,11 @@ function TravelPassPage() {
             )
           })}
           <div style={{ marginTop: '20px', padding: '12px', borderTop: '2px solid #333' }}><strong>Running tally:</strong> {totals.passengerCount} passengers, {totals.totalFare.toFixed(2)} total fare</div>
+          {selectedVehicle?.passenger_capacity != null && selectedVehicle.passenger_capacity > 0 && totals.passengerCount >= selectedVehicle.passenger_capacity ? (
+            <p style={{ color: '#9a6700' }}>
+              This vehicle&apos;s usual capacity ({selectedVehicle.passenger_capacity}) has been reached.
+            </p>
+          ) : null}
           {!isFinalized ? (showFinalizeForm ? <form onSubmit={handleFinalize} style={{ marginTop: '16px' }}>
             <label htmlFor="departureTime">Departure time</label>
             <input id="departureTime" type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} style={{ marginLeft: '8px', padding: '6px' }} required />

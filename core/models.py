@@ -91,6 +91,11 @@ class Line(models.Model):
 class Vehicle(models.Model):
 	plate_number = models.CharField(max_length=20, unique=True)
 	line = models.ForeignKey(Line, on_delete=models.PROTECT, related_name='vehicles')
+	passenger_capacity = models.PositiveIntegerField(
+		null=True,
+		blank=True,
+		validators=[MinValueValidator(1)],
+	)
 	is_active = models.BooleanField(default=True)
 
 	def __str__(self):

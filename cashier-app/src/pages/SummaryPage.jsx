@@ -37,6 +37,8 @@ function SummaryPage() {
       <h1>Daily Summary</h1>
       <p>
         <Link to="/topup">Back to top-up</Link>
+        {' | '}
+        <Link to="/travel-pass">Travel Pass</Link>
       </p>
 
       <form onSubmit={handleSubmit} style={{ marginBottom: '16px' }}>

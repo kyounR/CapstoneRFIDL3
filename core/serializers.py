@@ -3,11 +3,11 @@ from rest_framework import serializers
 from .models import (
     Card,
     DailyRemittance,
+    Destination,
     DispatchRound,
     FareManifestEntry,
     ManifestTrip,
     Passenger,
-    Route,
     Transaction,
     Trip,
     Vehicle,
@@ -52,11 +52,11 @@ class TransactionSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class RouteSerializer(serializers.ModelSerializer):
+class DestinationSerializer(serializers.ModelSerializer):
     discount_fare = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
 
     class Meta:
-        model = Route
+        model = Destination
         fields = '__all__'
 
 
@@ -76,6 +76,7 @@ class DailyRemittanceSerializer(serializers.ModelSerializer):
 
 
 class ManifestTripSerializer(serializers.ModelSerializer):
+    cashier = serializers.PrimaryKeyRelatedField(read_only=True)
     is_finalized = serializers.BooleanField(read_only=True)
     finalized_at = serializers.DateTimeField(read_only=True)
 
@@ -84,16 +85,16 @@ class ManifestTripSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class RouteFareSerializer(serializers.ModelSerializer):
+class DestinationFareSerializer(serializers.ModelSerializer):
     discount_fare = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
 
     class Meta:
-        model = Route
+        model = Destination
         fields = ['id', 'destination_name', 'base_fare', 'discount_fare']
 
 
 class FareManifestEntrySerializer(serializers.ModelSerializer):
-    route_details = RouteFareSerializer(source='route', read_only=True)
+    destination_details = DestinationFareSerializer(source='destination', read_only=True)
 
     def validate(self, attrs):
         passenger_count = attrs.get('passenger_count')

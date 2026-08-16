@@ -2,7 +2,8 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
-    RouteViewSet,
+    DestinationViewSet,
+    VehicleViewSet,
     card_lookup_view,
     DailyRemittanceViewSet,
     FareManifestEntryViewSet,
@@ -17,7 +18,8 @@ from .views import (
 )
 
 router = DefaultRouter()
-router.register('routes', RouteViewSet, basename='route')
+router.register('destinations', DestinationViewSet, basename='destination')
+router.register('vehicles', VehicleViewSet, basename='vehicle')
 router.register('remittances', DailyRemittanceViewSet, basename='remittance')
 router.register('manifests', ManifestTripViewSet, basename='manifest')
 router.register('manifests-entries', FareManifestEntryViewSet, basename='manifest-entry')

@@ -38,7 +38,7 @@ class Passenger(models.Model):
 		return self.full_name
 
 
-class Route(models.Model):
+class Destination(models.Model):
 	destination_name = models.CharField(max_length=255)
 	base_fare = models.DecimalField(max_digits=10, decimal_places=2)
 	discount_exempt = models.BooleanField(default=False)
@@ -188,7 +188,7 @@ class FareManifestEntry(models.Model):
 		on_delete=models.PROTECT,
 		related_name='entries',
 	)
-	route = models.ForeignKey(Route, on_delete=models.PROTECT, related_name='manifest_entries')
+	destination = models.ForeignKey(Destination, on_delete=models.PROTECT, related_name='manifest_entries')
 	passenger_count = models.PositiveIntegerField()
 	discount_count = models.PositiveIntegerField(default=0)
 	total_fare = models.DecimalField(max_digits=12, decimal_places=2)
@@ -201,13 +201,13 @@ class FareManifestEntry(models.Model):
 				name='discount_count_lte_passenger_count',
 			),
 			models.UniqueConstraint(
-				fields=['manifest_trip', 'route'],
-				name='unique_route_per_manifest_trip',
+				fields=['manifest_trip', 'destination'],
+				name='unique_destination_per_manifest_trip',
 			),
 		]
 
 	def __str__(self):
-		return f"{self.manifest_trip} - {self.route.destination_name}"
+		return f"{self.manifest_trip} - {self.destination.destination_name}"
 
 
 class Transaction(models.Model):
@@ -232,8 +232,8 @@ class Transaction(models.Model):
 		blank=True,
 		related_name='transactions',
 	)
-	route = models.ForeignKey(
-		Route,
+	destination = models.ForeignKey(
+		Destination,
 		on_delete=models.PROTECT,
 		null=True,
 		blank=True,

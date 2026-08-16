@@ -8,20 +8,21 @@ from django.utils.dateparse import parse_date
 from django.utils.timezone import localdate, now
 from rest_framework import status, viewsets
 from rest_framework.authtoken.models import Token
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action, api_view, authentication_classes, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Card, DailyRemittance, DispatchRound, FareManifestEntry, ManifestTrip, Passenger, Route, Transaction, Trip
+from .models import Card, DailyRemittance, Destination, DispatchRound, FareManifestEntry, ManifestTrip, Passenger, Transaction, Trip, Vehicle
 from .serializers import (
     CardSerializer,
     DailyRemittanceSerializer,
     DispatchRoundSerializer,
     FareManifestEntrySerializer,
     ManifestTripSerializer,
-    RouteSerializer,
+    DestinationSerializer,
+    VehicleSerializer,
 )
 
 
@@ -44,6 +45,7 @@ def _role_forbidden_response(action_label):
 
 
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def login_view(request):
     username = request.data.get('username')
@@ -157,12 +159,12 @@ def topup_view(request):
 def tap_view(request):
     card_uid = request.data.get('card_uid')
     trip_id = request.data.get('trip_id')
-    route_id = request.data.get('route_id')
+    destination_id = request.data.get('destination_id')
 
     if not card_uid:
         return Response({'error': 'card_uid is required.'}, status=status.HTTP_400_BAD_REQUEST)
-    if not route_id:
-        return Response({'error': 'route_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not destination_id:
+        return Response({'error': 'destination_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
     with transaction.atomic():
         card = Card.objects.select_for_update().select_related('passenger').filter(uid=card_uid).first()
@@ -171,9 +173,9 @@ def tap_view(request):
         if card.status != Card.Status.ACTIVE:
             return Response({'error': 'Card is not active.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        route = Route.objects.filter(id=route_id, is_active=True).first()
-        if route is None:
-            return Response({'error': 'Route not found or inactive.'}, status=status.HTTP_404_NOT_FOUND)
+        destination = Destination.objects.filter(id=destination_id, is_active=True).first()
+        if destination is None:
+            return Response({'error': 'Destination not found or inactive.'}, status=status.HTTP_404_NOT_FOUND)
 
         trip = None
         if trip_id is not None:
@@ -195,11 +197,11 @@ def tap_view(request):
         )
 
         if use_discount:
-            fare = route.discount_fare
+            fare = destination.discount_fare
             fare_type = 'discount'
             reason = f'Discount fare applied for passenger type: {passenger_discount_type}.'
         else:
-            fare = route.base_fare
+            fare = destination.base_fare
             fare_type = 'base'
             if passenger is None:
                 reason = 'Base fare applied because card has no linked passenger.'
@@ -228,7 +230,7 @@ def tap_view(request):
             transaction_type=Transaction.TransactionType.FARE,
             amount=fare,
             trip=trip,
-            route=route,
+            destination=destination,
             balance_after=card.balance,
         )
 
@@ -350,6 +352,9 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
         if not _has_cashier_or_admin_role(request):
             raise PermissionDenied('Only cashier or admin users can access this endpoint.')
 
+    def perform_create(self, serializer):
+        serializer.save(cashier=self.request.user)
+
     @action(detail=True, methods=['POST'], url_path='finalize')
     def finalize(self, request, pk=None):
         manifest = self.get_object()
@@ -376,7 +381,7 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
 
         entries = FareManifestEntry.objects.filter(
             manifest_trip=manifest,
-        ).order_by('route__destination_name')
+        ).order_by('destination__destination_name')
         return Response(
             {
                 'manifest_trip': serializer.data,
@@ -398,25 +403,25 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
             Transaction.objects.filter(
                 trip=manifest.trip,
                 transaction_type=Transaction.TransactionType.FARE,
-                route__isnull=False,
+                destination__isnull=False,
             )
-            .select_related('route', 'card__passenger')
+            .select_related('destination', 'card__passenger')
             .order_by('id')
         )
 
         grouped = {}
         for txn in fare_txns:
-            route_id = txn.route_id
-            if route_id not in grouped:
-                grouped[route_id] = {
-                    'route': txn.route,
+            destination_id = txn.destination_id
+            if destination_id not in grouped:
+                grouped[destination_id] = {
+                    'destination': txn.destination,
                     'passenger_count': 0,
                     'discount_count': 0,
                     'total_fare': Decimal('0.00'),
                 }
 
-            grouped[route_id]['passenger_count'] += 1
-            grouped[route_id]['total_fare'] += txn.amount
+            grouped[destination_id]['passenger_count'] += 1
+            grouped[destination_id]['total_fare'] += txn.amount
 
             passenger = txn.card.passenger
             if (
@@ -428,7 +433,7 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
                     Passenger.DiscountType.PWD,
                 }
             ):
-                grouped[route_id]['discount_count'] += 1
+                grouped[destination_id]['discount_count'] += 1
 
         with transaction.atomic():
             FareManifestEntry.objects.filter(
@@ -439,7 +444,7 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
             new_entries = [
                 FareManifestEntry(
                     manifest_trip=manifest,
-                    route=data['route'],
+                    destination=data['destination'],
                     passenger_count=data['passenger_count'],
                     discount_count=data['discount_count'],
                     total_fare=data['total_fare'],
@@ -454,7 +459,7 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
         created_entries = FareManifestEntry.objects.filter(
             manifest_trip=manifest,
             source=FareManifestEntry.Source.RFID,
-        ).order_by('route__destination_name')
+        ).order_by('destination__destination_name')
 
         serializer = FareManifestEntrySerializer(created_entries, many=True)
         return Response(
@@ -497,7 +502,7 @@ class FareManifestEntryViewSet(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.queryset.order_by('manifest_trip_id', 'route_id'))
+        queryset = self.filter_queryset(self.queryset.order_by('manifest_trip_id', 'destination_id'))
         manifest_trip_id = request.GET.get('manifest_trip')
         if manifest_trip_id:
             queryset = queryset.filter(manifest_trip_id=manifest_trip_id)
@@ -513,12 +518,12 @@ class FareManifestEntryViewSet(viewsets.ModelViewSet):
 
 def _manifest_tally_payload(request):
     manifest_trip_id = request.data.get('manifest_trip')
-    route_id = request.data.get('route')
+    destination_id = request.data.get('destination')
     passenger_type = request.data.get('passenger_type')
 
-    if not manifest_trip_id or not route_id or not passenger_type:
+    if not manifest_trip_id or not destination_id or not passenger_type:
         return None, Response(
-            {'error': 'manifest_trip, route, and passenger_type are required.'},
+            {'error': 'manifest_trip, destination, and passenger_type are required.'},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -528,13 +533,13 @@ def _manifest_tally_payload(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    return (manifest_trip_id, route_id, passenger_type), None
+    return (manifest_trip_id, destination_id, passenger_type), None
 
 
 def _recompute_manifest_entry_total(entry):
     entry.total_fare = (
-        (entry.passenger_count - entry.discount_count) * entry.route.base_fare
-        + entry.discount_count * entry.route.discount_fare
+        (entry.passenger_count - entry.discount_count) * entry.destination.base_fare
+        + entry.discount_count * entry.destination.discount_fare
     )
 
 
@@ -549,7 +554,7 @@ def manifest_entry_tally_view(request):
         return error_response
 
     assert payload is not None
-    manifest_trip_id, route_id, passenger_type = payload
+    manifest_trip_id, destination_id, passenger_type = payload
     with transaction.atomic():
         manifest = ManifestTrip.objects.select_for_update().filter(id=manifest_trip_id).first()
         if manifest is None:
@@ -560,23 +565,23 @@ def manifest_entry_tally_view(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        route = Route.objects.filter(id=route_id, is_active=True).first()
-        if route is None:
-            return Response({'error': 'Route not found or inactive.'}, status=status.HTTP_404_NOT_FOUND)
-        if passenger_type == 'discount' and route.discount_exempt:
+        destination = Destination.objects.filter(id=destination_id, is_active=True).first()
+        if destination is None:
+            return Response({'error': 'Destination not found or inactive.'}, status=status.HTTP_404_NOT_FOUND)
+        if passenger_type == 'discount' and destination.discount_exempt:
             return Response(
-                {'error': 'This route does not allow discount fares.'},
+                {'error': 'This destination does not allow discount fares.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         entry = FareManifestEntry.objects.select_for_update().filter(
             manifest_trip=manifest,
-            route=route,
+            destination=destination,
         ).first()
         if entry is None:
             entry = FareManifestEntry(
                 manifest_trip=manifest,
-                route=route,
+                destination=destination,
                 passenger_count=0,
                 discount_count=0,
                 total_fare=Decimal('0.00'),
@@ -603,7 +608,7 @@ def manifest_entry_untally_view(request):
         return error_response
 
     assert payload is not None
-    manifest_trip_id, route_id, passenger_type = payload
+    manifest_trip_id, destination_id, passenger_type = payload
     with transaction.atomic():
         manifest = ManifestTrip.objects.select_for_update().filter(id=manifest_trip_id).first()
         if manifest is None:
@@ -614,17 +619,17 @@ def manifest_entry_untally_view(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        route = Route.objects.filter(id=route_id, is_active=True).first()
-        if route is None:
-            return Response({'error': 'Route not found or inactive.'}, status=status.HTTP_404_NOT_FOUND)
+        destination = Destination.objects.filter(id=destination_id, is_active=True).first()
+        if destination is None:
+            return Response({'error': 'Destination not found or inactive.'}, status=status.HTTP_404_NOT_FOUND)
 
         entry = FareManifestEntry.objects.select_for_update().filter(
             manifest_trip=manifest,
-            route=route,
+            destination=destination,
         ).first()
         if entry is None:
             return Response(
-                {'error': 'No manifest entry exists for this trip and route.'},
+                {'error': 'No manifest entry exists for this trip and destination.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if entry.passenger_count <= 0:
@@ -647,9 +652,20 @@ def manifest_entry_untally_view(request):
     return Response(FareManifestEntrySerializer(entry).data, status=status.HTTP_200_OK)
 
 
-class RouteViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Route.objects.filter(is_active=True).order_by('destination_name')
-    serializer_class = RouteSerializer
+class DestinationViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Destination.objects.filter(is_active=True).order_by('base_fare', 'destination_name')
+    serializer_class = DestinationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if not _has_cashier_or_admin_role(request):
+            raise PermissionDenied('Only cashier or admin users can access this endpoint.')
+
+
+class VehicleViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Vehicle.objects.filter(is_active=True).order_by('plate_number')
+    serializer_class = VehicleSerializer
     permission_classes = [IsAuthenticated]
 
     def initial(self, request, *args, **kwargs):

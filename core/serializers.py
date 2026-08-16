@@ -6,6 +6,7 @@ from .models import (
     Destination,
     DispatchRound,
     FareManifestEntry,
+    ManifestCorrection,
     ManifestTrip,
     Passenger,
     Transaction,
@@ -139,4 +140,17 @@ class FareManifestEntrySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FareManifestEntry
+        fields = '__all__'
+
+
+class ManifestCorrectionSerializer(serializers.ModelSerializer):
+    admin_username = serializers.CharField(source='admin.username', read_only=True)
+    destination_name = serializers.CharField(
+        source='entry.destination.destination_name',
+        read_only=True,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = ManifestCorrection
         fields = '__all__'

@@ -4,7 +4,7 @@ from typing import Optional
 from django.contrib.auth import authenticate
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Q, Sum
-from django.utils.dateparse import parse_date
+from django.utils.dateparse import parse_date, parse_time
 from django.utils.timezone import localdate, now
 from rest_framework import status, viewsets
 from rest_framework.authtoken.models import Token
@@ -14,12 +14,13 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Card, DailyRemittance, Destination, DispatchRound, FareManifestEntry, ManifestTrip, Passenger, Transaction, Trip, Vehicle
+from .models import Card, DailyRemittance, Destination, DispatchRound, FareManifestEntry, ManifestCorrection, ManifestTrip, Passenger, Transaction, Trip, Vehicle
 from .serializers import (
     CardSerializer,
     DailyRemittanceSerializer,
     DispatchRoundSerializer,
     FareManifestEntrySerializer,
+    ManifestCorrectionSerializer,
     ManifestTripSerializer,
     DestinationSerializer,
     VehicleSerializer,
@@ -35,6 +36,10 @@ class HealthCheckView(APIView):
 
 def _has_cashier_or_admin_role(request):
     return getattr(request.user, 'role', None) in {'cashier', 'admin'}
+
+
+def _has_admin_role(request):
+    return getattr(request.user, 'role', None) == 'admin'
 
 
 def _role_forbidden_response(action_label):
@@ -453,6 +458,98 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+    @action(detail=True, methods=['POST'], url_path='admin-correct')
+    def admin_correct(self, request, pk=None):
+        if not _has_admin_role(request):
+            return Response(
+                {'error': 'Only admin users can create manifest corrections.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        reason = request.data.get('reason')
+        if not isinstance(reason, str) or not reason.strip():
+            return Response(
+                {'error': 'A non-empty reason is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            try:
+                manifest = ManifestTrip.objects.select_for_update().get(pk=pk)
+            except ManifestTrip.DoesNotExist:
+                return Response(
+                    {'error': 'ManifestTrip not found.'},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            if not manifest.is_finalized:
+                return Response(
+                    {'error': 'Only finalized Travel Passes can be corrected.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            changes = []
+            if 'vehicle' in request.data:
+                try:
+                    vehicle = Vehicle.objects.get(pk=request.data['vehicle'])
+                except (Vehicle.DoesNotExist, TypeError, ValueError):
+                    return Response(
+                        {'error': 'A valid vehicle is required.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if vehicle.pk != manifest.vehicle.pk:
+                    changes.append(('vehicle', str(manifest.vehicle), str(vehicle), vehicle))
+
+            if 'date' in request.data:
+                corrected_date = parse_date(str(request.data['date']))
+                if corrected_date is None:
+                    return Response(
+                        {'error': 'Invalid date format. Use YYYY-MM-DD.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if corrected_date != manifest.date:
+                    changes.append(('date', manifest.date.isoformat(), corrected_date.isoformat(), corrected_date))
+
+            if 'departure_time' in request.data:
+                raw_time = request.data['departure_time']
+                corrected_time = parse_time(str(raw_time)) if raw_time else None
+                if raw_time and corrected_time is None:
+                    return Response(
+                        {'error': 'Invalid departure_time format. Use HH:MM[:ss].'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if corrected_time != manifest.departure_time:
+                    old_value = manifest.departure_time.isoformat() if manifest.departure_time else ''
+                    new_value = corrected_time.isoformat() if corrected_time else ''
+                    changes.append(('departure_time', old_value, new_value, corrected_time))
+
+            for field_name, old_value, new_value, corrected_value in changes:
+                setattr(manifest, field_name, corrected_value)
+                ManifestCorrection.objects.create(
+                    manifest_trip=manifest,
+                    field_name=field_name,
+                    old_value=old_value,
+                    new_value=new_value,
+                    reason=reason.strip(),
+                    admin=request.user,
+                )
+
+            if changes:
+                manifest.save(update_fields=[change[0] for change in changes])
+
+        return Response(self.get_serializer(manifest).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['GET'], url_path='corrections')
+    def corrections(self, request, pk=None):
+        manifest = self.get_object()
+        corrections = ManifestCorrection.objects.filter(
+            manifest_trip=manifest,
+        ).select_related('admin', 'entry__destination').order_by('corrected_at')
+        return Response(
+            ManifestCorrectionSerializer(corrections, many=True).data,
+            status=status.HTTP_200_OK,
+        )
+
     @action(detail=True, methods=['POST'], url_path='generate-from-rfid')
     def generate_from_rfid(self, request, pk=None):
         manifest = self.get_object()
@@ -563,6 +660,91 @@ class FareManifestEntryViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return super().destroy(request, *args, **kwargs)
+
+    @action(detail=True, methods=['POST'], url_path='admin-correct')
+    def admin_correct(self, request, pk=None):
+        if not _has_admin_role(request):
+            return Response(
+                {'error': 'Only admin users can create manifest corrections.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        reason = request.data.get('reason')
+        if not isinstance(reason, str) or not reason.strip():
+            return Response(
+                {'error': 'A non-empty reason is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            try:
+                entry = FareManifestEntry.objects.select_for_update().select_related(
+                    'manifest_trip', 'destination'
+                ).get(pk=pk)
+            except FareManifestEntry.DoesNotExist:
+                return Response(
+                    {'error': 'Manifest entry not found.'},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            manifest = ManifestTrip.objects.select_for_update().get(pk=entry.manifest_trip.pk)
+            if not manifest.is_finalized:
+                return Response(
+                    {'error': 'Only finalized Travel Pass entries can be corrected.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            new_passenger_count = entry.passenger_count
+            new_discount_count = entry.discount_count
+            changes = []
+
+            for field_name in ('passenger_count', 'discount_count'):
+                if field_name not in request.data:
+                    continue
+                try:
+                    corrected_value = int(request.data[field_name])
+                except (TypeError, ValueError):
+                    return Response(
+                        {field_name: 'Must be a non-negative integer.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if corrected_value < 0:
+                    return Response(
+                        {field_name: 'Must be a non-negative integer.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                old_value = getattr(entry, field_name)
+                if corrected_value != old_value:
+                    changes.append((field_name, str(old_value), str(corrected_value)))
+                if field_name == 'passenger_count':
+                    new_passenger_count = corrected_value
+                else:
+                    new_discount_count = corrected_value
+
+            if new_discount_count > new_passenger_count:
+                return Response(
+                    {'error': 'discount_count cannot be greater than passenger_count.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            entry.passenger_count = new_passenger_count
+            entry.discount_count = new_discount_count
+            _recompute_manifest_entry_total(entry)
+            entry.save(update_fields=['passenger_count', 'discount_count', 'total_fare'])
+
+            for field_name, old_value, new_value in changes:
+                ManifestCorrection.objects.create(
+                    manifest_trip=manifest,
+                    entry=entry,
+                    field_name=field_name,
+                    old_value=old_value,
+                    new_value=new_value,
+                    reason=reason.strip(),
+                    admin=request.user,
+                )
+
+        return Response(FareManifestEntrySerializer(entry).data, status=status.HTTP_200_OK)
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.queryset.order_by('manifest_trip_id', 'destination_id'))

@@ -239,6 +239,34 @@ class FareManifestEntry(models.Model):
 		return f"{self.manifest_trip} - {self.destination.destination_name}"
 
 
+class ManifestCorrection(models.Model):
+	manifest_trip = models.ForeignKey(
+		ManifestTrip,
+		on_delete=models.PROTECT,
+		related_name='corrections',
+	)
+	entry = models.ForeignKey(
+		FareManifestEntry,
+		on_delete=models.PROTECT,
+		null=True,
+		blank=True,
+		related_name='corrections',
+	)
+	field_name = models.CharField(max_length=50)
+	old_value = models.CharField(max_length=255)
+	new_value = models.CharField(max_length=255)
+	reason = models.TextField()
+	admin = models.ForeignKey(
+		settings.AUTH_USER_MODEL,
+		on_delete=models.PROTECT,
+		related_name='manifest_corrections',
+	)
+	corrected_at = models.DateTimeField(auto_now_add=True)
+
+	def __str__(self):
+		return f"{self.manifest_trip} - {self.field_name}"
+
+
 class Transaction(models.Model):
 	class TransactionType(models.TextChoices):
 		TOPUP = 'topup', 'Top-up'

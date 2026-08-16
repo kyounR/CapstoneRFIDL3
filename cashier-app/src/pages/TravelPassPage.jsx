@@ -168,6 +168,8 @@ function TravelPassPage() {
       <h1>Travel Pass</h1>
       <p style={{ marginBottom: '16px' }}>
         <Link to="/topup">Back to top-up</Link>
+        {' | '}
+        <Link to="/travel-pass/history">Travel Pass History</Link>
       </p>
 
       {error ? <p style={{ color: 'crimson' }}>{error}</p> : null}

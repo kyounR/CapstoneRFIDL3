@@ -666,6 +666,16 @@ def manifest_entry_untally_view(request):
                 {'error': 'Cannot untally because passenger_count is already zero.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        if passenger_type == 'regular' and entry.passenger_count - entry.discount_count <= 0:
+            return Response(
+                {
+                    'error': (
+                        'Cannot remove a regular tally when all remaining passengers '
+                        'on this destination are discount.'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if passenger_type == 'discount' and entry.discount_count <= 0:
             return Response(
                 {'error': 'Cannot untally discount passenger because discount_count is already zero.'},

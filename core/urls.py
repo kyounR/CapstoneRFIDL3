@@ -22,7 +22,7 @@ router.register('destinations', DestinationViewSet, basename='destination')
 router.register('vehicles', VehicleViewSet, basename='vehicle')
 router.register('remittances', DailyRemittanceViewSet, basename='remittance')
 router.register('manifests', ManifestTripViewSet, basename='manifest')
-router.register('manifests-entries', FareManifestEntryViewSet, basename='manifest-entry')
+router.register('manifest-entries', FareManifestEntryViewSet, basename='manifest-entry')
 
 urlpatterns = [
     path('health/', HealthCheckView.as_view(), name='health-check'),

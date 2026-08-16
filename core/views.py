@@ -419,6 +419,40 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+    @action(detail=True, methods=['POST'], url_path='cancel')
+    def cancel(self, request, pk=None):
+        with transaction.atomic():
+            manifest = ManifestTrip.objects.select_for_update().filter(id=pk).first()
+            if manifest is None:
+                return Response(
+                    {'error': 'ManifestTrip not found.'},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            if manifest.is_finalized:
+                return Response(
+                    {'error': 'Cannot cancel a finalized Travel Pass.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            passenger_count = FareManifestEntry.objects.filter(
+                manifest_trip=manifest,
+                passenger_count__gt=0,
+            ).aggregate(total=Sum('passenger_count'))['total'] or 0
+            had_passengers = passenger_count > 0
+
+            FareManifestEntry.objects.filter(manifest_trip=manifest).delete()
+            manifest.delete()
+
+        return Response(
+            {
+                'message': 'Travel Pass cancelled successfully.',
+                'had_passengers': had_passengers,
+                'passenger_count': passenger_count,
+            },
+            status=status.HTTP_200_OK,
+        )
+
     @action(detail=True, methods=['POST'], url_path='generate-from-rfid')
     def generate_from_rfid(self, request, pk=None):
         manifest = self.get_object()

@@ -13,6 +13,8 @@ services:
       context: .
     ports:
       - "8000:8000"
+    volumes:
+      - .:/app
     environment:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}

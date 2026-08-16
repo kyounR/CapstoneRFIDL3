@@ -111,6 +111,7 @@ function TravelPassPage() {
     setBusyAction('create')
     try {
       const response = await api.post('manifests/', { vehicle: Number(vehicleId), date })
+      await fetchActivePasses()
       selectManifest(response.data)
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not create Travel Pass.')
@@ -160,6 +161,35 @@ function TravelPassPage() {
     }
   }
 
+  async function handleCancel() {
+    const passengerCount = Object.values(entries).reduce(
+      (total, entry) => total + entry.passenger_count,
+      0,
+    )
+    const confirmationMessage = passengerCount > 0
+      ? `This Travel Pass has ${passengerCount} passengers already tallied. Canceling will permanently delete this record. Are you sure?`
+      : 'Cancel this Travel Pass?'
+
+    if (!window.confirm(confirmationMessage)) {
+      return
+    }
+
+    setError('')
+    setBusyAction('cancel')
+    try {
+      await api.post(`manifests/${manifest.id}/cancel/`)
+      setManifest(null)
+      setEntries({})
+      setShowFinalizeForm(false)
+      setPageState(0)
+      await fetchActivePasses()
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || 'Could not cancel Travel Pass.')
+    } finally {
+      setBusyAction('')
+    }
+  }
+
   function switchVehicle() {
     setManifest(null)
     setEntries({})
@@ -176,6 +206,13 @@ function TravelPassPage() {
     }),
     { passengerCount: 0, totalFare: 0 },
   ), [entries])
+
+  const sortedActivePasses = useMemo(
+    () => [...activePasses].sort((firstPass, secondPass) => firstPass.id - secondPass.id),
+    [activePasses],
+  )
+  const selectedPassIndex = sortedActivePasses.findIndex((activePass) => activePass.id === manifest?.id)
+  const selectedPassLabel = selectedPassIndex === 0 ? 'Primary' : 'Overflow'
 
   const selectedVehicle = vehicles.find((vehicle) => vehicle.id === Number(manifest?.vehicle || vehicleId))
   const isFinalized = manifest?.is_finalized === true
@@ -195,11 +232,12 @@ function TravelPassPage() {
           <h2>Active Travel Passes</h2>
           {isLoadingPicker ? <p>Loading active Travel Passes...</p> : null}
           {!isLoadingPicker && activePasses.length === 0 ? <p>No active Travel Passes. Start a new one below.</p> : null}
-          {activePasses.map((activePass) => {
+          {sortedActivePasses.map((activePass, index) => {
             const vehicle = vehicles.find((item) => item.id === activePass.vehicle)
             return (
               <button key={activePass.id} type="button" onClick={() => selectManifest(activePass)} style={{ display: 'block', width: '100%', marginBottom: '10px', padding: '12px', textAlign: 'left' }}>
                 <strong>{vehicle?.plate_number || activePass.vehicle}</strong>
+                <span style={{ marginLeft: '8px', fontSize: '0.85em' }}>{index === 0 ? 'Primary' : 'Overflow'}</span>
                 <span> - {activePass.date} - {activePass.total_passengers} passengers</span>
               </button>
             )
@@ -233,7 +271,7 @@ function TravelPassPage() {
         <section>
           <button type="button" onClick={switchVehicle} style={{ marginBottom: '12px', padding: '6px 10px' }}>Switch Vehicle</button>
           <div style={{ marginBottom: '20px', padding: '12px', border: '1px solid #ccc' }}>
-            <h2 style={{ marginTop: 0 }}>{selectedVehicle?.plate_number || manifest.vehicle} - {manifest.date}</h2>
+            <h2 style={{ marginTop: 0 }}>{selectedVehicle?.plate_number || manifest.vehicle} <span style={{ fontSize: '0.65em', fontWeight: 'normal' }}>{selectedPassLabel}</span> - {manifest.date}</h2>
             {isFinalized ? <p style={{ color: 'green', fontWeight: 'bold' }}>Finalized{manifest.departure_time ? ` at ${manifest.departure_time}` : ''}{manifest.finalized_at ? ` (${manifest.finalized_at})` : ''}</p> : <p>Active and ready for boarding tally.</p>}
           </div>
           {isLoadingDestinations ? <p>Loading destinations...</p> : null}
@@ -268,7 +306,12 @@ function TravelPassPage() {
             <label htmlFor="departureTime">Departure time</label>
             <input id="departureTime" type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} style={{ marginLeft: '8px', padding: '6px' }} required />
             <button type="submit" disabled={busyAction === 'finalize'} style={{ marginLeft: '8px', padding: '6px 10px' }}>{busyAction === 'finalize' ? 'Finalizing...' : 'Confirm Finalize'}</button>
-          </form> : <button type="button" onClick={() => setShowFinalizeForm(true)} style={{ marginTop: '16px', padding: '8px 14px' }}>Finalize Travel Pass</button>) : null}
+          </form> : <div style={{ marginTop: '16px' }}>
+            <button type="button" onClick={() => setShowFinalizeForm(true)} style={{ padding: '8px 14px' }}>Finalize Travel Pass</button>
+            <button type="button" onClick={handleCancel} disabled={busyAction !== ''} style={{ marginLeft: '8px', padding: '8px 14px' }}>
+              {busyAction === 'cancel' ? 'Canceling...' : 'Cancel Travel Pass'}
+            </button>
+          </div>) : null}
         </section>
       ) : null}
     </div>

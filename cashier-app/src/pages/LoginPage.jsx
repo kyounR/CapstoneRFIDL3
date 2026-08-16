@@ -18,6 +18,7 @@ function LoginPage() {
       const response = await api.post('login/', { username, password })
       localStorage.setItem('authToken', response.data.token)
       localStorage.setItem('userRole', response.data.role)
+      localStorage.setItem('username', response.data.username)
       navigate('/topup')
     } catch (requestError) {
       const message = requestError.response?.data?.error || 'Login failed.'

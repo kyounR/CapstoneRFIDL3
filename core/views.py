@@ -70,6 +70,7 @@ def login_view(request):
     return Response(
         {
             'token': token.key,
+            'username': user.username,
             'role': getattr(user, 'role', None),
         },
         status=status.HTTP_200_OK,

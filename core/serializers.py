@@ -75,10 +75,21 @@ class DailyRemittanceSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class ManifestEntrySummarySerializer(serializers.ModelSerializer):
+    destination_name = serializers.CharField(source='destination.destination_name', read_only=True)
+
+    class Meta:
+        model = FareManifestEntry
+        fields = ['destination_name', 'passenger_count', 'discount_count', 'total_fare']
+
+
 class ManifestTripSerializer(serializers.ModelSerializer):
     cashier = serializers.PrimaryKeyRelatedField(read_only=True)
     is_finalized = serializers.BooleanField(read_only=True)
     finalized_at = serializers.DateTimeField(read_only=True)
+    total_passengers = serializers.IntegerField(read_only=True)
+    total_fare = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    entries = ManifestEntrySummarySerializer(many=True, read_only=True)
 
     class Meta:
         model = ManifestTrip

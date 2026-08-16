@@ -355,6 +355,26 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(cashier=self.request.user)
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.queryset)
+        date_param = request.query_params.get('date')
+        if date_param:
+            manifest_date = parse_date(date_param)
+            if manifest_date is None:
+                return Response(
+                    {'error': 'Invalid date format. Use YYYY-MM-DD.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            queryset = queryset.filter(date=manifest_date)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['POST'], url_path='finalize')
     def finalize(self, request, pk=None):
         manifest = self.get_object()

@@ -174,6 +174,18 @@ class ManifestTrip(models.Model):
 		related_name='manifest_trips',
 	)
 
+	@property
+	def total_passengers(self):
+		return FareManifestEntry.objects.filter(manifest_trip=self).aggregate(
+			total=models.Sum('passenger_count')
+		)['total'] or 0
+
+	@property
+	def total_fare(self):
+		return FareManifestEntry.objects.filter(manifest_trip=self).aggregate(
+			total=models.Sum('total_fare')
+		)['total'] or Decimal('0.00')
+
 	def __str__(self):
 		return f"{self.date} - {self.vehicle.plate_number} ({self.departure_time})"
 

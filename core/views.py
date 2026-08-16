@@ -367,6 +367,15 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
                 )
             queryset = queryset.filter(date=manifest_date)
 
+        finalized_param = request.query_params.get('is_finalized')
+        if finalized_param is not None:
+            if finalized_param.lower() not in {'true', 'false'}:
+                return Response(
+                    {'error': 'is_finalized must be true or false.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            queryset = queryset.filter(is_finalized=finalized_param.lower() == 'true')
+
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)

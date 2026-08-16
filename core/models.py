@@ -42,6 +42,7 @@ class Destination(models.Model):
 	destination_name = models.CharField(max_length=255)
 	base_fare = models.DecimalField(max_digits=10, decimal_places=2)
 	discount_exempt = models.BooleanField(default=False)
+	capacity_limit = models.PositiveIntegerField(null=True, blank=True)
 	is_active = models.BooleanField(default=True)
 
 	@property

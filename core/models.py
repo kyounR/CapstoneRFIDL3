@@ -42,7 +42,11 @@ class Destination(models.Model):
 	destination_name = models.CharField(max_length=255)
 	base_fare = models.DecimalField(max_digits=10, decimal_places=2)
 	discount_exempt = models.BooleanField(default=False)
-	capacity_limit = models.PositiveIntegerField(null=True, blank=True)
+	capacity_limit = models.PositiveIntegerField(
+		null=True,
+		blank=True,
+		validators=[MinValueValidator(1)],
+	)
 	is_active = models.BooleanField(default=True)
 
 	@property
@@ -77,13 +81,20 @@ class Card(models.Model):
 		return f"{self.uid} - {self.status}"
 
 
+class Line(models.Model):
+	name = models.CharField(max_length=255, unique=True)
+
+	def __str__(self):
+		return self.name
+
+
 class Vehicle(models.Model):
 	plate_number = models.CharField(max_length=20, unique=True)
-	route_name = models.CharField(max_length=255)
+	line = models.ForeignKey(Line, on_delete=models.PROTECT, related_name='vehicles')
 	is_active = models.BooleanField(default=True)
 
 	def __str__(self):
-		return f"{self.plate_number} ({self.route_name})"
+		return f"{self.plate_number} ({self.line.name})"
 
 
 class Trip(models.Model):

@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.core.management.base import BaseCommand
 
-from core.models import Card, Destination, Passenger, User, Vehicle
+from core.models import Card, Destination, Line, Passenger, User, Vehicle
 
 
 class Command(BaseCommand):
@@ -82,17 +82,20 @@ class Command(BaseCommand):
                 reused_items,
             )
 
+        line, line_created = Line.objects.get_or_create(name='Calinan-Bangkerohan')
+        self._record_result('Line: Calinan-Bangkerohan', line_created, created_items, reused_items)
+
         vehicle, vehicle_created = Vehicle.objects.get_or_create(
             plate_number='ABC-1234',
             defaults={
-                'route_name': 'Calinan-Bangkerohan',
+                'line': line,
                 'is_active': True,
             },
         )
         if not vehicle_created:
-            vehicle.route_name = 'Calinan-Bangkerohan'
+            vehicle.line = line
             vehicle.is_active = True
-            vehicle.save(update_fields=['route_name', 'is_active'])
+            vehicle.save(update_fields=['line', 'is_active'])
         self._record_result('Vehicle: ABC-1234', vehicle_created, created_items, reused_items)
 
         route_data = [

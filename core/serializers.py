@@ -35,6 +35,8 @@ class CardSerializer(serializers.ModelSerializer):
 
 
 class VehicleSerializer(serializers.ModelSerializer):
+    line_name = serializers.CharField(source='line.name', read_only=True)
+
     class Meta:
         model = Vehicle
         fields = '__all__'

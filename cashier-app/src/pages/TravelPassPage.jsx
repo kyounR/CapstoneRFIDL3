@@ -217,7 +217,7 @@ function TravelPassPage() {
             <label htmlFor="vehicle">Vehicle</label>
             <select id="vehicle" value={vehicleId} onChange={(event) => setVehicleId(event.target.value)} style={{ display: 'block', width: '100%', padding: '8px', marginTop: '4px' }} required disabled={isLoadingVehicles || busyAction === 'create'}>
               <option value="">{isLoadingVehicles ? 'Loading vehicles...' : 'Select a vehicle'}</option>
-              {vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.plate_number} - {vehicle.route_name}</option>)}
+              {vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.plate_number} - {vehicle.line_name}</option>)}
             </select>
           </div>
           <div style={{ marginBottom: '12px' }}>
@@ -239,7 +239,7 @@ function TravelPassPage() {
           {isLoadingDestinations ? <p>Loading destinations...</p> : null}
           {destinations.map((destination) => {
             const entry = entries[destination.id] || { passenger_count: 0, discount_count: 0, total_fare: '0.00' }
-            const atCapacity = destination.capacity_limit != null && entry.passenger_count >= destination.capacity_limit
+            const atCapacity = destination.capacity_limit != null && destination.capacity_limit > 0 && entry.passenger_count >= destination.capacity_limit
             const regularAddKey = `${destination.id}-regular-add`
             const discountAddKey = `${destination.id}-discount-add`
             const regularRemoveKey = `${destination.id}-regular-remove`

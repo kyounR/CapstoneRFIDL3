@@ -41,8 +41,14 @@ class Passenger(models.Model):
 class Route(models.Model):
 	destination_name = models.CharField(max_length=255)
 	base_fare = models.DecimalField(max_digits=10, decimal_places=2)
-	discount_fare = models.DecimalField(max_digits=10, decimal_places=2)
+	discount_exempt = models.BooleanField(default=False)
 	is_active = models.BooleanField(default=True)
+
+	@property
+	def discount_fare(self):
+		if self.discount_exempt:
+			return self.base_fare
+		return self.base_fare - Decimal('5.00')
 
 	def __str__(self):
 		return self.destination_name
@@ -159,7 +165,9 @@ class ManifestTrip(models.Model):
 		related_name='manifest_trips',
 	)
 	date = models.DateField()
-	departure_time = models.TimeField()
+	departure_time = models.TimeField(null=True, blank=True)
+	is_finalized = models.BooleanField(default=False)
+	finalized_at = models.DateTimeField(null=True, blank=True)
 	cashier = models.ForeignKey(
 		settings.AUTH_USER_MODEL,
 		on_delete=models.PROTECT,

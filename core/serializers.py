@@ -53,6 +53,8 @@ class TransactionSerializer(serializers.ModelSerializer):
 
 
 class RouteSerializer(serializers.ModelSerializer):
+    discount_fare = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+
     class Meta:
         model = Route
         fields = '__all__'
@@ -74,12 +76,17 @@ class DailyRemittanceSerializer(serializers.ModelSerializer):
 
 
 class ManifestTripSerializer(serializers.ModelSerializer):
+    is_finalized = serializers.BooleanField(read_only=True)
+    finalized_at = serializers.DateTimeField(read_only=True)
+
     class Meta:
         model = ManifestTrip
         fields = '__all__'
 
 
 class RouteFareSerializer(serializers.ModelSerializer):
+    discount_fare = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+
     class Meta:
         model = Route
         fields = ['id', 'destination_name', 'base_fare', 'discount_fare']

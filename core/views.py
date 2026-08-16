@@ -5,7 +5,7 @@ from django.contrib.auth import authenticate
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Q, Sum
 from django.utils.dateparse import parse_date
-from django.utils.timezone import localdate
+from django.utils.timezone import localdate, now
 from rest_framework import status, viewsets
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action, api_view, permission_classes
@@ -14,7 +14,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Card, DailyRemittance, DispatchRound, FareManifestEntry, ManifestTrip, Passenger, Route, Transaction
+from .models import Card, DailyRemittance, DispatchRound, FareManifestEntry, ManifestTrip, Passenger, Route, Transaction, Trip
 from .serializers import (
     CardSerializer,
     DailyRemittanceSerializer,
@@ -350,6 +350,41 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
         if not _has_cashier_or_admin_role(request):
             raise PermissionDenied('Only cashier or admin users can access this endpoint.')
 
+    @action(detail=True, methods=['POST'], url_path='finalize')
+    def finalize(self, request, pk=None):
+        manifest = self.get_object()
+
+        if manifest.is_finalized:
+            return Response(
+                {'error': 'ManifestTrip is already finalized.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        departure_time = request.data.get('departure_time')
+        if not departure_time:
+            return Response(
+                {'error': 'departure_time is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        manifest.departure_time = departure_time
+        manifest.is_finalized = True
+        manifest.finalized_at = now()
+        manifest.save()
+
+        serializer = self.get_serializer(manifest)
+
+        entries = FareManifestEntry.objects.filter(
+            manifest_trip=manifest,
+        ).order_by('route__destination_name')
+        return Response(
+            {
+                'manifest_trip': serializer.data,
+                'entries': FareManifestEntrySerializer(entries, many=True).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
     @action(detail=True, methods=['POST'], url_path='generate-from-rfid')
     def generate_from_rfid(self, request, pk=None):
         manifest = self.get_object()
@@ -443,6 +478,24 @@ class FareManifestEntryViewSet(viewsets.ModelViewSet):
         if not _has_cashier_or_admin_role(request):
             raise PermissionDenied('Only cashier or admin users can access this endpoint.')
 
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.manifest_trip.is_finalized:
+            return Response(
+                {'error': 'This Travel Pass has been finalized and can no longer be edited.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.manifest_trip.is_finalized:
+            return Response(
+                {'error': 'This Travel Pass has been finalized and can no longer be edited.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().destroy(request, *args, **kwargs)
+
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.queryset.order_by('manifest_trip_id', 'route_id'))
         manifest_trip_id = request.GET.get('manifest_trip')
@@ -456,6 +509,142 @@ class FareManifestEntryViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+def _manifest_tally_payload(request):
+    manifest_trip_id = request.data.get('manifest_trip')
+    route_id = request.data.get('route')
+    passenger_type = request.data.get('passenger_type')
+
+    if not manifest_trip_id or not route_id or not passenger_type:
+        return None, Response(
+            {'error': 'manifest_trip, route, and passenger_type are required.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if passenger_type not in {'regular', 'discount'}:
+        return None, Response(
+            {'error': 'passenger_type must be regular or discount.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    return (manifest_trip_id, route_id, passenger_type), None
+
+
+def _recompute_manifest_entry_total(entry):
+    entry.total_fare = (
+        (entry.passenger_count - entry.discount_count) * entry.route.base_fare
+        + entry.discount_count * entry.route.discount_fare
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def manifest_entry_tally_view(request):
+    if not _has_cashier_or_admin_role(request):
+        return _role_forbidden_response('tally manifest entries')
+
+    payload, error_response = _manifest_tally_payload(request)
+    if error_response is not None:
+        return error_response
+
+    assert payload is not None
+    manifest_trip_id, route_id, passenger_type = payload
+    with transaction.atomic():
+        manifest = ManifestTrip.objects.select_for_update().filter(id=manifest_trip_id).first()
+        if manifest is None:
+            return Response({'error': 'ManifestTrip not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if manifest.is_finalized:
+            return Response(
+                {'error': 'Cannot tally a finalized ManifestTrip.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        route = Route.objects.filter(id=route_id, is_active=True).first()
+        if route is None:
+            return Response({'error': 'Route not found or inactive.'}, status=status.HTTP_404_NOT_FOUND)
+        if passenger_type == 'discount' and route.discount_exempt:
+            return Response(
+                {'error': 'This route does not allow discount fares.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        entry = FareManifestEntry.objects.select_for_update().filter(
+            manifest_trip=manifest,
+            route=route,
+        ).first()
+        if entry is None:
+            entry = FareManifestEntry(
+                manifest_trip=manifest,
+                route=route,
+                passenger_count=0,
+                discount_count=0,
+                total_fare=Decimal('0.00'),
+                source=FareManifestEntry.Source.MANUAL,
+            )
+
+        entry.passenger_count += 1
+        if passenger_type == 'discount':
+            entry.discount_count += 1
+        _recompute_manifest_entry_total(entry)
+        entry.save()
+
+    return Response(FareManifestEntrySerializer(entry).data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def manifest_entry_untally_view(request):
+    if not _has_cashier_or_admin_role(request):
+        return _role_forbidden_response('untally manifest entries')
+
+    payload, error_response = _manifest_tally_payload(request)
+    if error_response is not None:
+        return error_response
+
+    assert payload is not None
+    manifest_trip_id, route_id, passenger_type = payload
+    with transaction.atomic():
+        manifest = ManifestTrip.objects.select_for_update().filter(id=manifest_trip_id).first()
+        if manifest is None:
+            return Response({'error': 'ManifestTrip not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if manifest.is_finalized:
+            return Response(
+                {'error': 'Cannot untally a finalized ManifestTrip.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        route = Route.objects.filter(id=route_id, is_active=True).first()
+        if route is None:
+            return Response({'error': 'Route not found or inactive.'}, status=status.HTTP_404_NOT_FOUND)
+
+        entry = FareManifestEntry.objects.select_for_update().filter(
+            manifest_trip=manifest,
+            route=route,
+        ).first()
+        if entry is None:
+            return Response(
+                {'error': 'No manifest entry exists for this trip and route.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if entry.passenger_count <= 0:
+            return Response(
+                {'error': 'Cannot untally because passenger_count is already zero.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if passenger_type == 'discount' and entry.discount_count <= 0:
+            return Response(
+                {'error': 'Cannot untally discount passenger because discount_count is already zero.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        entry.passenger_count -= 1
+        if passenger_type == 'discount':
+            entry.discount_count -= 1
+        _recompute_manifest_entry_total(entry)
+        entry.save()
+
+    return Response(FareManifestEntrySerializer(entry).data, status=status.HTTP_200_OK)
 
 
 class RouteViewSet(viewsets.ReadOnlyModelViewSet):

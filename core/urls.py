@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
     admin_dashboard_view,
+    admin_reports_export_view,
     DestinationViewSet,
     VehicleViewSet,
     card_lookup_view,
@@ -28,6 +29,7 @@ router.register('manifest-entries', FareManifestEntryViewSet, basename='manifest
 urlpatterns = [
     path('health/', HealthCheckView.as_view(), name='health-check'),
     path('admin/dashboard/', admin_dashboard_view, name='admin-dashboard'),
+    path('admin/reports/export/', admin_reports_export_view, name='admin-reports-export'),
     path('login/', login_view, name='login'),
     path('cards/lookup/', card_lookup_view, name='card-lookup'),
     path('topup/', topup_view, name='topup'),

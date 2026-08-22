@@ -1,9 +1,12 @@
+import csv
+from io import StringIO
 from decimal import Decimal
 from typing import Optional
 
 from django.contrib.auth import authenticate
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Q, Sum
+from django.http import HttpResponse
 from django.utils.dateparse import parse_date, parse_time
 from django.utils.timezone import localdate, now
 from rest_framework import status, viewsets
@@ -49,6 +52,38 @@ def _role_forbidden_response(action_label):
     )
 
 
+def _get_report_date_range(request):
+    start_date_param = request.query_params.get('start_date')
+    end_date_param = request.query_params.get('end_date')
+    if not start_date_param or not end_date_param:
+        return None, Response(
+            {'error': 'start_date and end_date are required.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    start_date = parse_date(start_date_param)
+    end_date = parse_date(end_date_param)
+    if start_date is None or end_date is None:
+        return None, Response(
+            {'error': 'start_date and end_date must use YYYY-MM-DD format.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if start_date > end_date:
+        return None, Response(
+            {'error': 'start_date cannot be after end_date.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    return (start_date, end_date), None
+
+
+def _finalized_entries_in_date_range(start_date, end_date):
+    return FareManifestEntry.objects.filter(
+        manifest_trip__is_finalized=True,
+        manifest_trip__date__range=(start_date, end_date),
+    )
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def admin_dashboard_view(request):
@@ -58,31 +93,13 @@ def admin_dashboard_view(request):
             status=status.HTTP_403_FORBIDDEN,
         )
 
-    start_date_param = request.query_params.get('start_date')
-    end_date_param = request.query_params.get('end_date')
-    if not start_date_param or not end_date_param:
-        return Response(
-            {'error': 'start_date and end_date are required.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+    date_range, error_response = _get_report_date_range(request)
+    if error_response is not None:
+        return error_response
 
-    start_date = parse_date(start_date_param)
-    end_date = parse_date(end_date_param)
-    if start_date is None or end_date is None:
-        return Response(
-            {'error': 'start_date and end_date must use YYYY-MM-DD format.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    if start_date > end_date:
-        return Response(
-            {'error': 'start_date cannot be after end_date.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    finalized_entries = FareManifestEntry.objects.filter(
-        manifest_trip__is_finalized=True,
-        manifest_trip__date__range=(start_date, end_date),
-    )
+    assert date_range is not None
+    start_date, end_date = date_range
+    finalized_entries = _finalized_entries_in_date_range(start_date, end_date)
     totals = finalized_entries.aggregate(
         total_passengers=Sum('passenger_count'),
         total_income=Sum('total_fare'),
@@ -132,6 +149,58 @@ def admin_dashboard_view(request):
         },
         status=status.HTTP_200_OK,
     )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_reports_export_view(request):
+    if not _has_admin_role(request):
+        return Response(
+            {'error': 'Only admin users can export reports.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    date_range, error_response = _get_report_date_range(request)
+    if error_response is not None:
+        return error_response
+
+    assert date_range is not None
+    start_date, end_date = date_range
+    finalized_entries = _finalized_entries_in_date_range(start_date, end_date)
+    totals = finalized_entries.aggregate(
+        total_passengers=Sum('passenger_count'),
+        total_discount_passengers=Sum('discount_count'),
+        total_income=Sum('total_fare'),
+    )
+    entries = finalized_entries.select_related(
+        'manifest_trip',
+        'destination',
+    ).order_by('manifest_trip__date', 'destination__destination_name', 'id')
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Date', 'Destination', 'Passenger Count', 'Discount Count', 'Total Fare'])
+    for entry in entries:
+        writer.writerow([
+            entry.manifest_trip.date,
+            entry.destination.destination_name,
+            entry.passenger_count,
+            entry.discount_count,
+            entry.total_fare,
+        ])
+    writer.writerow([
+        'TOTAL',
+        '',
+        totals['total_passengers'] or 0,
+        totals['total_discount_passengers'] or 0,
+        totals['total_income'] or Decimal('0.00'),
+    ])
+
+    response = HttpResponse(output.getvalue(), content_type='text/csv')
+    response['Content-Disposition'] = (
+        f'attachment; filename="caltransco_report_{start_date}_to_{end_date}.csv"'
+    )
+    return response
 
 
 @api_view(['POST'])

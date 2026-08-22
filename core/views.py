@@ -173,7 +173,8 @@ def tap_view(request):
         return Response({'error': 'destination_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
     with transaction.atomic():
-        card = Card.objects.select_for_update().select_related('passenger').filter(uid=card_uid).first()
+        # of=('self',) avoids FOR UPDATE across the LEFT OUTER JOIN from nullable Card.passenger
+        card = Card.objects.select_for_update(of=('self',)).select_related('passenger').filter(uid=card_uid).first()
         if card is None:
             return Response({'error': 'Card not found.'}, status=status.HTTP_404_NOT_FOUND)
         if card.status != Card.Status.ACTIVE:

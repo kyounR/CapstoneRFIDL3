@@ -49,6 +49,91 @@ def _role_forbidden_response(action_label):
     )
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_dashboard_view(request):
+    if not _has_admin_role(request):
+        return Response(
+            {'error': 'Only admin users can access the dashboard.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    start_date_param = request.query_params.get('start_date')
+    end_date_param = request.query_params.get('end_date')
+    if not start_date_param or not end_date_param:
+        return Response(
+            {'error': 'start_date and end_date are required.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    start_date = parse_date(start_date_param)
+    end_date = parse_date(end_date_param)
+    if start_date is None or end_date is None:
+        return Response(
+            {'error': 'start_date and end_date must use YYYY-MM-DD format.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if start_date > end_date:
+        return Response(
+            {'error': 'start_date cannot be after end_date.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    finalized_entries = FareManifestEntry.objects.filter(
+        manifest_trip__is_finalized=True,
+        manifest_trip__date__range=(start_date, end_date),
+    )
+    totals = finalized_entries.aggregate(
+        total_passengers=Sum('passenger_count'),
+        total_income=Sum('total_fare'),
+        total_discount_passengers=Sum('discount_count'),
+    )
+    trip_count = ManifestTrip.objects.filter(
+        is_finalized=True,
+        date__range=(start_date, end_date),
+    ).count()
+    popular_destinations = finalized_entries.values(
+        'destination_id',
+        'destination__destination_name',
+    ).annotate(
+        passenger_count=Sum('passenger_count'),
+        total_fare=Sum('total_fare'),
+    ).order_by('-passenger_count', 'destination__destination_name')
+    daily_breakdown = finalized_entries.values(
+        'manifest_trip__date',
+    ).annotate(
+        total_passengers=Sum('passenger_count'),
+        total_income=Sum('total_fare'),
+    ).order_by('manifest_trip__date')
+
+    return Response(
+        {
+            'total_passengers': totals['total_passengers'] or 0,
+            'total_income': totals['total_income'] or Decimal('0.00'),
+            'total_discount_passengers': totals['total_discount_passengers'] or 0,
+            'trip_count': trip_count,
+            'popular_destinations': [
+                {
+                    'destination_id': row['destination_id'],
+                    'destination_name': row['destination__destination_name'],
+                    'passenger_count': row['passenger_count'],
+                    'total_fare': row['total_fare'],
+                }
+                for row in popular_destinations
+            ],
+            'daily_breakdown': [
+                {
+                    'date': row['manifest_trip__date'],
+                    'total_passengers': row['total_passengers'],
+                    'total_income': row['total_income'],
+                }
+                for row in daily_breakdown
+            ],
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])

@@ -1,4 +1,4 @@
-import { Navigate, Outlet, useNavigate } from 'react-router-dom'
+import { Link, Navigate, Outlet, useNavigate } from 'react-router-dom'
 
 function RequireAuth() {
   const navigate = useNavigate()
@@ -25,9 +25,12 @@ function RequireAuth() {
     <>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #ccc', fontFamily: 'sans-serif' }}>
         <span>Logged in as {username} ({role})</span>
-        <button type="button" onClick={handleLogout} style={{ padding: '6px 10px' }}>
-          Log out
-        </button>
+        <div>
+          {role === 'admin' ? <Link to="/admin/dashboard" style={{ marginRight: '12px' }}>Admin Dashboard</Link> : null}
+          <button type="button" onClick={handleLogout} style={{ padding: '6px 10px' }}>
+            Log out
+          </button>
+        </div>
       </header>
       <Outlet />
     </>

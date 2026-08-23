@@ -17,7 +17,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Card, DailyRemittance, Destination, DispatchRound, FareManifestEntry, ManifestCorrection, ManifestTrip, Passenger, Transaction, Trip, Vehicle
+from .models import Card, DailyRemittance, Destination, DispatchRound, FareManifestEntry, FeeSettings, ManifestCorrection, ManifestTrip, Passenger, Transaction, Trip, Vehicle
 from .serializers import (
     CardSerializer,
     DailyRemittanceSerializer,
@@ -469,6 +469,25 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
         if not _has_cashier_or_admin_role(request):
             raise PermissionDenied('Only cashier or admin users can access this endpoint.')
 
+    def perform_create(self, serializer):
+        fee_settings = FeeSettings.get_current()
+        vehicle = serializer.validated_data['vehicle']
+        defaults = {
+            'terminal_fee_percentage': fee_settings.terminal_fee_percentage,
+            'ps_fee': fee_settings.ps_fee,
+            'water_fee': fee_settings.water_fee,
+            'dispatcher_collection_fee': fee_settings.dispatcher_collection_fee,
+            'ftb': fee_settings.ftb,
+            'savings': fee_settings.savings,
+            'trust_fund': fee_settings.trust_fund,
+            'original_assigned_driver': vehicle.assigned_driver,
+            'cashier': self.request.user,
+        }
+        for field_name in defaults:
+            if field_name in serializer.validated_data:
+                defaults.pop(field_name)
+        serializer.save(**defaults)
+
     @action(detail=True, methods=['GET', 'POST'], url_path='rounds')
     def rounds(self, request, pk=None):
         remittance = self.get_object()
@@ -477,6 +496,12 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
             rounds_qs = remittance.rounds.all().order_by('round_number')
             serializer = DispatchRoundSerializer(rounds_qs, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
+
+        if remittance.is_finalized:
+            return Response(
+                {'error': 'This Daily Remittance has been finalized and can no longer be edited.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         payload = request.data.copy()
         payload['remittance'] = remittance.id
@@ -501,6 +526,36 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_201_CREATED,
         )
+
+    @action(detail=True, methods=['POST'], url_path='finalize')
+    def finalize(self, request, pk=None):
+        remittance = self.get_object()
+        if remittance.is_finalized:
+            return Response(
+                {'error': 'Daily Remittance is already finalized.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        remittance.is_finalized = True
+        remittance.finalized_at = now()
+        remittance.save(update_fields=['is_finalized', 'finalized_at'])
+        return Response(self.get_serializer(remittance).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['DELETE'], url_path=r'rounds/(?P<round_id>[^/.]+)')
+    def remove_round(self, request, pk=None, round_id=None):
+        remittance = self.get_object()
+        if remittance.is_finalized:
+            return Response(
+                {'error': 'This Daily Remittance has been finalized and can no longer be edited.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            dispatch_round = DispatchRound.objects.get(pk=round_id, remittance=remittance)
+        except DispatchRound.DoesNotExist:
+            return Response({'error': 'Dispatch round not found.'}, status=status.HTTP_404_NOT_FOUND)
+        dispatch_round.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ManifestTripViewSet(viewsets.ModelViewSet):

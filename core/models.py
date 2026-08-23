@@ -167,7 +167,7 @@ class Trip(models.Model):
 
 
 class DailyRemittance(models.Model):
-	terminal_name = models.CharField(max_length=255)
+	terminal = models.ForeignKey(Terminal, on_delete=models.PROTECT, related_name='daily_remittances')
 	cashier = models.ForeignKey(
 		settings.AUTH_USER_MODEL,
 		on_delete=models.PROTECT,
@@ -175,26 +175,39 @@ class DailyRemittance(models.Model):
 	)
 	dispatcher_name = models.CharField(max_length=255)
 	date = models.DateField()
-	driver_name = models.CharField(max_length=255)
+	driver = models.ForeignKey(Driver, on_delete=models.PROTECT, related_name='daily_remittances')
+	original_assigned_driver = models.ForeignKey(
+		Driver,
+		null=True,
+		on_delete=models.SET_NULL,
+		related_name='+',
+	)
 	vehicle = models.ForeignKey(Vehicle, on_delete=models.PROTECT, related_name='daily_remittances')
-	terminal_fee = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+	substitute_fee = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+	terminal_fee_percentage = models.DecimalField(max_digits=12, decimal_places=2)
 	ps_fee = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
 	water_fee = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
 	dispatcher_collection_fee = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
 	ftb = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
 	savings = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
 	trust_fund = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+	is_finalized = models.BooleanField(default=False)
+	finalized_at = models.DateTimeField(null=True, blank=True)
 
 	@property
 	def gross(self):
 		return DispatchRound.objects.filter(remittance=self).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
 	@property
+	def terminal_fee(self):
+		return self.gross * (self.terminal_fee_percentage / Decimal('100.00'))
+
+	@property
 	def subtotal(self):
 		return self.gross - self.terminal_fee
 
 	def __str__(self):
-		return f"{self.date} - {self.driver_name} ({self.vehicle.plate_number})"
+		return f"{self.date} - {self.driver.full_name} ({self.vehicle.plate_number})"
 
 
 class DispatchRound(models.Model):
@@ -218,7 +231,7 @@ class DispatchRound(models.Model):
 		]
 
 	def __str__(self):
-		return f"{self.remittance.driver_name} - Round {self.round_number}"
+		return f"{self.remittance.driver.full_name} - Round {self.round_number}"
 
 
 class ManifestTrip(models.Model):

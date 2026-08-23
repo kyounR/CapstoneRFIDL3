@@ -491,15 +491,15 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         if serializer.instance.is_finalized:
             raise serializers.ValidationError(
-                'This Daily Remittance has been finalized and can no longer be edited.'
-            )
+                {'error': 'This Daily Remittance has been finalized and can no longer be edited.'}
+        )
         serializer.save()
 
     def perform_destroy(self, instance):
         if instance.is_finalized:
             raise serializers.ValidationError(
-                'This Daily Remittance has been finalized and can no longer be edited.'
-            )
+                {'error': 'This Daily Remittance has been finalized and can no longer be edited.'}
+        )
         instance.delete()
 
     @action(detail=True, methods=['GET', 'POST'], url_path='rounds')

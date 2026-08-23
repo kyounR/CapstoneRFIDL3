@@ -297,6 +297,7 @@ function DailyRemittancePage() {
           <p>Gross: {remittance.gross}</p>
           <p>Terminal Fee ({remittance.terminal_fee_percentage}%): {remittance.terminal_fee}</p>
           <p>Subtotal: {remittance.subtotal}</p>
+          <p>Net Pay: {remittance.net_pay}</p>
 
           <h3>Fees</h3>
           {!remittance.is_finalized ? <>

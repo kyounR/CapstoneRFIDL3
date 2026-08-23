@@ -215,10 +215,10 @@ function DailyRemittanceHistoryPage() {
         groups[key].items.push(item)
         return groups
       }, {})).map(([key, group]) => {
-        const totals = group.items.reduce((result, item) => ({ gross: result.gross + Number(item.gross || 0), terminal: result.terminal + Number(item.terminal_fee || 0), subtotal: result.subtotal + Number(item.subtotal || 0) }), { gross: 0, terminal: 0, subtotal: 0 })
+        const totals = group.items.reduce((result, item) => ({ gross: result.gross + Number(item.gross || 0), terminal: result.terminal + Number(item.terminal_fee || 0), subtotal: result.subtotal + Number(item.subtotal || 0), netPay: result.netPay + Number(item.net_pay || 0) }), { gross: 0, terminal: 0, subtotal: 0, netPay: 0 })
         return <section key={key} style={{ marginBottom: '28px' }}>
           <h2>{group.name}</h2>
-          <p>Day totals — Gross: {totals.gross.toFixed(2)}, Terminal Fees: {totals.terminal.toFixed(2)}, Subtotal: {totals.subtotal.toFixed(2)}</p>
+          <p>Day totals — Gross: {totals.gross.toFixed(2)}, Terminal Fees: {totals.terminal.toFixed(2)}, Subtotal: {totals.subtotal.toFixed(2)}, Net Pay: {totals.netPay.toFixed(2)}</p>
           <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', width: '100%' }}><thead><tr><th>Driver</th><th>Vehicle</th><th>Gross</th><th>Terminal Fee</th><th>Subtotal</th><th>Status</th></tr></thead><tbody>
             {group.items.map((item) => {
               const vehicle = vehicles.find((entry) => entry.id === item.vehicle)
@@ -232,6 +232,7 @@ function DailyRemittanceHistoryPage() {
                   {rounds.map((round) => <Fragment key={`${round.id}-edit`}>{editControls('round', round.id, 'amount', <input type="number" min="0" step="0.01" value={editValue} onChange={(event) => setEditValue(event.target.value)} />)}{editControls('round', round.id, 'departure_time', <input type="time" value={editValue} onChange={(event) => setEditValue(event.target.value)} />)}</Fragment>)}
                   <h3>Fees</h3>
                   <p><strong>Terminal Fee:</strong> {detail.terminal_fee} (computed)</p>
+                  <p><strong>Net Pay:</strong> {detail.net_pay}</p>
                   {feeFields.map(([field, label]) => <p key={field}><strong>{label}:</strong> {detail[field]}{editButton('remittance', detail.id, field, detail[field])}</p>)}
                   {feeFields.map(([field]) => editControls('remittance', detail.id, field, <input type="number" min="0" step="0.01" value={editValue} onChange={(event) => setEditValue(event.target.value)} />))}
                   <h3>Correction History</h3>

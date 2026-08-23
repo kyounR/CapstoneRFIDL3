@@ -99,6 +99,7 @@ class DailyRemittanceSerializer(serializers.ModelSerializer):
     terminal_fee = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     gross = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     subtotal = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    net_pay = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
 
     class Meta:
         model = DailyRemittance

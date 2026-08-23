@@ -214,6 +214,17 @@ class DailyRemittance(models.Model):
 	def subtotal(self):
 		return self.gross - self.terminal_fee
 
+	@property
+	def net_pay(self):
+		return self.subtotal - (
+			self.ps_fee
+			+ self.water_fee
+			+ self.dispatcher_collection_fee
+			+ self.ftb
+			+ self.savings
+			+ self.trust_fund
+		)
+
 	def __str__(self):
 		return f"{self.date} - {self.driver.full_name} ({self.vehicle.plate_number})"
 

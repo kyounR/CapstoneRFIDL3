@@ -219,13 +219,13 @@ function DailyRemittanceHistoryPage() {
         return <section key={key} style={{ marginBottom: '28px' }}>
           <h2>{group.name}</h2>
           <p>Day totals — Gross: {totals.gross.toFixed(2)}, Terminal Fees: {totals.terminal.toFixed(2)}, Subtotal: {totals.subtotal.toFixed(2)}, Net Pay: {totals.netPay.toFixed(2)}</p>
-          <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', width: '100%' }}><thead><tr><th>Driver</th><th>Vehicle</th><th>Gross</th><th>Terminal Fee</th><th>Subtotal</th><th>Status</th></tr></thead><tbody>
+          <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', width: '100%' }}><thead><tr><th>Driver</th><th>Vehicle</th><th>Gross</th><th>Terminal Fee</th><th>Subtotal</th><th>Net Pay</th><th>Status</th></tr></thead><tbody>
             {group.items.map((item) => {
               const vehicle = vehicles.find((entry) => entry.id === item.vehicle)
               const driver = drivers.find((entry) => entry.id === item.driver)
               return <Fragment key={item.id}>
-                <tr onClick={() => toggleDetail(item.id)} style={{ cursor: 'pointer' }}><td>{driver?.full_name || item.driver}</td><td>{vehicle?.plate_number || item.vehicle}</td><td>{item.gross}</td><td>{item.terminal_fee}</td><td>{item.subtotal}</td><td>{item.is_finalized ? 'Finalized' : 'In Progress'}</td></tr>
-                {expandedId === item.id ? <tr><td colSpan="6">{isLoadingDetail || !detail ? <p>Loading details...</p> : <>
+                <tr onClick={() => toggleDetail(item.id)} style={{ cursor: 'pointer' }}><td>{driver?.full_name || item.driver}</td><td>{vehicle?.plate_number || item.vehicle}</td><td>{item.gross}</td><td>{item.terminal_fee}</td><td>{item.subtotal}</td><td>{item.net_pay}</td><td>{item.is_finalized ? 'Finalized' : 'In Progress'}</td></tr>
+                {expandedId === item.id ? <tr><td colSpan="7">{isLoadingDetail || !detail ? <p>Loading details...</p> : <>
                   {renderHeader(detail)}
                   <h3>Dispatch Rounds</h3>
                   <table border="1" cellPadding="6" style={{ borderCollapse: 'collapse', width: '100%' }}><thead><tr><th>Round</th><th>Amount</th><th>Time</th></tr></thead><tbody>{rounds.map((round) => <tr key={round.id}><td>{round.round_number}</td><td>{round.amount}{editButton('round', round.id, 'amount', round.amount)}</td><td>{round.departure_time}{editButton('round', round.id, 'departure_time', round.departure_time)}</td></tr>)}</tbody></table>

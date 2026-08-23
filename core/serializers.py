@@ -10,7 +10,6 @@ from .models import (
     ManifestTrip,
     Passenger,
     RemittanceCorrection,
-    RemittanceCorrection,
     Transaction,
     Trip,
     Vehicle,

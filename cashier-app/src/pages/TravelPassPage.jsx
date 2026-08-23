@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import api from '../api/client'
 
 function getToday() {
@@ -220,11 +219,6 @@ function TravelPassPage() {
   return (
     <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'sans-serif' }}>
       <h1>Travel Pass</h1>
-      <p style={{ marginBottom: '16px' }}>
-        <Link to="/topup">Back to top-up</Link>
-        {' | '}
-        <Link to="/travel-pass/history">Travel Pass History</Link>
-      </p>
       {error ? <p style={{ color: 'crimson' }}>{error}</p> : null}
 
       {pageState === 0 ? (

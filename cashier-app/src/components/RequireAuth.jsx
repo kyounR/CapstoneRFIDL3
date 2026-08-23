@@ -1,7 +1,8 @@
-import { Link, Navigate, Outlet, useNavigate } from 'react-router-dom'
+import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 
 function RequireAuth() {
   const navigate = useNavigate()
+  const location = useLocation()
   const token = localStorage.getItem('authToken')
   const role = localStorage.getItem('userRole')
   const username = localStorage.getItem('username')
@@ -21,18 +22,34 @@ function RequireAuth() {
     navigate('/login')
   }
 
+  const navItems = [
+    { label: 'Top-up', path: '/topup' },
+    { label: 'Travel Pass', path: '/travel-pass' },
+    { label: 'Remittance', path: '/remittance' },
+    { label: 'Summary', path: '/summary' },
+  ]
+
+  const isActive = (path) => location.pathname === path || location.pathname.startsWith(`${path}/`)
+
   return (
     <>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #ccc', fontFamily: 'sans-serif' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', padding: '12px 16px', borderBottom: '1px solid #ccc', fontFamily: 'sans-serif' }}>
         <span>Logged in as {username} ({role})</span>
-        <div>
-          {role === 'admin' ? <Link to="/admin/dashboard" style={{ marginRight: '12px' }}>Admin Dashboard</Link> : null}
-          {role === 'admin' ? <Link to="/admin/reports" style={{ marginRight: '12px' }}>Reports</Link> : null}
-          <Link to="/remittance" style={{ marginRight: '12px' }}>Remittance</Link>
+        <nav aria-label="Primary navigation" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {navItems.map((item) => (
+            <Link key={item.path} to={item.path} style={{ fontWeight: isActive(item.path) ? 'bold' : 'normal', textDecoration: isActive(item.path) ? 'underline' : 'none' }}>
+              {item.label}
+            </Link>
+          ))}
+          {role === 'admin' ? <>
+            <span aria-hidden="true">|</span>
+            <Link to="/admin/dashboard" style={{ fontWeight: isActive('/admin/dashboard') ? 'bold' : 'normal', textDecoration: isActive('/admin/dashboard') ? 'underline' : 'none' }}>Admin Dashboard</Link>
+            <Link to="/admin/reports" style={{ fontWeight: isActive('/admin/reports') ? 'bold' : 'normal', textDecoration: isActive('/admin/reports') ? 'underline' : 'none' }}>Reports</Link>
+          </> : null}
           <button type="button" onClick={handleLogout} style={{ padding: '6px 10px' }}>
             Log out
           </button>
-        </div>
+        </nav>
       </header>
       <Outlet />
     </>

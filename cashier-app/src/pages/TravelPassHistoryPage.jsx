@@ -1,5 +1,4 @@
 import { Fragment, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import api from '../api/client'
 
 function getToday() {
@@ -239,7 +238,6 @@ function TravelPassHistoryPage() {
   return (
     <div style={{ maxWidth: '1000px', margin: '40px auto', fontFamily: 'sans-serif' }}>
       <h1>Travel Pass History</h1>
-      <p style={{ marginBottom: '16px' }}><Link to="/travel-pass">Travel Pass</Link></p>
 
       <div style={{ marginBottom: '16px' }}>
         <label htmlFor="historyDate">Date</label>

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import api from '../api/client'
 
 function SummaryPage() {
@@ -35,11 +34,6 @@ function SummaryPage() {
   return (
     <div style={{ maxWidth: '760px', margin: '40px auto', fontFamily: 'sans-serif' }}>
       <h1>Daily Summary</h1>
-      <p>
-        <Link to="/topup">Back to top-up</Link>
-        {' | '}
-        <Link to="/travel-pass">Travel Pass</Link>
-      </p>
 
       <form onSubmit={handleSubmit} style={{ marginBottom: '16px' }}>
         <label htmlFor="summaryDate">Date</label>

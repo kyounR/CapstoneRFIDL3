@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import api from '../api/client'
 
 function TopupPage() {
@@ -80,11 +79,6 @@ function TopupPage() {
   return (
     <div style={{ maxWidth: '560px', margin: '40px auto', fontFamily: 'sans-serif' }}>
       <h1>Top-up</h1>
-      <p>
-        <Link to="/summary">Go to summary</Link>
-        {' | '}
-        <Link to="/travel-pass">Travel Pass</Link>
-      </p>
       <p style={{ marginBottom: '16px' }}>
         Top-ups are charged at face value. Discounts apply only during fare deduction.
       </p>

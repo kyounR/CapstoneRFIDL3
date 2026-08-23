@@ -1,5 +1,4 @@
 import { Fragment, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import api from '../api/client'
 
 function getToday() {
@@ -202,7 +201,6 @@ function DailyRemittanceHistoryPage() {
 
   return <div style={{ maxWidth: '1100px', margin: '40px auto', fontFamily: 'sans-serif' }}>
     <h1>Daily Remittance History</h1>
-    <p style={{ marginBottom: '16px' }}><Link to="/remittance">Remittance</Link></p>
     <div style={{ marginBottom: '16px' }}><label htmlFor="historyDate">Date</label><input id="historyDate" type="date" value={date} onChange={(event) => setDate(event.target.value)} style={{ marginLeft: '8px', padding: '6px' }} /></div>
     {error ? <p style={{ color: 'crimson' }}>{error}</p> : null}
     {isLoading ? <p>Loading remittance history...</p> : null}

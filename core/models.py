@@ -88,6 +88,47 @@ class Line(models.Model):
 		return self.name
 
 
+class Terminal(models.Model):
+	name = models.CharField(max_length=255, unique=True)
+
+	def __str__(self):
+		return self.name
+
+
+class Driver(models.Model):
+	full_name = models.CharField(max_length=255)
+	contact_number = models.CharField(max_length=30, blank=True, null=True)
+
+	def __str__(self):
+		return self.full_name
+
+
+class FeeSettings(models.Model):
+	terminal_fee_percentage = models.DecimalField(
+		max_digits=12,
+		decimal_places=2,
+		default=Decimal('10.00'),
+	)
+	ps_fee = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+	water_fee = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+	dispatcher_collection_fee = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+	ftb = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+	savings = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+	trust_fund = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+	updated_at = models.DateTimeField(auto_now=True)
+
+	def save(self, *args, **kwargs):
+		self.pk = 1
+		super().save(*args, **kwargs)
+
+	@classmethod
+	def get_current(cls):
+		return cls.objects.get_or_create(pk=1)[0]
+
+	def __str__(self):
+		return 'Current fee settings'
+
+
 class Vehicle(models.Model):
 	plate_number = models.CharField(max_length=20, unique=True)
 	line = models.ForeignKey(Line, on_delete=models.PROTECT, related_name='vehicles')
@@ -95,6 +136,14 @@ class Vehicle(models.Model):
 		null=True,
 		blank=True,
 		validators=[MinValueValidator(1)],
+	)
+	is_light_vehicle = models.BooleanField(default=False)
+	assigned_driver = models.ForeignKey(
+		Driver,
+		null=True,
+		blank=True,
+		on_delete=models.SET_NULL,
+		related_name='assigned_vehicles',
 	)
 	is_active = models.BooleanField(default=True)
 

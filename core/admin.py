@@ -1,6 +1,17 @@
 from django.contrib import admin
 
-from .models import Card, Destination, Line, ManifestCorrection, Passenger, Trip, Vehicle
+from .models import (
+	Card,
+	Destination,
+	Driver,
+	FeeSettings,
+	Line,
+	ManifestCorrection,
+	Passenger,
+	Terminal,
+	Trip,
+	Vehicle,
+)
 
 
 admin.site.register(Passenger)
@@ -10,3 +21,6 @@ admin.site.register(Line)
 admin.site.register(Destination)
 admin.site.register(Trip)
 admin.site.register(ManifestCorrection)
+admin.site.register(Terminal)
+admin.site.register(Driver)
+admin.site.register(FeeSettings)

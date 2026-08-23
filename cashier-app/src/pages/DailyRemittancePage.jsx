@@ -186,6 +186,30 @@ function DailyRemittancePage() {
     }
   }
 
+  async function handleCancel() {
+    const roundCount = rounds.length
+    const confirmationMessage = roundCount > 0
+      ? `This remittance has ${roundCount} dispatch rounds already added. Canceling will permanently delete this record. Are you sure?`
+      : 'Cancel this remittance?'
+
+    if (!window.confirm(confirmationMessage)) return
+
+    setBusyAction('cancel')
+    setError('')
+    try {
+      await api.post(`remittances/${remittance.id}/cancel/`)
+      setPageState(0)
+      setRemittance(null)
+      setRounds([])
+      resetForm()
+      await fetchPickerData()
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || 'Could not cancel remittance.')
+    } finally {
+      setBusyAction('')
+    }
+  }
+
   function switchRemittance() {
     setPageState(0)
     setRemittance(null)
@@ -282,6 +306,9 @@ function DailyRemittancePage() {
               <button type="submit" disabled={busyAction === 'fees'} style={{ padding: '8px 14px' }}>{busyAction === 'fees' ? 'Saving...' : 'Save Fees'}</button>
             </form>
             <button type="button" onClick={handleFinalize} disabled={busyAction !== ''} style={{ marginTop: '20px', padding: '8px 14px' }}>Finalize Remittance</button>
+            <button type="button" onClick={handleCancel} disabled={busyAction !== ''} style={{ marginTop: '20px', marginLeft: '8px', padding: '8px 14px' }}>
+              {busyAction === 'cancel' ? 'Canceling...' : 'Cancel Remittance'}
+            </button>
           </> : null}
         </section>
       ) : null}

@@ -4,6 +4,7 @@ from .models import (
     Card,
     DailyRemittance,
     Destination,
+    Dispatcher,
     DispatchRound,
     FareManifestEntry,
     ManifestCorrection,
@@ -58,6 +59,12 @@ class DriverSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class DispatcherSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Dispatcher
+        fields = '__all__'
+
+
 class TripSerializer(serializers.ModelSerializer):
     class Meta:
         model = Trip
@@ -88,6 +95,7 @@ class DailyRemittanceSerializer(serializers.ModelSerializer):
     cashier = serializers.PrimaryKeyRelatedField(read_only=True)
     is_finalized = serializers.BooleanField(read_only=True)
     finalized_at = serializers.DateTimeField(read_only=True)
+    terminal_fee_percentage = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     terminal_fee = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     gross = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     subtotal = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)

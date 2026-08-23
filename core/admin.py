@@ -4,6 +4,7 @@ from .models import (
 	Card,
 	Destination,
 	Driver,
+	Dispatcher,
 	FeeSettings,
 	Line,
 	ManifestCorrection,
@@ -23,4 +24,5 @@ admin.site.register(Trip)
 admin.site.register(ManifestCorrection)
 admin.site.register(Terminal)
 admin.site.register(Driver)
+admin.site.register(Dispatcher)
 admin.site.register(FeeSettings)

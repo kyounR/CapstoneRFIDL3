@@ -103,6 +103,14 @@ class Driver(models.Model):
 		return self.full_name
 
 
+class Dispatcher(models.Model):
+	full_name = models.CharField(max_length=255)
+	contact_number = models.CharField(max_length=30, blank=True, null=True)
+
+	def __str__(self):
+		return self.full_name
+
+
 class FeeSettings(models.Model):
 	terminal_fee_percentage = models.DecimalField(
 		max_digits=12,
@@ -173,7 +181,7 @@ class DailyRemittance(models.Model):
 		on_delete=models.PROTECT,
 		related_name='daily_remittances',
 	)
-	dispatcher_name = models.CharField(max_length=255)
+	dispatcher = models.ForeignKey(Dispatcher, on_delete=models.PROTECT, related_name='daily_remittances')
 	date = models.DateField()
 	driver = models.ForeignKey(Driver, on_delete=models.PROTECT, related_name='daily_remittances')
 	original_assigned_driver = models.ForeignKey(

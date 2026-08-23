@@ -29,9 +29,11 @@ function DailyRemittancePage() {
   const [terminals, setTerminals] = useState([])
   const [vehicles, setVehicles] = useState([])
   const [drivers, setDrivers] = useState([])
+  const [dispatchers, setDispatchers] = useState([])
   const [terminalId, setTerminalId] = useState('')
   const [vehicleId, setVehicleId] = useState('')
   const [driverId, setDriverId] = useState('')
+  const [dispatcherName, setDispatcherName] = useState('')
   const [date, setDate] = useState(getToday())
   const [substituteFee, setSubstituteFee] = useState('')
   const [remittance, setRemittance] = useState(null)
@@ -47,16 +49,18 @@ function DailyRemittancePage() {
     setIsLoading(true)
     setError('')
     try {
-      const [remittanceResponse, terminalResponse, vehicleResponse, driverResponse] = await Promise.all([
+      const [remittanceResponse, terminalResponse, vehicleResponse, driverResponse, dispatcherResponse] = await Promise.all([
         api.get('remittances/', { params: { is_finalized: false } }),
         api.get('terminals/'),
         api.get('vehicles/'),
         api.get('drivers/'),
+        api.get('dispatchers/'),
       ])
       setRemittances(getListData(remittanceResponse.data))
       setTerminals(getListData(terminalResponse.data))
       setVehicles(getListData(vehicleResponse.data))
       setDrivers(getListData(driverResponse.data))
+      setDispatchers(getListData(dispatcherResponse.data))
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not load remittance data.')
     } finally {
@@ -72,6 +76,7 @@ function DailyRemittancePage() {
     setTerminalId('')
     setVehicleId('')
     setDriverId('')
+    setDispatcherName('')
     setSubstituteFee('')
     setDate(getToday())
   }
@@ -110,7 +115,7 @@ function DailyRemittancePage() {
     event.preventDefault()
     setBusyAction('create')
     setError('')
-    const payload = { terminal: Number(terminalId), vehicle: Number(vehicleId), driver: Number(driverId), date }
+    const payload = { terminal: Number(terminalId), vehicle: Number(vehicleId), driver: Number(driverId), dispatcher: Number(dispatcherName), date }
     if (substituteFee !== '') payload.substitute_fee = substituteFee
     try {
       const response = await api.post('remittances/', payload)
@@ -195,6 +200,7 @@ function DailyRemittancePage() {
   const detailDriver = drivers.find((driver) => driver.id === remittance?.driver)
   const originalAssignedDriver = drivers.find((driver) => driver.id === remittance?.original_assigned_driver)
   const detailTerminal = terminals.find((terminal) => terminal.id === remittance?.terminal)
+  const detailDispatcher = dispatchers.find((dispatcher) => dispatcher.id === remittance?.dispatcher)
 
   return (
     <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'sans-serif' }}>
@@ -235,6 +241,11 @@ function DailyRemittancePage() {
             {drivers.map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name}</option>)}
           </select>
           {isSubstitution ? <div style={{ marginBottom: '12px' }}><label htmlFor="substituteFee">Substitute fee</label><input id="substituteFee" type="number" min="0" step="0.01" value={substituteFee} onChange={(event) => setSubstituteFee(event.target.value)} style={{ display: 'block', padding: '8px', marginTop: '4px' }} /><p>Fee owed by the substitute driver to the assigned driver.</p></div> : null}
+          <label htmlFor="dispatcher">Dispatcher</label>
+          <select id="dispatcher" value={dispatcherName} onChange={(event) => setDispatcherName(event.target.value)} required style={{ display: 'block', width: '100%', padding: '8px', margin: '4px 0 12px' }}>
+            <option value="">Select a dispatcher</option>
+            {dispatchers.map((dispatcher) => <option key={dispatcher.id} value={dispatcher.id}>{dispatcher.full_name}</option>)}
+          </select>
           <label htmlFor="remittanceDate">Date</label>
           <input id="remittanceDate" type="date" value={date} onChange={(event) => setDate(event.target.value)} required style={{ display: 'block', padding: '8px', margin: '4px 0 12px' }} />
           <button type="submit" disabled={busyAction === 'create'} style={{ padding: '8px 14px' }}>{busyAction === 'create' ? 'Creating...' : 'Start Remittance'}</button>
@@ -248,6 +259,7 @@ function DailyRemittancePage() {
           <div style={{ padding: '12px', border: '1px solid #ccc', marginBottom: '20px' }}>
             <h2>{detailTerminal?.name || remittance.terminal} - {detailVehicle?.plate_number || remittance.vehicle}</h2>
             <p><strong>Driver:</strong> {detailDriver?.full_name || remittance.driver}</p>
+            <p><strong>Dispatcher:</strong> {detailDispatcher?.full_name || remittance.dispatcher}</p>
             <p><strong>Date:</strong> {remittance.date}</p>
             {detailVehicle?.is_light_vehicle ? <span style={{ padding: '3px 6px', border: '1px solid #999' }}>Light vehicle</span> : null}
             {remittance.substitute_fee != null ? <p>Substitute driver — original assigned driver: {originalAssignedDriver?.full_name || remittance.original_assigned_driver}, fee: {remittance.substitute_fee}</p> : null}

@@ -17,7 +17,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Card, DailyRemittance, Destination, DispatchRound, Driver, FareManifestEntry, FeeSettings, ManifestCorrection, ManifestTrip, Passenger, RemittanceCorrection, Terminal, Transaction, Trip, Vehicle
+from .models import Card, DailyRemittance, Destination, DispatchRound, Dispatcher, Driver, FareManifestEntry, FeeSettings, ManifestCorrection, ManifestTrip, Passenger, RemittanceCorrection, Terminal, Transaction, Trip, Vehicle
 from .serializers import (
     CardSerializer,
     DailyRemittanceSerializer,
@@ -26,6 +26,7 @@ from .serializers import (
     ManifestCorrectionSerializer,
     ManifestTripSerializer,
     DestinationSerializer,
+    DispatcherSerializer,
     DriverSerializer,
     RemittanceCorrectionSerializer,
     TerminalSerializer,
@@ -1354,6 +1355,17 @@ class TerminalViewSet(viewsets.ReadOnlyModelViewSet):
 class DriverViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Driver.objects.all().order_by('full_name')
     serializer_class = DriverSerializer
+    permission_classes = [IsAuthenticated]
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if not _has_cashier_or_admin_role(request):
+            raise PermissionDenied('Only cashier or admin users can access this endpoint.')
+
+
+class DispatcherViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Dispatcher.objects.all().order_by('full_name')
+    serializer_class = DispatcherSerializer
     permission_classes = [IsAuthenticated]
 
     def initial(self, request, *args, **kwargs):

@@ -5,6 +5,7 @@ from .views import (
     admin_dashboard_view,
     admin_reports_export_view,
     DestinationViewSet,
+    DispatcherViewSet,
     DriverViewSet,
     TerminalViewSet,
     VehicleViewSet,
@@ -27,6 +28,7 @@ router.register('destinations', DestinationViewSet, basename='destination')
 router.register('vehicles', VehicleViewSet, basename='vehicle')
 router.register('terminals', TerminalViewSet, basename='terminal')
 router.register('drivers', DriverViewSet, basename='driver')
+router.register('dispatchers', DispatcherViewSet, basename='dispatcher')
 router.register('remittances', DailyRemittanceViewSet, basename='remittance')
 router.register('manifests', ManifestTripViewSet, basename='manifest')
 router.register('manifest-entries', FareManifestEntryViewSet, basename='manifest-entry')

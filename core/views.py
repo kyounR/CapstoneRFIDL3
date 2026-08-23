@@ -17,7 +17,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Card, DailyRemittance, Destination, DispatchRound, FareManifestEntry, FeeSettings, ManifestCorrection, ManifestTrip, Passenger, Transaction, Trip, Vehicle
+from .models import Card, DailyRemittance, Destination, DispatchRound, Driver, FareManifestEntry, FeeSettings, ManifestCorrection, ManifestTrip, Passenger, RemittanceCorrection, Terminal, Transaction, Trip, Vehicle
 from .serializers import (
     CardSerializer,
     DailyRemittanceSerializer,
@@ -26,6 +26,7 @@ from .serializers import (
     ManifestCorrectionSerializer,
     ManifestTripSerializer,
     DestinationSerializer,
+    RemittanceCorrectionSerializer,
     VehicleSerializer,
 )
 
@@ -502,6 +503,98 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
         )
         instance.delete()
 
+    @action(detail=True, methods=['POST'], url_path='admin-correct')
+    def admin_correct(self, request, pk=None):
+        if not _has_admin_role(request):
+            return Response(
+                {'error': 'Only admin users can create remittance corrections.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        reason = request.data.get('reason')
+        if not isinstance(reason, str) or not reason.strip():
+            return Response(
+                {'error': 'A non-empty reason is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        editable_fields = (
+            'terminal', 'date', 'driver', 'substitute_fee', 'ps_fee',
+            'water_fee', 'dispatcher_collection_fee', 'ftb', 'savings',
+            'trust_fund',
+        )
+        with transaction.atomic():
+            try:
+                remittance = DailyRemittance.objects.select_for_update().get(pk=pk)
+            except DailyRemittance.DoesNotExist:
+                return Response({'error': 'Daily Remittance not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+            if not remittance.is_finalized:
+                return Response(
+                    {'error': 'Only finalized Daily Remittances can be corrected.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            changes = []
+            for field_name in editable_fields:
+                if field_name not in request.data:
+                    continue
+                raw_value = request.data[field_name]
+                old_value = getattr(remittance, field_name)
+                corrected_value = raw_value
+
+                if field_name == 'terminal':
+                    try:
+                        corrected_value = Terminal.objects.get(pk=raw_value)
+                    except (Terminal.DoesNotExist, TypeError, ValueError):
+                        return Response({'error': 'A valid terminal is required.'}, status=status.HTTP_400_BAD_REQUEST)
+                elif field_name == 'driver':
+                    try:
+                        corrected_value = Driver.objects.get(pk=raw_value)
+                    except (Driver.DoesNotExist, TypeError, ValueError):
+                        return Response({'error': 'A valid driver is required.'}, status=status.HTTP_400_BAD_REQUEST)
+                elif field_name == 'date':
+                    corrected_value = parse_date(str(raw_value))
+                    if corrected_value is None:
+                        return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+                elif field_name in {
+                    'substitute_fee', 'ps_fee', 'water_fee', 'dispatcher_collection_fee',
+                    'ftb', 'savings', 'trust_fund',
+                }:
+                    try:
+                        corrected_value = Decimal(str(raw_value)) if raw_value != '' else None
+                    except Exception:
+                        return Response({'error': f'{field_name} must be a valid number.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                if corrected_value != old_value:
+                    changes.append((field_name, str(old_value) if old_value is not None else '', str(corrected_value) if corrected_value is not None else '', corrected_value))
+
+            for field_name, old_value, new_value, corrected_value in changes:
+                setattr(remittance, field_name, corrected_value)
+                RemittanceCorrection.objects.create(
+                    daily_remittance=remittance,
+                    field_name=field_name,
+                    old_value=old_value,
+                    new_value=new_value,
+                    reason=reason.strip(),
+                    admin=request.user,
+                )
+            if changes:
+                remittance.save(update_fields=[change[0] for change in changes])
+
+        return Response(self.get_serializer(remittance).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['GET'], url_path='corrections')
+    def corrections(self, request, pk=None):
+        remittance = self.get_object()
+        corrections = RemittanceCorrection.objects.filter(
+            daily_remittance=remittance,
+        ).select_related('admin', 'dispatch_round').order_by('corrected_at')
+        return Response(
+            RemittanceCorrectionSerializer(corrections, many=True).data,
+            status=status.HTTP_200_OK,
+        )
+
     @action(detail=True, methods=['GET', 'POST'], url_path='rounds')
     def rounds(self, request, pk=None):
         remittance = self.get_object()
@@ -570,6 +663,68 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Dispatch round not found.'}, status=status.HTTP_404_NOT_FOUND)
         dispatch_round.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def dispatch_round_admin_correct_view(request, pk=None):
+    if not _has_admin_role(request):
+        return Response(
+            {'error': 'Only admin users can create remittance corrections.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    reason = request.data.get('reason')
+    if not isinstance(reason, str) or not reason.strip():
+        return Response(
+            {'error': 'A non-empty reason is required.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    with transaction.atomic():
+        try:
+            dispatch_round = DispatchRound.objects.select_for_update().select_related('remittance').get(pk=pk)
+        except DispatchRound.DoesNotExist:
+            return Response({'error': 'Dispatch round not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        remittance = DailyRemittance.objects.select_for_update().get(pk=dispatch_round.remittance.pk)
+        if not remittance.is_finalized:
+            return Response(
+                {'error': 'Only finalized Daily Remittances can be corrected.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        changes = []
+        if 'amount' in request.data:
+            try:
+                corrected_amount = Decimal(str(request.data['amount']))
+            except Exception:
+                return Response({'error': 'amount must be a valid number.'}, status=status.HTTP_400_BAD_REQUEST)
+            if corrected_amount != dispatch_round.amount:
+                changes.append(('amount', str(dispatch_round.amount), str(corrected_amount), corrected_amount))
+
+        if 'departure_time' in request.data:
+            corrected_time = parse_time(str(request.data['departure_time']))
+            if corrected_time is None:
+                return Response({'error': 'Invalid departure_time format. Use HH:MM[:ss].'}, status=status.HTTP_400_BAD_REQUEST)
+            if corrected_time != dispatch_round.departure_time:
+                changes.append(('departure_time', str(dispatch_round.departure_time), str(corrected_time), corrected_time))
+
+        for field_name, old_value, new_value, corrected_value in changes:
+            setattr(dispatch_round, field_name, corrected_value)
+            RemittanceCorrection.objects.create(
+                daily_remittance=remittance,
+                dispatch_round=dispatch_round,
+                field_name=field_name,
+                old_value=old_value,
+                new_value=new_value,
+                reason=reason.strip(),
+                admin=request.user,
+            )
+        if changes:
+            dispatch_round.save(update_fields=[change[0] for change in changes])
+
+    return Response(DispatchRoundSerializer(dispatch_round).data, status=status.HTTP_200_OK)
 
 
 class ManifestTripViewSet(viewsets.ModelViewSet):

@@ -8,6 +8,7 @@ from .views import (
     VehicleViewSet,
     card_lookup_view,
     DailyRemittanceViewSet,
+    dispatch_round_admin_correct_view,
     FareManifestEntryViewSet,
     HealthCheckView,
     ManifestTripViewSet,
@@ -37,5 +38,6 @@ urlpatterns = [
     path('reports/', reports_view, name='reports'),
     path('manifest-entries/tally/', manifest_entry_tally_view, name='manifest-entry-tally'),
     path('manifest-entries/untally/', manifest_entry_untally_view, name='manifest-entry-untally'),
+    path('dispatch-rounds/<int:pk>/admin-correct/', dispatch_round_admin_correct_view, name='dispatch-round-admin-correct'),
     path('', include(router.urls)),
 ]

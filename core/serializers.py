@@ -9,6 +9,8 @@ from .models import (
     ManifestCorrection,
     ManifestTrip,
     Passenger,
+    RemittanceCorrection,
+    RemittanceCorrection,
     Transaction,
     Trip,
     Vehicle,
@@ -157,4 +159,13 @@ class ManifestCorrectionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ManifestCorrection
+        fields = '__all__'
+
+
+class RemittanceCorrectionSerializer(serializers.ModelSerializer):
+    admin_username = serializers.CharField(source='admin.username', read_only=True)
+    dispatch_round_number = serializers.IntegerField(source='dispatch_round.round_number', read_only=True)
+
+    class Meta:
+        model = RemittanceCorrection
         fields = '__all__'

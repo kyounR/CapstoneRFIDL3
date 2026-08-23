@@ -27,6 +27,7 @@ function RequireAuth() {
         <span>Logged in as {username} ({role})</span>
         <div>
           {role === 'admin' ? <Link to="/admin/dashboard" style={{ marginRight: '12px' }}>Admin Dashboard</Link> : null}
+          {role === 'admin' ? <Link to="/admin/reports" style={{ marginRight: '12px' }}>Reports</Link> : null}
           <button type="button" onClick={handleLogout} style={{ padding: '6px 10px' }}>
             Log out
           </button>

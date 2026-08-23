@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import RequireAdmin from './components/RequireAdmin'
 import RequireAuth from './components/RequireAuth'
 import AdminDashboardPage from './pages/AdminDashboardPage'
+import AdminReportPage from './pages/AdminReportPage'
 import LoginPage from './pages/LoginPage'
 import SummaryPage from './pages/SummaryPage'
 import TopupPage from './pages/TopupPage'
@@ -19,6 +20,7 @@ function App() {
         <Route path="/travel-pass/history" element={<TravelPassHistoryPage />} />
         <Route element={<RequireAdmin />}>
           <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+          <Route path="/admin/reports" element={<AdminReportPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />

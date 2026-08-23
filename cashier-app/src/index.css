@@ -6,3 +6,15 @@ body {
   margin: 0;
   font-family: sans-serif;
 }
+
+@media print {
+  header,
+  .report-controls {
+    display: none !important;
+  }
+
+  body {
+    color: #000;
+    background: #fff;
+  }
+}

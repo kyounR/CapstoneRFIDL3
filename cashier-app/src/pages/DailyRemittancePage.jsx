@@ -193,6 +193,7 @@ function DailyRemittancePage() {
   const isSubstitution = selectedVehicle?.assigned_driver && selectedVehicle.assigned_driver !== Number(driverId)
   const detailVehicle = vehicles.find((vehicle) => vehicle.id === remittance?.vehicle)
   const detailDriver = drivers.find((driver) => driver.id === remittance?.driver)
+  const originalAssignedDriver = drivers.find((driver) => driver.id === remittance?.original_assigned_driver)
   const detailTerminal = terminals.find((terminal) => terminal.id === remittance?.terminal)
 
   return (
@@ -249,11 +250,12 @@ function DailyRemittancePage() {
             <p><strong>Driver:</strong> {detailDriver?.full_name || remittance.driver}</p>
             <p><strong>Date:</strong> {remittance.date}</p>
             {detailVehicle?.is_light_vehicle ? <span style={{ padding: '3px 6px', border: '1px solid #999' }}>Light vehicle</span> : null}
+            {remittance.substitute_fee != null ? <p>Substitute driver — original assigned driver: {originalAssignedDriver?.full_name || remittance.original_assigned_driver}, fee: {remittance.substitute_fee}</p> : null}
           </div>
 
           <h3>Dispatch Rounds</h3>
           {rounds.length > 0 ? <table border="1" cellPadding="6" style={{ borderCollapse: 'collapse', width: '100%', marginBottom: '12px' }}><thead><tr><th>Round</th><th>Amount</th><th>Departure Time</th></tr></thead><tbody>{rounds.map((round) => <tr key={round.id}><td>{round.round_number}</td><td>{round.amount}</td><td>{round.departure_time}</td></tr>)}</tbody></table> : <p>No rounds added yet.</p>}
-          {rounds.length < 5 ? <form onSubmit={handleAddRound} style={{ marginBottom: '20px' }}><input type="number" min="0" step="0.01" placeholder="Amount" value={roundAmount} onChange={(event) => setRoundAmount(event.target.value)} required style={{ padding: '7px', marginRight: '8px' }} /><input type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} required style={{ padding: '7px', marginRight: '8px' }} /><button type="submit" disabled={busyAction === 'round'} style={{ padding: '7px 10px' }}>{busyAction === 'round' ? 'Adding...' : `Add Round ${rounds.length + 1}`}</button></form> : <p>All 5 dispatch rounds have been added.</p>}
+          {!remittance.is_finalized ? (rounds.length < 5 ? <form onSubmit={handleAddRound} style={{ marginBottom: '20px' }}><input type="number" min="0" step="0.01" placeholder="Amount" value={roundAmount} onChange={(event) => setRoundAmount(event.target.value)} required style={{ padding: '7px', marginRight: '8px' }} /><input type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} required style={{ padding: '7px', marginRight: '8px' }} /><button type="submit" disabled={busyAction === 'round'} style={{ padding: '7px 10px' }}>{busyAction === 'round' ? 'Adding...' : `Add Round ${rounds.length + 1}`}</button></form> : <p>All 5 dispatch rounds have been added.</p>) : null}
 
           <h3>Computed Figures</h3>
           <p>Gross: {remittance.gross}</p>
@@ -261,12 +263,14 @@ function DailyRemittancePage() {
           <p>Subtotal: {remittance.subtotal}</p>
 
           <h3>Fees</h3>
-          <form onSubmit={handleFeeUpdate}>
-            <p><strong>Terminal Fee:</strong> {remittance.terminal_fee} (computed)</p>
-            {feeFields.map(([field, label]) => <div key={field} style={{ marginBottom: '8px' }}><label htmlFor={field}>{label}</label><input id={field} type="number" min="0" step="0.01" value={feeValues[field] ?? ''} onChange={(event) => setFeeValues((current) => ({ ...current, [field]: event.target.value }))} style={{ display: 'block', padding: '6px', marginTop: '3px' }} /></div>)}
-            <button type="submit" disabled={busyAction === 'fees'} style={{ padding: '8px 14px' }}>{busyAction === 'fees' ? 'Saving...' : 'Save Fees'}</button>
-          </form>
-          <button type="button" onClick={handleFinalize} disabled={busyAction !== ''} style={{ marginTop: '20px', padding: '8px 14px' }}>Finalize Remittance</button>
+          {!remittance.is_finalized ? <>
+            <form onSubmit={handleFeeUpdate}>
+              <p><strong>Terminal Fee:</strong> {remittance.terminal_fee} (computed)</p>
+              {feeFields.map(([field, label]) => <div key={field} style={{ marginBottom: '8px' }}><label htmlFor={field}>{label}</label><input id={field} type="number" min="0" step="0.01" value={feeValues[field] ?? ''} onChange={(event) => setFeeValues((current) => ({ ...current, [field]: event.target.value }))} style={{ display: 'block', padding: '6px', marginTop: '3px' }} /></div>)}
+              <button type="submit" disabled={busyAction === 'fees'} style={{ padding: '8px 14px' }}>{busyAction === 'fees' ? 'Saving...' : 'Save Fees'}</button>
+            </form>
+            <button type="button" onClick={handleFinalize} disabled={busyAction !== ''} style={{ marginTop: '20px', padding: '8px 14px' }}>Finalize Remittance</button>
+          </> : null}
         </section>
       ) : null}
     </div>

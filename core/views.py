@@ -495,6 +495,16 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.queryset)
+        date_param = request.query_params.get('date')
+        if date_param:
+            remittance_date = parse_date(date_param)
+            if remittance_date is None:
+                return Response(
+                    {'error': 'Invalid date format. Use YYYY-MM-DD.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            queryset = queryset.filter(date=remittance_date)
+
         finalized_param = request.query_params.get('is_finalized')
         if finalized_param is not None:
             if finalized_param.lower() not in {'true', 'false'}:

@@ -9,7 +9,7 @@ from django.db.models import Count, Q, Sum
 from django.http import HttpResponse
 from django.utils.dateparse import parse_date, parse_time
 from django.utils.timezone import localdate, now
-from rest_framework import status, viewsets
+from rest_framework import serializers, status, viewsets
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action, api_view, authentication_classes, permission_classes
 from rest_framework.exceptions import PermissionDenied
@@ -487,6 +487,20 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
             if field_name in serializer.validated_data:
                 defaults.pop(field_name)
         serializer.save(**defaults)
+
+    def perform_update(self, serializer):
+        if serializer.instance.is_finalized:
+            raise serializers.ValidationError(
+                'This Daily Remittance has been finalized and can no longer be edited.'
+            )
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.is_finalized:
+            raise serializers.ValidationError(
+                'This Daily Remittance has been finalized and can no longer be edited.'
+            )
+        instance.delete()
 
     @action(detail=True, methods=['GET', 'POST'], url_path='rounds')
     def rounds(self, request, pk=None):

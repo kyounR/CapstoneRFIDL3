@@ -70,6 +70,9 @@ class DispatchRoundSerializer(serializers.ModelSerializer):
 
 
 class DailyRemittanceSerializer(serializers.ModelSerializer):
+    cashier = serializers.PrimaryKeyRelatedField(read_only=True)
+    is_finalized = serializers.BooleanField(read_only=True)
+    finalized_at = serializers.DateTimeField(read_only=True)
     terminal_fee = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     gross = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     subtotal = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)

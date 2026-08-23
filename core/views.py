@@ -26,7 +26,9 @@ from .serializers import (
     ManifestCorrectionSerializer,
     ManifestTripSerializer,
     DestinationSerializer,
+    DriverSerializer,
     RemittanceCorrectionSerializer,
+    TerminalSerializer,
     VehicleSerializer,
 )
 
@@ -484,10 +486,29 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
             'original_assigned_driver': vehicle.assigned_driver,
             'cashier': self.request.user,
         }
-        for field_name in defaults:
-            if field_name in serializer.validated_data:
-                defaults.pop(field_name)
+        defaults = {
+            field_name: value
+            for field_name, value in defaults.items()
+            if field_name not in serializer.validated_data
+        }
         serializer.save(**defaults)
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.queryset)
+        finalized_param = request.query_params.get('is_finalized')
+        if finalized_param is not None:
+            if finalized_param.lower() not in {'true', 'false'}:
+                return Response(
+                    {'error': 'is_finalized must be true or false.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            queryset = queryset.filter(is_finalized=finalized_param.lower() == 'true')
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        return Response(self.get_serializer(queryset, many=True).data, status=status.HTTP_200_OK)
 
     def perform_update(self, serializer):
         if serializer.instance.is_finalized:
@@ -1301,6 +1322,28 @@ class DestinationViewSet(viewsets.ReadOnlyModelViewSet):
 class VehicleViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Vehicle.objects.filter(is_active=True).order_by('plate_number')
     serializer_class = VehicleSerializer
+    permission_classes = [IsAuthenticated]
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if not _has_cashier_or_admin_role(request):
+            raise PermissionDenied('Only cashier or admin users can access this endpoint.')
+
+
+class TerminalViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Terminal.objects.all().order_by('name')
+    serializer_class = TerminalSerializer
+    permission_classes = [IsAuthenticated]
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if not _has_cashier_or_admin_role(request):
+            raise PermissionDenied('Only cashier or admin users can access this endpoint.')
+
+
+class DriverViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Driver.objects.all().order_by('full_name')
+    serializer_class = DriverSerializer
     permission_classes = [IsAuthenticated]
 
     def initial(self, request, *args, **kwargs):

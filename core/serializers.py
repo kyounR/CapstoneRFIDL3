@@ -10,6 +10,8 @@ from .models import (
     ManifestTrip,
     Passenger,
     RemittanceCorrection,
+    Driver,
+    Terminal,
     Transaction,
     Trip,
     Vehicle,
@@ -41,6 +43,18 @@ class VehicleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Vehicle
+        fields = '__all__'
+
+
+class TerminalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Terminal
+        fields = '__all__'
+
+
+class DriverSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Driver
         fields = '__all__'
 
 

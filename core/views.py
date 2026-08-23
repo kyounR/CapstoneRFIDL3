@@ -535,6 +535,39 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
         )
         instance.delete()
 
+    @action(detail=True, methods=['POST'], url_path='cancel')
+    def cancel(self, request, pk=None):
+        with transaction.atomic():
+            remittance = DailyRemittance.objects.select_for_update().filter(pk=pk).first()
+            if remittance is None:
+                return Response(
+                    {'error': 'Daily Remittance not found.'},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            if remittance.is_finalized:
+                return Response(
+                    {'error': 'Cannot cancel a finalized Daily Remittance.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            round_count = DispatchRound.objects.filter(
+                remittance=remittance,
+            ).count()
+            had_rounds = round_count > 0
+
+            DispatchRound.objects.filter(remittance=remittance).delete()
+            remittance.delete()
+
+        return Response(
+            {
+                'message': 'Daily Remittance cancelled successfully.',
+                'had_rounds': had_rounds,
+                'round_count': round_count,
+            },
+            status=status.HTTP_200_OK,
+        )
+
     @action(detail=True, methods=['POST'], url_path='admin-correct')
     def admin_correct(self, request, pk=None):
         if not _has_admin_role(request):

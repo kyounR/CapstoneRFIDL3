@@ -205,7 +205,7 @@ function DailyRemittancePage() {
   return (
     <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'sans-serif' }}>
       <h1>Daily Remittance</h1>
-      <p style={{ marginBottom: '16px' }}><Link to="/topup">Back to top-up</Link> {' | '}<Link to="/travel-pass">Travel Pass</Link></p>
+      <p style={{ marginBottom: '16px' }}><Link to="/topup">Back to top-up</Link> {' | '}<Link to="/travel-pass">Travel Pass</Link> {' | '}<Link to="/remittance/history">Remittance History</Link></p>
       {error ? <p style={{ color: 'crimson' }}>{error}</p> : null}
 
       {pageState === 0 ? (

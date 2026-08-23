@@ -551,7 +551,7 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
             )
 
         editable_fields = (
-            'terminal', 'date', 'driver', 'substitute_fee', 'ps_fee',
+            'terminal', 'date', 'driver', 'dispatcher', 'substitute_fee', 'ps_fee',
             'water_fee', 'dispatcher_collection_fee', 'ftb', 'savings',
             'trust_fund',
         )
@@ -585,6 +585,11 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
                         corrected_value = Driver.objects.get(pk=raw_value)
                     except (Driver.DoesNotExist, TypeError, ValueError):
                         return Response({'error': 'A valid driver is required.'}, status=status.HTTP_400_BAD_REQUEST)
+                elif field_name == 'dispatcher':
+                    try:
+                        corrected_value = Dispatcher.objects.get(pk=raw_value)
+                    except (Dispatcher.DoesNotExist, TypeError, ValueError):
+                        return Response({'error': 'A valid dispatcher is required.'}, status=status.HTTP_400_BAD_REQUEST)
                 elif field_name == 'date':
                     corrected_value = parse_date(str(raw_value))
                     if corrected_value is None:

@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.core.management.base import BaseCommand
 
-from core.models import Card, Destination, Line, Passenger, User, Vehicle
+from core.models import Card, Destination, Dispatcher, Driver, FeeSettings, Line, Passenger, Terminal, User, Vehicle
 
 
 class Command(BaseCommand):
@@ -37,6 +37,73 @@ class Command(BaseCommand):
             created_items,
             reused_items,
         )
+
+        terminal_data = ['Terminal A', 'Terminal B']
+        terminals = []
+        for terminal_name in terminal_data:
+            terminal, terminal_created = Terminal.objects.get_or_create(name=terminal_name)
+            terminals.append(terminal)
+            self._record_result(
+                f'Terminal: {terminal_name}',
+                terminal_created,
+                created_items,
+                reused_items,
+            )
+
+        driver_data = [
+            ('Ramon Villanueva', '09171234568'),
+            ('Josefina Manalo', '09181234568'),
+            ('Danilo Mercado', '09191234568'),
+        ]
+        drivers = []
+        for full_name, contact_number in driver_data:
+            driver, driver_created = Driver.objects.get_or_create(
+                full_name=full_name,
+                defaults={'contact_number': contact_number},
+            )
+            if not driver_created:
+                driver.contact_number = contact_number
+                driver.save(update_fields=['contact_number'])
+            drivers.append(driver)
+            self._record_result(
+                f'Driver: {full_name}',
+                driver_created,
+                created_items,
+                reused_items,
+            )
+
+        dispatcher_data = [
+            ('Lorna Bautista', '09171234569'),
+            ('Nestor Garcia', '09181234569'),
+        ]
+        dispatchers = []
+        for full_name, contact_number in dispatcher_data:
+            dispatcher, dispatcher_created = Dispatcher.objects.get_or_create(
+                full_name=full_name,
+                defaults={'contact_number': contact_number},
+            )
+            if not dispatcher_created:
+                dispatcher.contact_number = contact_number
+                dispatcher.save(update_fields=['contact_number'])
+            dispatchers.append(dispatcher)
+            self._record_result(
+                f'Dispatcher: {full_name}',
+                dispatcher_created,
+                created_items,
+                reused_items,
+            )
+
+        fee_settings_created = not FeeSettings.objects.filter(pk=1).exists()
+        fee_settings = FeeSettings.get_current()
+        fee_settings.terminal_fee_percentage = Decimal('10.00')
+        fee_settings.ps_fee = Decimal('20.00')
+        fee_settings.water_fee = Decimal('10.00')
+        fee_settings.dispatcher_collection_fee = Decimal('15.00')
+        fee_settings.ftb = Decimal('10.00')
+        fee_settings.savings = Decimal('20.00')
+        fee_settings.trust_fund = Decimal('20.00')
+        fee_settings.save()
+        self._record_result('FeeSettings: current defaults', fee_settings_created, created_items, reused_items)
 
         passenger_data = [
             ('Juan Dela Cruz', '09171234567', Passenger.DiscountType.REGULAR, 'CARD001'),
@@ -94,8 +161,13 @@ class Command(BaseCommand):
         )
         if not vehicle_created:
             vehicle.line = line
+            vehicle.assigned_driver = drivers[0]
             vehicle.is_active = True
-            vehicle.save(update_fields=['line', 'is_active'])
+            vehicle.save(update_fields=['line', 'assigned_driver', 'is_active'])
+        elif vehicle.assigned_driver_id != drivers[0].id:
+            vehicle.assigned_driver = drivers[0]
+            vehicle.save(update_fields=['assigned_driver'])
+        self._record_result('Vehicle assigned driver: Ramon Villanueva', False, created_items, reused_items)
         self._record_result('Vehicle: ABC-1234', vehicle_created, created_items, reused_items)
 
         route_data = [
@@ -138,6 +210,12 @@ class Command(BaseCommand):
         self.stdout.write('Demo account credentials:')
         self.stdout.write('  admin    / adminpass123')
         self.stdout.write('  cashier1 / cashierpass123')
+        self.stdout.write('')
+        self.stdout.write('Terminals: Terminal A, Terminal B')
+        self.stdout.write('Drivers: Ramon Villanueva, Josefina Manalo, Danilo Mercado')
+        self.stdout.write('Dispatchers: Lorna Bautista, Nestor Garcia')
+        self.stdout.write('Current FeeSettings: terminal 10.00%, PS 20.00, water 10.00, dispatcher 15.00, FTB 10.00, savings 20.00, trust fund 20.00')
+        self.stdout.write('Assigned demo driver: Ramon Villanueva -> ABC-1234')
         self.stdout.write('')
         self.stdout.write('Destinations by fare:')
         for destination in Destination.objects.filter(is_active=True).order_by('base_fare', 'destination_name'):

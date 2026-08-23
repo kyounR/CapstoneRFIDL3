@@ -3,3 +3,4 @@ djangorestframework==3.18.0
 django-cors-headers==4.9.0
 psycopg2-binary==2.9.10
 python-dotenv==1.1.1
+django-stubs==6.1.0

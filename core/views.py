@@ -1,5 +1,6 @@
 import csv
 from io import StringIO
+from datetime import timedelta
 from decimal import Decimal
 from typing import Optional
 
@@ -337,6 +338,20 @@ def tap_view(request):
             return Response({'error': 'Card not found.'}, status=status.HTTP_404_NOT_FOUND)
         if card.status != Card.Status.ACTIVE:
             return Response({'error': 'Card is not active.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        last_fare_txn = Transaction.objects.filter(
+            card=card,
+            transaction_type=Transaction.TransactionType.FARE,
+        ).order_by('-timestamp').first()
+        if last_fare_txn is not None and now() - last_fare_txn.timestamp < timedelta(seconds=7):
+            return Response(
+                {
+                    'success': False,
+                    'error': 'This card was just tapped. Please wait a moment before tapping again.',
+                    'remaining_balance': card.balance,
+                },
+                status=status.HTTP_200_OK,
+            )
 
         destination = Destination.objects.filter(id=destination_id, is_active=True).first()
         if destination is None:

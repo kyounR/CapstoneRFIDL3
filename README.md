@@ -32,13 +32,16 @@ In a second terminal, migrate and seed test data:
 
 powershell
 docker compose exec server python manage.py migrate
+
 docker compose exec server python manage.py seed_demo_data
 
 Frontend, run natively:
 
 powershell
 cd cashier-app
+
 npm install
+
 npm run dev
 
 In another terminal, start up the Python script for RFID:

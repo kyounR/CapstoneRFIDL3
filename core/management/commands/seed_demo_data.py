@@ -38,7 +38,7 @@ class Command(BaseCommand):
             reused_items,
         )
 
-        terminal_data = ['Terminal A', 'Terminal B']
+        terminal_data = ['Calinan', 'Bankerohan']
         terminals = []
         for terminal_name in terminal_data:
             terminal, terminal_created = Terminal.objects.get_or_create(name=terminal_name)
@@ -106,9 +106,9 @@ class Command(BaseCommand):
         self._record_result('FeeSettings: current defaults', fee_settings_created, created_items, reused_items)
 
         passenger_data = [
-            ('Juan Dela Cruz', '09171234567', Passenger.DiscountType.REGULAR, 'CARD001'),
-            ('Maria Santos', '09181234567', Passenger.DiscountType.STUDENT, 'CARD002'),
-            ('Elena Reyes', '09191234567', Passenger.DiscountType.SENIOR, 'CARD003'),
+            ('Juan Dela Cruz', '09171234567', Passenger.DiscountType.REGULAR, '272E4C63'),
+            ('Maria Santos', '09181234567', Passenger.DiscountType.STUDENT, 'A1A12F66'),
+            ('Elena Reyes', '09191234567', Passenger.DiscountType.SENIOR, '153D8C28'),
         ]
 
         for full_name, contact_number, discount_type, card_uid in passenger_data:
@@ -134,7 +134,7 @@ class Command(BaseCommand):
                 uid=card_uid,
                 defaults={
                     'passenger': passenger,
-                    'balance': Decimal('100.00'),
+                    'balance': Decimal('500.00'),
                     'status': Card.Status.ACTIVE,
                 },
             )
@@ -211,7 +211,7 @@ class Command(BaseCommand):
         self.stdout.write('  admin    / adminpass123')
         self.stdout.write('  cashier1 / cashierpass123')
         self.stdout.write('')
-        self.stdout.write('Terminals: Terminal A, Terminal B')
+        self.stdout.write('Terminals: Calinan, Bankerohan')
         self.stdout.write('Drivers: Ramon Villanueva, Josefina Manalo, Danilo Mercado')
         self.stdout.write('Dispatchers: Lorna Bautista, Nestor Garcia')
         self.stdout.write('Current FeeSettings: terminal 10.00%, PS 20.00, water 10.00, dispatcher 15.00, FTB 10.00, savings 20.00, trust fund 20.00')
@@ -221,7 +221,7 @@ class Command(BaseCommand):
         for destination in Destination.objects.filter(is_active=True).order_by('base_fare', 'destination_name'):
             self.stdout.write(f'  {destination.destination_name}: {destination.base_fare}')
         self.stdout.write('')
-        self.stdout.write('Demo cards: CARD001, CARD002, CARD003 (starting balance: 100.00)')
+        self.stdout.write('Demo cards: 272E4C63, A1A12F66, 153D8C28 (starting balance: 100.00)')
 
     @staticmethod
     def _record_result(label, created, created_items, reused_items):

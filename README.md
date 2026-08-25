@@ -6,7 +6,6 @@ Install Node.js
 
 Check for a native Postgres install on the new machine
 
-powershell
 Get-Service | Where-Object {$_.Name -like "*postgres*"}
 
 Get your project files there — git clone if you're using version control
@@ -25,19 +24,18 @@ DB_PORT=5432
 
 Start backend + database:
 
-powershell
 docker compose up --build
+
+(docker compose down/docker compose stop server)
 
 In a second terminal, migrate and seed test data:
 
-powershell
 docker compose exec server python manage.py migrate
 
 docker compose exec server python manage.py seed_demo_data
 
 Frontend, run natively:
 
-powershell
 cd cashier-app
 
 npm install

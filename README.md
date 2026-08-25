@@ -40,3 +40,7 @@ powershell
 cd cashier-app
 npm install
 npm run dev
+
+In another terminal, start up the Python script for RFID:
+
+python rfid_relay.py

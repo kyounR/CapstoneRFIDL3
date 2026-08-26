@@ -71,20 +71,25 @@ function AdminReportPage() {
 
   return (
     <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'serif' }}>
-      <div className="report-controls" style={{ marginBottom: '20px', fontFamily: 'sans-serif' }}>
+      <div className="report-controls card" style={{ marginBottom: '20px', fontFamily: 'var(--font-body)' }}>
         <form onSubmit={handleApply}>
           <label htmlFor="reportStartDate">Start date</label>
-          <input id="reportStartDate" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} style={{ marginLeft: '8px', marginRight: '16px', padding: '6px' }} required />
+          <input id="reportStartDate" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="input" style={{ marginLeft: '8px', marginRight: '16px' }} required />
           <label htmlFor="reportEndDate">End date</label>
-          <input id="reportEndDate" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} style={{ marginLeft: '8px', marginRight: '8px', padding: '6px' }} required />
-          <button type="submit" disabled={isLoading} style={{ padding: '6px 10px' }}>{isLoading ? 'Loading...' : 'Apply'}</button>
-          <button type="button" onClick={handleDownload} disabled={isDownloading} style={{ marginLeft: '8px', padding: '6px 10px' }}>{isDownloading ? 'Downloading...' : 'Download CSV'}</button>
-          <button type="button" onClick={() => window.print()} style={{ marginLeft: '8px', padding: '6px 10px' }}>Print Report</button>
+          <input id="reportEndDate" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="input" style={{ marginLeft: '8px', marginRight: '8px' }} required />
+          <button type="submit" disabled={isLoading} className="btn-primary">{isLoading ? 'Loading...' : 'Apply'}</button>
+          <button type="button" onClick={handleDownload} disabled={isDownloading} className="btn-secondary" style={{ marginLeft: '8px' }}>{isDownloading ? 'Downloading...' : 'Download CSV'}</button>
+          <button type="button" onClick={() => window.print()} className="btn-secondary" style={{ marginLeft: '8px' }}>Print Report</button>
         </form>
       </div>
 
-      {error ? <p style={{ color: 'crimson', fontFamily: 'sans-serif' }}>{error}</p> : null}
-      {isLoading ? <p style={{ fontFamily: 'sans-serif' }}>Loading report...</p> : null}
+      {error ? (
+        <p style={{ fontFamily: 'var(--font-body)' }}>
+          <span className="status-dot status-dot--danger" style={{ marginRight: '8px' }} />
+          {error}
+        </p>
+      ) : null}
+      {isLoading ? <p style={{ fontFamily: 'var(--font-body)' }}>Loading report...</p> : null}
 
       {report ? (
         <article className="management-report">

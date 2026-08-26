@@ -51,7 +51,7 @@ function PublicTapDisplayPage() {
   const isSuccess = tap?.success === true
   const isFailure = tap != null && tap.success === false
 
-  const backgroundColor = isSuccess ? '#1b5e20' : isFailure ? '#8c1c13' : '#1a1a2e'
+  const backgroundColor = isSuccess ? 'var(--success)' : isFailure ? 'var(--danger)' : 'var(--bg)'
 
   return (
     <div
@@ -64,8 +64,8 @@ function PublicTapDisplayPage() {
         justifyContent: 'center',
         gap: '32px',
         backgroundColor,
-        color: '#ffffff',
-        fontFamily: 'sans-serif',
+        color: 'var(--text-primary)',
+        fontFamily: 'var(--font-display)',
         textAlign: 'center',
         padding: '48px',
         transition: 'background-color 0.4s ease',
@@ -78,9 +78,9 @@ function PublicTapDisplayPage() {
           </span>
           <h1 style={{ fontSize: '5rem', margin: 0 }}>{tap.display_name}</h1>
           {tap.destination_name ? (
-            <p style={{ fontSize: '3rem', margin: 0 }}>{tap.destination_name}</p>
+            <p style={{ fontSize: '3rem', margin: 0, fontFamily: 'var(--font-body)' }}>{tap.destination_name}</p>
           ) : null}
-          {isFailure ? <p style={{ fontSize: '2.5rem', margin: 0 }}>{tap.message}</p> : null}
+          {isFailure ? <p style={{ fontSize: '2.5rem', margin: 0, fontFamily: 'var(--font-body)' }}>{tap.message}</p> : null}
         </>
       ) : (
         <>

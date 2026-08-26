@@ -32,10 +32,15 @@ function TapFeedPage() {
   }, [])
 
   return (
-    <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'sans-serif', fontSize: '1.4rem' }}>
+    <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'var(--font-body)', fontSize: '1.4rem' }}>
       <h1 style={{ fontSize: '2.5rem' }}>Tap Feed</h1>
 
-      {error ? <p style={{ color: 'crimson', fontSize: '1.4rem' }}>{error}</p> : null}
+      {error ? (
+        <p style={{ fontSize: '1.4rem' }}>
+          <span className="status-dot status-dot--danger" style={{ marginRight: '8px' }} />
+          {error}
+        </p>
+      ) : null}
 
       {taps.length === 0 && !error ? (
         <p style={{ fontSize: '1.6rem' }}>No taps yet today.</p>
@@ -49,9 +54,9 @@ function TapFeedPage() {
                 alignItems: 'center',
                 gap: '20px',
                 padding: '20px 24px',
-                borderRadius: '8px',
-                backgroundColor: tap.success ? '#e6f7e9' : '#fbe6e6',
-                border: `2px solid ${tap.success ? '#2e8b3d' : '#c92a2a'}`,
+                borderRadius: 'var(--radius)',
+                backgroundColor: 'var(--surface)',
+                border: `2px solid ${tap.success ? 'var(--success)' : 'var(--danger)'}`,
               }}
             >
               <span
@@ -59,20 +64,20 @@ function TapFeedPage() {
                 style={{
                   fontSize: '3rem',
                   lineHeight: 1,
-                  color: tap.success ? '#2e8b3d' : '#c92a2a',
+                  color: tap.success ? 'var(--success)' : 'var(--danger)',
                 }}
               >
                 {tap.success ? '✔' : '✘'}
               </span>
 
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: '1.8rem', fontWeight: 'bold', margin: 0 }}>
+                <p style={{ fontSize: '1.8rem', fontWeight: 'bold', margin: 0, fontFamily: 'var(--font-display)' }}>
                   {tap.passenger_name ? tap.passenger_name : 'Unregistered card'}
                   {tap.destination_name ? ` → ${tap.destination_name}` : ''}
                 </p>
                 <p style={{ fontSize: '1.4rem', margin: '8px 0 0' }}>{tap.message}</p>
                 {tap.success ? (
-                  <p style={{ fontSize: '1.4rem', margin: '8px 0 0' }}>
+                  <p className="numeric" style={{ fontSize: '1.4rem', margin: '8px 0 0' }}>
                     Fare charged: {tap.fare_charged} · Remaining balance: {tap.remaining_balance}
                   </p>
                 ) : null}

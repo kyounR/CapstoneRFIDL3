@@ -41,17 +41,18 @@ function AdminDashboardPage() {
   const hasFinalizedTrips = dashboard?.trip_count > 0
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '40px auto', fontFamily: 'sans-serif' }}>
+    <div style={{ maxWidth: '1000px', margin: '40px auto', fontFamily: 'var(--font-body)' }}>
       <h1>Admin Dashboard</h1>
 
-      <form onSubmit={handleApply} style={{ marginBottom: '20px' }}>
+      <form onSubmit={handleApply} className="card" style={{ marginBottom: '20px' }}>
         <label htmlFor="startDate">Start date</label>
         <input
           id="startDate"
           type="date"
           value={startDate}
           onChange={(event) => setStartDate(event.target.value)}
-          style={{ marginLeft: '8px', marginRight: '16px', padding: '6px' }}
+          className="input"
+          style={{ marginLeft: '8px', marginRight: '16px' }}
           required
         />
         <label htmlFor="endDate">End date</label>
@@ -60,15 +61,21 @@ function AdminDashboardPage() {
           type="date"
           value={endDate}
           onChange={(event) => setEndDate(event.target.value)}
-          style={{ marginLeft: '8px', marginRight: '8px', padding: '6px' }}
+          className="input"
+          style={{ marginLeft: '8px', marginRight: '8px' }}
           required
         />
-        <button type="submit" disabled={isLoading} style={{ padding: '6px 10px' }}>
+        <button type="submit" disabled={isLoading} className="btn-primary">
           {isLoading ? 'Loading...' : 'Apply'}
         </button>
       </form>
 
-      {error ? <p style={{ color: 'crimson' }}>{error}</p> : null}
+      {error ? (
+        <p>
+          <span className="status-dot status-dot--danger" style={{ marginRight: '8px' }} />
+          {error}
+        </p>
+      ) : null}
       {isLoading ? <p>Loading dashboard...</p> : null}
 
       {dashboard && !hasFinalizedTrips ? <p>No finalized Travel Passes in this date range.</p> : null}
@@ -76,28 +83,28 @@ function AdminDashboardPage() {
       {dashboard && hasFinalizedTrips ? (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '12px', marginBottom: '24px' }}>
-            <div style={{ border: '1px solid #ccc', padding: '12px' }}><strong>Total Passengers</strong><p style={{ fontSize: '28px', marginBottom: 0 }}>{dashboard.total_passengers}</p></div>
-            <div style={{ border: '1px solid #ccc', padding: '12px' }}><strong>Total Income</strong><p style={{ fontSize: '28px', marginBottom: 0 }}>{dashboard.total_income}</p></div>
-            <div style={{ border: '1px solid #ccc', padding: '12px' }}><strong>Total Discount Passengers</strong><p style={{ fontSize: '28px', marginBottom: 0 }}>{dashboard.total_discount_passengers}</p></div>
-            <div style={{ border: '1px solid #ccc', padding: '12px' }}><strong>Trip Count</strong><p style={{ fontSize: '28px', marginBottom: 0 }}>{dashboard.trip_count}</p></div>
+            <div className="card"><strong>Total Passengers</strong><p className="numeric" style={{ fontSize: '28px', marginBottom: 0 }}>{dashboard.total_passengers}</p></div>
+            <div className="card"><strong>Total Income</strong><p className="numeric" style={{ fontSize: '28px', marginBottom: 0 }}>{dashboard.total_income}</p></div>
+            <div className="card"><strong>Total Discount Passengers</strong><p className="numeric" style={{ fontSize: '28px', marginBottom: 0 }}>{dashboard.total_discount_passengers}</p></div>
+            <div className="card"><strong>Trip Count</strong><p className="numeric" style={{ fontSize: '28px', marginBottom: 0 }}>{dashboard.trip_count}</p></div>
           </div>
 
           <h2>Popular Destinations</h2>
-          <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', width: '100%', marginBottom: '24px' }}>
+          <table className="table" style={{ marginBottom: '24px' }}>
             <thead><tr><th>Destination</th><th>Passenger Count</th><th>Total Fare</th></tr></thead>
             <tbody>
               {dashboard.popular_destinations.map((destination) => (
-                <tr key={destination.destination_id}><td>{destination.destination_name}</td><td>{destination.passenger_count}</td><td>{destination.total_fare}</td></tr>
+                <tr key={destination.destination_id}><td>{destination.destination_name}</td><td className="numeric">{destination.passenger_count}</td><td className="numeric">{destination.total_fare}</td></tr>
               ))}
             </tbody>
           </table>
 
           <h2>Daily Breakdown</h2>
-          <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <table className="table">
             <thead><tr><th>Date</th><th>Total Passengers</th><th>Total Income</th></tr></thead>
             <tbody>
               {dashboard.daily_breakdown.map((day) => (
-                <tr key={day.date}><td>{day.date}</td><td>{day.total_passengers}</td><td>{day.total_income}</td></tr>
+                <tr key={day.date}><td>{day.date}</td><td className="numeric">{day.total_passengers}</td><td className="numeric">{day.total_income}</td></tr>
               ))}
             </tbody>
           </table>

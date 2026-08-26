@@ -29,9 +29,9 @@ function LoginPage() {
   }
 
   return (
-    <div style={{ maxWidth: '420px', margin: '40px auto', fontFamily: 'sans-serif' }}>
+    <div style={{ maxWidth: '420px', margin: '40px auto', fontFamily: 'var(--font-body)' }}>
       <h1>Cashier Login</h1>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="card">
         <div style={{ marginBottom: '12px' }}>
           <label htmlFor="username">Username</label>
           <input
@@ -39,7 +39,8 @@ function LoginPage() {
             type="text"
             value={username}
             onChange={(event) => setUsername(event.target.value)}
-            style={{ width: '100%', padding: '8px', marginTop: '4px' }}
+            className="input"
+            style={{ width: '100%', marginTop: '4px' }}
             required
           />
         </div>
@@ -51,14 +52,20 @@ function LoginPage() {
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            style={{ width: '100%', padding: '8px', marginTop: '4px' }}
+            className="input"
+            style={{ width: '100%', marginTop: '4px' }}
             required
           />
         </div>
 
-        {error ? <p style={{ color: 'crimson' }}>{error}</p> : null}
+        {error ? (
+          <p>
+            <span className="status-dot status-dot--danger" style={{ marginRight: '8px' }} />
+            {error}
+          </p>
+        ) : null}
 
-        <button type="submit" disabled={isSubmitting} style={{ padding: '8px 14px' }}>
+        <button type="submit" disabled={isSubmitting} className="btn-primary">
           {isSubmitting ? 'Signing in...' : 'Login'}
         </button>
       </form>

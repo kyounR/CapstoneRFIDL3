@@ -1,6 +1,18 @@
 import { useState } from 'react'
 import api from '../api/client'
 
+const CARD_STATUS_BADGE = {
+  active: 'badge--success',
+  lost: 'badge--pending',
+  deactivated: 'badge--danger',
+}
+
+const CARD_STATUS_DOT = {
+  active: 'status-dot--success',
+  lost: 'status-dot--pending',
+  deactivated: 'status-dot--danger',
+}
+
 function TopupPage() {
   const [cardUid, setCardUid] = useState('')
   const [cardLookup, setCardLookup] = useState(null)
@@ -77,13 +89,13 @@ function TopupPage() {
   }
 
   return (
-    <div style={{ maxWidth: '560px', margin: '40px auto', fontFamily: 'sans-serif' }}>
+    <div style={{ maxWidth: '560px', margin: '40px auto', fontFamily: 'var(--font-body)' }}>
       <h1>Top-up</h1>
       <p style={{ marginBottom: '16px' }}>
         Top-ups are charged at face value. Discounts apply only during fare deduction.
       </p>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="card">
         <div style={{ marginBottom: '12px' }}>
           <label htmlFor="cardUid">Card UID</label>
           <input
@@ -91,7 +103,8 @@ function TopupPage() {
             type="text"
             value={cardUid}
             onChange={(event) => setCardUid(event.target.value)}
-            style={{ width: '100%', padding: '8px', marginTop: '4px' }}
+            className="input"
+            style={{ width: '100%', marginTop: '4px' }}
             required
           />
           <div style={{ marginTop: '8px' }}>
@@ -99,21 +112,37 @@ function TopupPage() {
               type="button"
               onClick={handleLookupCard}
               disabled={isLookingUp}
-              style={{ padding: '8px 14px' }}
+              className="btn-secondary"
             >
               {isLookingUp ? 'Looking up...' : 'Look up card'}
             </button>
           </div>
         </div>
 
-        {lookupError ? <p style={{ color: 'crimson' }}>{lookupError}</p> : null}
-        {lookupMessage ? <p style={{ color: 'green' }}>{lookupMessage}</p> : null}
+        {lookupError ? (
+          <p>
+            <span className="status-dot status-dot--danger" style={{ marginRight: '8px' }} />
+            {lookupError}
+          </p>
+        ) : null}
+        {lookupMessage ? (
+          <p>
+            <span className="status-dot status-dot--success" style={{ marginRight: '8px' }} />
+            {lookupMessage}
+          </p>
+        ) : null}
 
         {cardLookup ? (
-          <div style={{ marginBottom: '12px', padding: '12px', border: '1px solid #ccc' }}>
-            <p>Card UID: {cardLookup.uid}</p>
-            <p>Balance: {cardLookup.balance}</p>
-            <p>Status: {cardLookup.status}</p>
+          <div className="card" style={{ marginBottom: '12px' }}>
+            <p className="numeric">Card UID: {cardLookup.uid}</p>
+            <p className="numeric">Balance: {cardLookup.balance}</p>
+            <p>
+              Status:{' '}
+              <span className={`badge ${CARD_STATUS_BADGE[cardLookup.status] || 'badge--pending'}`}>
+                <span className={`status-dot ${CARD_STATUS_DOT[cardLookup.status] || 'status-dot--pending'}`} style={{ marginRight: '6px' }} />
+                {cardLookup.status}
+              </span>
+            </p>
             {cardLookup.passenger ? (
               <>
                 <p>Passenger: {cardLookup.passenger.full_name}</p>
@@ -134,23 +163,32 @@ function TopupPage() {
             min="0.01"
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
-            style={{ width: '100%', padding: '8px', marginTop: '4px' }}
+            className="input numeric"
+            style={{ width: '100%', marginTop: '4px' }}
             required
           />
         </div>
 
-        {topupError ? <p style={{ color: 'crimson' }}>{topupError}</p> : null}
+        {topupError ? (
+          <p>
+            <span className="status-dot status-dot--danger" style={{ marginRight: '8px' }} />
+            {topupError}
+          </p>
+        ) : null}
 
-        <button type="submit" disabled={isSubmitting} style={{ padding: '8px 14px' }}>
+        <button type="submit" disabled={isSubmitting} className="btn-primary">
           {isSubmitting ? 'Processing...' : 'Confirm Top-Up'}
         </button>
       </form>
 
       {topupResult ? (
-        <div style={{ marginTop: '16px', padding: '12px', border: '1px solid #ccc' }}>
-          <p>{topupResult.message}</p>
-          <p>Card UID: {topupResult.card_uid}</p>
-          <p>Updated Balance: {topupResult.balance}</p>
+        <div className="card" style={{ marginTop: '16px' }}>
+          <p>
+            <span className="status-dot status-dot--success" style={{ marginRight: '8px' }} />
+            {topupResult.message}
+          </p>
+          <p className="numeric">Card UID: {topupResult.card_uid}</p>
+          <p className="numeric">Updated Balance: {topupResult.balance}</p>
         </div>
       ) : null}
     </div>

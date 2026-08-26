@@ -32,34 +32,39 @@ function SummaryPage() {
   }
 
   return (
-    <div style={{ maxWidth: '760px', margin: '40px auto', fontFamily: 'sans-serif' }}>
+    <div style={{ maxWidth: '760px', margin: '40px auto', fontFamily: 'var(--font-body)' }}>
       <h1>Daily Summary</h1>
 
-      <form onSubmit={handleSubmit} style={{ marginBottom: '16px' }}>
+      <form onSubmit={handleSubmit} className="card" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
         <label htmlFor="summaryDate">Date</label>
         <input
           id="summaryDate"
           type="date"
           value={date}
           onChange={(event) => setDate(event.target.value)}
-          style={{ marginLeft: '8px', padding: '6px' }}
+          className="input"
           required
         />
-        <button type="submit" style={{ marginLeft: '8px', padding: '6px 10px' }}>
+        <button type="submit" className="btn-primary">
           Load Summary
         </button>
       </form>
 
-      {error ? <p style={{ color: 'crimson' }}>{error}</p> : null}
+      {error ? (
+        <p>
+          <span className="status-dot status-dot--danger" style={{ marginRight: '8px' }} />
+          {error}
+        </p>
+      ) : null}
 
       {summary ? (
-        <div>
-          <p>Total Top-ups: {summary.total_topups_amount}</p>
-          <p>Total Fare Collected: {summary.total_fare_amount}</p>
-          <p>Transaction Count: {summary.transaction_count}</p>
+        <div className="card">
+          <p className="numeric">Total Top-ups: {summary.total_topups_amount}</p>
+          <p className="numeric">Total Fare Collected: {summary.total_fare_amount}</p>
+          <p className="numeric">Transaction Count: {summary.transaction_count}</p>
 
           <h2>Cashier Top-up Breakdown</h2>
-          <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <table className="table">
             <thead>
               <tr>
                 <th>Cashier</th>
@@ -76,8 +81,8 @@ function SummaryPage() {
                 summary.cashier_topup_breakdown.map((item) => (
                   <tr key={item.cashier_id}>
                     <td>{item.cashier_username}</td>
-                    <td>{item.total_topups}</td>
-                    <td>{item.topup_count}</td>
+                    <td className="numeric">{item.total_topups}</td>
+                    <td className="numeric">{item.topup_count}</td>
                   </tr>
                 ))
               )}

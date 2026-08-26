@@ -34,20 +34,20 @@ function RequireAuth() {
 
   return (
     <>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', padding: '12px 16px', borderBottom: '1px solid #ccc', fontFamily: 'sans-serif' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', padding: '12px 16px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)', fontFamily: 'var(--font-body)' }}>
         <span>Logged in as {username} ({role})</span>
         <nav aria-label="Primary navigation" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {navItems.map((item) => (
-            <Link key={item.path} to={item.path} style={{ fontWeight: isActive(item.path) ? 'bold' : 'normal', textDecoration: isActive(item.path) ? 'underline' : 'none' }}>
+            <Link key={item.path} to={item.path} style={{ color: isActive(item.path) ? 'var(--accent)' : 'var(--text-primary)', fontWeight: isActive(item.path) ? 600 : 400, textDecoration: isActive(item.path) ? 'underline' : 'none' }}>
               {item.label}
             </Link>
           ))}
           {role === 'admin' ? <>
-            <span aria-hidden="true">|</span>
-            <Link to="/admin/dashboard" style={{ fontWeight: isActive('/admin/dashboard') ? 'bold' : 'normal', textDecoration: isActive('/admin/dashboard') ? 'underline' : 'none' }}>Admin Dashboard</Link>
-            <Link to="/admin/reports" style={{ fontWeight: isActive('/admin/reports') ? 'bold' : 'normal', textDecoration: isActive('/admin/reports') ? 'underline' : 'none' }}>Reports</Link>
+            <span aria-hidden="true" style={{ color: 'var(--border)' }}>|</span>
+            <Link to="/admin/dashboard" style={{ color: isActive('/admin/dashboard') ? 'var(--accent)' : 'var(--text-primary)', fontWeight: isActive('/admin/dashboard') ? 600 : 400, textDecoration: isActive('/admin/dashboard') ? 'underline' : 'none' }}>Admin Dashboard</Link>
+            <Link to="/admin/reports" style={{ color: isActive('/admin/reports') ? 'var(--accent)' : 'var(--text-primary)', fontWeight: isActive('/admin/reports') ? 600 : 400, textDecoration: isActive('/admin/reports') ? 'underline' : 'none' }}>Reports</Link>
           </> : null}
-          <button type="button" onClick={handleLogout} style={{ padding: '6px 10px' }}>
+          <button type="button" onClick={handleLogout} className="btn-secondary">
             Log out
           </button>
         </nav>

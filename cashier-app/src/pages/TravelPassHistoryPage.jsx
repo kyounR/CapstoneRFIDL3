@@ -172,13 +172,19 @@ function TravelPassHistoryPage() {
           onChange={(event) => setReason(event.target.value)}
           placeholder="Reason for correction"
           required
-          style={{ display: 'block', marginTop: '6px', padding: '6px', width: '100%' }}
+          className="input"
+          style={{ display: 'block', marginTop: '6px', width: '100%' }}
         />
-        {editError ? <p style={{ color: 'crimson' }}>{editError}</p> : null}
-        <button type="button" onClick={saveEdit} disabled={!reason.trim() || isSavingEdit} style={{ marginTop: '6px', padding: '6px 10px' }}>
+        {editError ? (
+          <p>
+            <span className="status-dot status-dot--danger" style={{ marginRight: '8px' }} />
+            {editError}
+          </p>
+        ) : null}
+        <button type="button" onClick={saveEdit} disabled={!reason.trim() || isSavingEdit} className="btn-primary" style={{ marginTop: '6px' }}>
           {isSavingEdit ? 'Saving...' : 'Save Correction'}
         </button>
-        <button type="button" onClick={cancelEdit} disabled={isSavingEdit} style={{ marginLeft: '6px', padding: '6px 10px' }}>
+        <button type="button" onClick={cancelEdit} disabled={isSavingEdit} className="btn-secondary" style={{ marginLeft: '6px', marginTop: '6px' }}>
           Cancel
         </button>
       </div>
@@ -197,6 +203,7 @@ function TravelPassHistoryPage() {
           event.stopPropagation()
           startEdit(type, id, field, value)
         }}
+        className="btn-secondary"
         style={{ marginLeft: '6px', padding: '3px 7px', fontSize: '0.85em' }}
       >
         Edit (Admin)
@@ -211,13 +218,13 @@ function TravelPassHistoryPage() {
     const isEditingDeparture = editing?.type === 'trip' && editing.id === pass.id && editing.field === 'departure_time'
 
     return (
-      <div style={{ marginBottom: '16px', padding: '12px', border: '1px solid #ccc' }} onClick={(event) => event.stopPropagation()}>
+      <div className="card" style={{ marginBottom: '16px' }} onClick={(event) => event.stopPropagation()}>
         <p>
           <strong>Vehicle:</strong> {vehicle?.plate_number || pass.vehicle}
           {renderAdminEditButton('trip', pass.id, 'vehicle', pass.vehicle)}
         </p>
         {isEditingVehicle ? renderEditControls('trip', pass.id, 'vehicle', (
-          <select value={editValue} onChange={(event) => setEditValue(event.target.value)} style={{ padding: '6px' }}>
+          <select value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input">
             {vehicles.map((item) => <option key={item.id} value={item.id}>{item.plate_number} - {item.line_name}</option>)}
           </select>
         )) : null}
@@ -225,31 +232,36 @@ function TravelPassHistoryPage() {
           <strong>Date:</strong> {pass.date}
           {renderAdminEditButton('trip', pass.id, 'date', pass.date)}
         </p>
-        {isEditingDate ? renderEditControls('trip', pass.id, 'date', <input type="date" value={editValue} onChange={(event) => setEditValue(event.target.value)} />) : null}
+        {isEditingDate ? renderEditControls('trip', pass.id, 'date', <input type="date" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input" />) : null}
         <p>
           <strong>Departure:</strong> {pass.departure_time || 'Not yet finalized'}
           {renderAdminEditButton('trip', pass.id, 'departure_time', pass.departure_time || '')}
         </p>
-        {isEditingDeparture ? renderEditControls('trip', pass.id, 'departure_time', <input type="time" value={editValue} onChange={(event) => setEditValue(event.target.value)} />) : null}
+        {isEditingDeparture ? renderEditControls('trip', pass.id, 'departure_time', <input type="time" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input" />) : null}
       </div>
     )
   }
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '40px auto', fontFamily: 'sans-serif' }}>
+    <div style={{ maxWidth: '1000px', margin: '40px auto', fontFamily: 'var(--font-body)' }}>
       <h1>Travel Pass History</h1>
 
       <div style={{ marginBottom: '16px' }}>
         <label htmlFor="historyDate">Date</label>
-        <input id="historyDate" type="date" value={date} onChange={(event) => setDate(event.target.value)} style={{ marginLeft: '8px', padding: '6px' }} />
+        <input id="historyDate" type="date" value={date} onChange={(event) => setDate(event.target.value)} className="input" style={{ marginLeft: '8px' }} />
       </div>
 
-      {error ? <p style={{ color: 'crimson' }}>{error}</p> : null}
+      {error ? (
+        <p>
+          <span className="status-dot status-dot--danger" style={{ marginRight: '8px' }} />
+          {error}
+        </p>
+      ) : null}
       {isLoading ? <p>Loading Travel Pass history...</p> : null}
       {!isLoading && !error && travelPasses.length === 0 ? <p>No Travel Passes recorded for this date.</p> : null}
 
       {!isLoading && travelPasses.length > 0 ? (
-        <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', width: '100%' }}>
+        <table className="table">
           <thead><tr><th>Vehicle</th><th>Cashier</th><th>Departure</th><th>Total Passengers</th><th>Total Fare</th><th>Status</th></tr></thead>
           <tbody>
             {travelPasses.map((travelPass) => {
@@ -261,9 +273,12 @@ function TravelPassHistoryPage() {
                     <td>{vehicle?.plate_number || travelPass.vehicle}</td>
                     <td>{travelPass.cashier_username || travelPass.cashier}</td>
                     <td>{travelPass.departure_time || 'Not yet finalized'}</td>
-                    <td>{travelPass.total_passengers}</td>
-                    <td>{travelPass.total_fare}</td>
-                    <td><span style={{ color: travelPass.is_finalized ? 'green' : '#9a6700' }}>{travelPass.is_finalized ? 'Finalized' : 'In Progress'}</span></td>
+                    <td className="numeric">{travelPass.total_passengers}</td>
+                    <td className="numeric">{travelPass.total_fare}</td>
+                    <td>
+                      <span className={`status-dot ${travelPass.is_finalized ? 'status-dot--success' : 'status-dot--pending'}`} style={{ marginRight: '6px' }} />
+                      <span className={`badge ${travelPass.is_finalized ? 'badge--success' : 'badge--pending'}`}>{travelPass.is_finalized ? 'Finalized' : 'In Progress'}</span>
+                    </td>
                   </tr>
                   {isExpanded ? (
                     <tr><td colSpan="6">
@@ -276,7 +291,7 @@ function TravelPassHistoryPage() {
                               <strong>Departure:</strong> {detailPass.departure_time || 'Not yet finalized'}
                             </div>
                           )}
-                          <table border="1" cellPadding="6" style={{ borderCollapse: 'collapse', width: '100%' }}>
+                          <table className="table">
                             <thead><tr><th>Destination</th><th>Passenger Count</th><th>Discount Count</th><th>Total Fare</th></tr></thead>
                             <tbody>
                               {detailPass.entries?.length ? detailPass.entries.map((entry) => {
@@ -284,17 +299,17 @@ function TravelPassHistoryPage() {
                                 return (
                                   <tr key={`${detailPass.id}-${entry.id || entry.destination}`}>
                                     <td>{destinationName}</td>
-                                    <td>
+                                    <td className="numeric">
                                       {entry.passenger_count}
                                       {detailPass.is_finalized ? renderAdminEditButton('entry', entry.id, 'passenger_count', entry.passenger_count) : null}
-                                      {detailPass.is_finalized && editing?.type === 'entry' && editing.id === entry.id && editing.field === 'passenger_count' ? renderEditControls('entry', entry.id, 'passenger_count', <input type="number" min="0" value={editValue} onChange={(event) => setEditValue(event.target.value)} />) : null}
+                                      {detailPass.is_finalized && editing?.type === 'entry' && editing.id === entry.id && editing.field === 'passenger_count' ? renderEditControls('entry', entry.id, 'passenger_count', <input type="number" min="0" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input numeric" />) : null}
                                     </td>
-                                    <td>
+                                    <td className="numeric">
                                       {entry.discount_count}
                                       {detailPass.is_finalized ? renderAdminEditButton('entry', entry.id, 'discount_count', entry.discount_count) : null}
-                                      {detailPass.is_finalized && editing?.type === 'entry' && editing.id === entry.id && editing.field === 'discount_count' ? renderEditControls('entry', entry.id, 'discount_count', <input type="number" min="0" value={editValue} onChange={(event) => setEditValue(event.target.value)} />) : null}
+                                      {detailPass.is_finalized && editing?.type === 'entry' && editing.id === entry.id && editing.field === 'discount_count' ? renderEditControls('entry', entry.id, 'discount_count', <input type="number" min="0" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input numeric" />) : null}
                                     </td>
-                                    <td>{entry.total_fare}</td>
+                                    <td className="numeric">{entry.total_fare}</td>
                                   </tr>
                                 )
                               }) : <tr><td colSpan="4">No entries recorded.</td></tr>}
@@ -306,9 +321,9 @@ function TravelPassHistoryPage() {
                             {isLoadingCorrections ? <p>Loading correction history...</p> : null}
                             {!isLoadingCorrections && corrections.length === 0 ? <p>No corrections have been made to this Travel Pass.</p> : null}
                             {!isLoadingCorrections && corrections.length > 0 ? (
-                              <table border="1" cellPadding="6" style={{ borderCollapse: 'collapse', width: '100%' }}>
+                              <table className="table">
                                 <thead><tr><th>Field</th><th>Destination</th><th>Old Value</th><th>New Value</th><th>Admin</th><th>When</th><th>Reason</th></tr></thead>
-                                <tbody>{corrections.map((correction) => <tr key={correction.id}><td>{correction.field_name}</td><td>{correction.destination_name || 'Travel Pass'}</td><td>{correction.old_value}</td><td>{correction.new_value}</td><td>{correction.admin_username}</td><td>{correction.corrected_at}</td><td>{correction.reason}</td></tr>)}</tbody>
+                                <tbody>{corrections.map((correction) => <tr key={correction.id}><td>{correction.field_name}</td><td>{correction.destination_name || 'Travel Pass'}</td><td className="numeric">{correction.old_value}</td><td className="numeric">{correction.new_value}</td><td>{correction.admin_username}</td><td>{correction.corrected_at}</td><td>{correction.reason}</td></tr>)}</tbody>
                               </table>
                             ) : null}
                           </section>

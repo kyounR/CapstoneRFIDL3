@@ -217,9 +217,14 @@ function TravelPassPage() {
   const isFinalized = manifest?.is_finalized === true
 
   return (
-    <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'sans-serif' }}>
+    <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'var(--font-body)' }}>
       <h1>Travel Pass</h1>
-      {error ? <p style={{ color: 'crimson' }}>{error}</p> : null}
+      {error ? (
+        <p>
+          <span className="status-dot status-dot--danger" style={{ marginRight: '8px' }} />
+          {error}
+        </p>
+      ) : null}
 
       {pageState === 0 ? (
         <section>
@@ -229,44 +234,60 @@ function TravelPassPage() {
           {sortedActivePasses.map((activePass, index) => {
             const vehicle = vehicles.find((item) => item.id === activePass.vehicle)
             return (
-              <button key={activePass.id} type="button" onClick={() => selectManifest(activePass)} style={{ display: 'block', width: '100%', marginBottom: '10px', padding: '12px', textAlign: 'left' }}>
+              <button key={activePass.id} type="button" onClick={() => selectManifest(activePass)} className="card" style={{ display: 'block', width: '100%', marginBottom: '10px', textAlign: 'left', cursor: 'pointer' }}>
                 <strong>{vehicle?.plate_number || activePass.vehicle}</strong>
-                <span style={{ marginLeft: '8px', fontSize: '0.85em' }}>{index === 0 ? 'Primary' : `Next Vehicle (#${index + 1})`}</span>
-                <span> - {activePass.date} - {activePass.total_passengers} passengers</span>
+                <span className={`badge ${index === 0 ? 'badge--success' : 'badge--pending'}`} style={{ marginLeft: '8px' }}>{index === 0 ? 'Primary' : `Next Vehicle (#${index + 1})`}</span>
+                <span> - {activePass.date} - <span className="numeric">{activePass.total_passengers}</span> passengers</span>
               </button>
             )
           })}
-          <button type="button" onClick={() => setPageState(1)} style={{ padding: '8px 14px' }}>
+          <button type="button" onClick={() => setPageState(1)} className="btn-primary">
             Start New Travel Pass
           </button>
         </section>
       ) : null}
 
       {pageState === 1 ? (
-        <form onSubmit={handleCreatePass}>
-          <h2>Start New Travel Pass</h2>
+        <form onSubmit={handleCreatePass} className="card">
+          <h2 style={{ marginTop: 0 }}>Start New Travel Pass</h2>
           <div style={{ marginBottom: '12px' }}>
             <label htmlFor="vehicle">Vehicle</label>
-            <select id="vehicle" value={vehicleId} onChange={(event) => setVehicleId(event.target.value)} style={{ display: 'block', width: '100%', padding: '8px', marginTop: '4px' }} required disabled={isLoadingVehicles || busyAction === 'create'}>
+            <select id="vehicle" value={vehicleId} onChange={(event) => setVehicleId(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required disabled={isLoadingVehicles || busyAction === 'create'}>
               <option value="">{isLoadingVehicles ? 'Loading vehicles...' : 'Select a vehicle'}</option>
               {vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.plate_number} - {vehicle.line_name}</option>)}
             </select>
           </div>
           <div style={{ marginBottom: '12px' }}>
             <label htmlFor="travelPassDate">Date</label>
-            <input id="travelPassDate" type="date" value={date} onChange={(event) => setDate(event.target.value)} style={{ display: 'block', padding: '8px', marginTop: '4px' }} required />
+            <input id="travelPassDate" type="date" value={date} onChange={(event) => setDate(event.target.value)} className="input" style={{ display: 'block', marginTop: '4px' }} required />
           </div>
-          <button type="submit" disabled={busyAction === 'create'} style={{ padding: '8px 14px' }}>{busyAction === 'create' ? 'Creating...' : 'Start Travel Pass'}</button>
-          <button type="button" onClick={() => setPageState(0)} style={{ marginLeft: '8px', padding: '8px 14px' }}>Cancel</button>
+          <button type="submit" disabled={busyAction === 'create'} className="btn-primary">{busyAction === 'create' ? 'Creating...' : 'Start Travel Pass'}</button>
+          <button type="button" onClick={() => setPageState(0)} className="btn-secondary" style={{ marginLeft: '8px' }}>Cancel</button>
         </form>
       ) : null}
 
       {pageState === 2 && manifest ? (
         <section>
-          <button type="button" onClick={switchVehicle} style={{ marginBottom: '12px', padding: '6px 10px' }}>Switch Vehicle</button>
-          <div style={{ marginBottom: '20px', padding: '12px', border: '1px solid #ccc' }}>
-            <h2 style={{ marginTop: 0 }}>{selectedVehicle?.plate_number || manifest.vehicle} <span style={{ fontSize: '0.65em', fontWeight: 'normal' }}>{selectedPassLabel}</span> - {manifest.date}</h2>
-            {isFinalized ? <p style={{ color: 'green', fontWeight: 'bold' }}>Finalized{manifest.departure_time ? ` at ${manifest.departure_time}` : ''}{manifest.finalized_at ? ` (${manifest.finalized_at})` : ''}</p> : <p>Active and ready for boarding tally.</p>}
+          <button type="button" onClick={switchVehicle} className="btn-secondary" style={{ marginBottom: '12px' }}>Switch Vehicle</button>
+          <div className="card" style={{ marginBottom: '20px' }}>
+            <h2 style={{ marginTop: 0 }}>
+              {selectedVehicle?.plate_number || manifest.vehicle}{' '}
+              <span className={`badge ${selectedPassIndex === 0 ? 'badge--success' : 'badge--pending'}`} style={{ fontSize: '0.55em', verticalAlign: 'middle' }}>{selectedPassLabel}</span>
+              {' '}- {manifest.date}
+            </h2>
+            {isFinalized ? (
+              <p>
+                <span className="status-dot status-dot--success" style={{ marginRight: '8px' }} />
+                <span className="badge badge--success">Finalized</span>
+                {manifest.departure_time ? ` at ${manifest.departure_time}` : ''}{manifest.finalized_at ? ` (${manifest.finalized_at})` : ''}
+              </p>
+            ) : (
+              <p>
+                <span className="status-dot status-dot--pending" style={{ marginRight: '8px' }} />
+                <span className="badge badge--pending">In Progress</span>
+                {' '}Active and ready for boarding tally.
+              </p>
+            )}
           </div>
           {isLoadingDestinations ? <p>Loading destinations...</p> : null}
           {destinations.map((destination) => {
@@ -277,37 +298,41 @@ function TravelPassPage() {
             const regularRemoveKey = `${destination.id}-regular-remove`
             const discountRemoveKey = `${destination.id}-discount-remove`
             return (
-              <div key={destination.id} style={{ marginBottom: '12px', padding: '12px', border: '1px solid #ccc' }}>
+              <div key={destination.id} className="card" style={{ marginBottom: '12px' }}>
                 <h3 style={{ marginTop: 0 }}>{destination.destination_name}</h3>
-                <p>Fare: {destination.base_fare}</p>
-                <p>Passengers: {entry.passenger_count}</p>
-                <p>Discount passengers: {entry.discount_count}</p>
-                <p>Total fare: {entry.total_fare}</p>
-                {atCapacity ? <p style={{ color: '#9a6700' }}>At capacity ({entry.passenger_count}/{destination.capacity_limit}) for this vehicle — tally additional passengers heading here under the NEXT vehicle&apos;s Travel Pass instead. <button type="button" onClick={switchVehicle} style={{ padding: '4px 8px' }}>Switch Vehicle</button></p> : null}
+                <p className="numeric">Fare: {destination.base_fare}</p>
+                <p className="numeric">Passengers: {entry.passenger_count}</p>
+                <p className="numeric">Discount passengers: {entry.discount_count}</p>
+                <p className="numeric">Total fare: {entry.total_fare}</p>
+                {atCapacity ? (
+                  <p style={{ color: 'var(--danger)' }}>
+                    At capacity (<span className="numeric">{entry.passenger_count}/{destination.capacity_limit}</span>) for this vehicle — tally additional passengers heading here under the NEXT vehicle&apos;s Travel Pass instead. <button type="button" onClick={switchVehicle} className="btn-secondary">Switch Vehicle</button>
+                  </p>
+                ) : null}
                 {!isFinalized ? <div>
-                  <button type="button" onClick={() => handleTally(destination, 'regular', 'add')} disabled={busyAction !== ''} style={{ marginRight: '8px', padding: '6px 10px' }}>{busyAction === regularAddKey ? '...' : '+1 Regular'}</button>
-                  <button type="button" onClick={() => handleTally(destination, 'regular', 'remove')} disabled={entry.passenger_count - entry.discount_count <= 0 || busyAction !== ''} style={{ marginRight: '8px', padding: '6px 10px' }}>{busyAction === regularRemoveKey ? '...' : '-1 Regular'}</button>
+                  <button type="button" onClick={() => handleTally(destination, 'regular', 'add')} disabled={busyAction !== ''} className="btn-primary" style={{ marginRight: '8px' }}>{busyAction === regularAddKey ? '...' : '+1 Regular'}</button>
+                  <button type="button" onClick={() => handleTally(destination, 'regular', 'remove')} disabled={entry.passenger_count - entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={{ marginRight: '8px' }}>{busyAction === regularRemoveKey ? '...' : '-1 Regular'}</button>
                   {!destination.discount_exempt ? <>
-                    <button type="button" onClick={() => handleTally(destination, 'discount', 'add')} disabled={busyAction !== ''} style={{ marginRight: '8px', padding: '6px 10px' }}>{busyAction === discountAddKey ? '...' : '+1 Discount'}</button>
-                    <button type="button" onClick={() => handleTally(destination, 'discount', 'remove')} disabled={entry.discount_count <= 0 || busyAction !== ''} style={{ padding: '6px 10px' }}>{busyAction === discountRemoveKey ? '...' : '-1 Discount'}</button>
+                    <button type="button" onClick={() => handleTally(destination, 'discount', 'add')} disabled={busyAction !== ''} className="btn-primary" style={{ marginRight: '8px' }}>{busyAction === discountAddKey ? '...' : '+1 Discount'}</button>
+                    <button type="button" onClick={() => handleTally(destination, 'discount', 'remove')} disabled={entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary">{busyAction === discountRemoveKey ? '...' : '-1 Discount'}</button>
                   </> : <span>No discount on this destination.</span>}
                 </div> : null}
               </div>
             )
           })}
-          <div style={{ marginTop: '20px', padding: '12px', borderTop: '2px solid #333' }}><strong>Running tally:</strong> {totals.passengerCount} passengers, {totals.totalFare.toFixed(2)} total fare</div>
+          <div className="card numeric" style={{ marginTop: '20px' }}><strong>Running tally:</strong> {totals.passengerCount} passengers, {totals.totalFare.toFixed(2)} total fare</div>
           {selectedVehicle?.passenger_capacity != null && selectedVehicle.passenger_capacity > 0 && totals.passengerCount >= selectedVehicle.passenger_capacity ? (
-            <p style={{ color: '#9a6700' }}>
-              This vehicle&apos;s usual capacity ({selectedVehicle.passenger_capacity}) has been reached.
+            <p style={{ color: 'var(--danger)' }}>
+              This vehicle&apos;s usual capacity (<span className="numeric">{selectedVehicle.passenger_capacity}</span>) has been reached.
             </p>
           ) : null}
-          {!isFinalized ? (showFinalizeForm ? <form onSubmit={handleFinalize} style={{ marginTop: '16px' }}>
+          {!isFinalized ? (showFinalizeForm ? <form onSubmit={handleFinalize} className="card" style={{ marginTop: '16px' }}>
             <label htmlFor="departureTime">Departure time</label>
-            <input id="departureTime" type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} style={{ marginLeft: '8px', padding: '6px' }} required />
-            <button type="submit" disabled={busyAction === 'finalize'} style={{ marginLeft: '8px', padding: '6px 10px' }}>{busyAction === 'finalize' ? 'Finalizing...' : 'Confirm Finalize'}</button>
+            <input id="departureTime" type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} className="input" style={{ marginLeft: '8px' }} required />
+            <button type="submit" disabled={busyAction === 'finalize'} className="btn-primary" style={{ marginLeft: '8px' }}>{busyAction === 'finalize' ? 'Finalizing...' : 'Confirm Finalize'}</button>
           </form> : <div style={{ marginTop: '16px' }}>
-            <button type="button" onClick={() => setShowFinalizeForm(true)} style={{ padding: '8px 14px' }}>Finalize Travel Pass</button>
-            <button type="button" onClick={handleCancel} disabled={busyAction !== ''} style={{ marginLeft: '8px', padding: '8px 14px' }}>
+            <button type="button" onClick={() => setShowFinalizeForm(true)} className="btn-primary">Finalize Travel Pass</button>
+            <button type="button" onClick={handleCancel} disabled={busyAction !== ''} className="btn-secondary" style={{ marginLeft: '8px' }}>
               {busyAction === 'cancel' ? 'Canceling...' : 'Cancel Travel Pass'}
             </button>
           </div>) : null}

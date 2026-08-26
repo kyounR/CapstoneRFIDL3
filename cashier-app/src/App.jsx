@@ -6,6 +6,7 @@ import AdminReportPage from './pages/AdminReportPage'
 import DailyRemittancePage from './pages/DailyRemittancePage'
 import DailyRemittanceHistoryPage from './pages/DailyRemittanceHistoryPage'
 import LoginPage from './pages/LoginPage'
+import PublicTapDisplayPage from './pages/PublicTapDisplayPage'
 import SummaryPage from './pages/SummaryPage'
 import TapFeedPage from './pages/TapFeedPage'
 import TopupPage from './pages/TopupPage'
@@ -16,6 +17,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/display" element={<PublicTapDisplayPage />} />
       <Route element={<RequireAuth />}>
         <Route path="/topup" element={<TopupPage />} />
         <Route path="/summary" element={<SummaryPage />} />

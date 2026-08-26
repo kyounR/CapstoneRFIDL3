@@ -18,7 +18,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Card, DailyRemittance, Destination, DispatchRound, Dispatcher, Driver, FareManifestEntry, FeeSettings, ManifestCorrection, ManifestTrip, Passenger, RemittanceCorrection, Terminal, Transaction, Trip, Vehicle
+from .models import Card, DailyRemittance, Destination, DispatchRound, Dispatcher, Driver, FareManifestEntry, FeeSettings, ManifestCorrection, ManifestTrip, Passenger, RemittanceCorrection, TapLog, Terminal, Transaction, Trip, Vehicle
 from .serializers import (
     CardSerializer,
     DailyRemittanceSerializer,
@@ -335,8 +335,21 @@ def tap_view(request):
         # of=('self',) avoids FOR UPDATE across the LEFT OUTER JOIN from nullable Card.passenger
         card = Card.objects.select_for_update(of=('self',)).select_related('passenger').filter(uid=card_uid).first()
         if card is None:
+            TapLog.objects.create(
+                card_uid=card_uid,
+                success=False,
+                message='Card not found.',
+            )
             return Response({'error': 'Card not found.'}, status=status.HTTP_404_NOT_FOUND)
         if card.status != Card.Status.ACTIVE:
+            TapLog.objects.create(
+                card_uid=card_uid,
+                card=card,
+                passenger_name=card.passenger.full_name if card.passenger else '',
+                success=False,
+                message='Card is not active.',
+                remaining_balance=card.balance,
+            )
             return Response({'error': 'Card is not active.'}, status=status.HTTP_400_BAD_REQUEST)
 
         last_fare_txn = Transaction.objects.filter(
@@ -344,10 +357,19 @@ def tap_view(request):
             transaction_type=Transaction.TransactionType.FARE,
         ).order_by('-timestamp').first()
         if last_fare_txn is not None and now() - last_fare_txn.timestamp < timedelta(seconds=7):
+            cooldown_message = 'This card was just tapped. Please wait a moment before tapping again.'
+            TapLog.objects.create(
+                card_uid=card_uid,
+                card=card,
+                passenger_name=card.passenger.full_name if card.passenger else '',
+                success=False,
+                message=cooldown_message,
+                remaining_balance=card.balance,
+            )
             return Response(
                 {
                     'success': False,
-                    'error': 'This card was just tapped. Please wait a moment before tapping again.',
+                    'error': cooldown_message,
                     'remaining_balance': card.balance,
                 },
                 status=status.HTTP_200_OK,
@@ -355,6 +377,14 @@ def tap_view(request):
 
         destination = Destination.objects.filter(id=destination_id, is_active=True).first()
         if destination is None:
+            TapLog.objects.create(
+                card_uid=card_uid,
+                card=card,
+                passenger_name=card.passenger.full_name if card.passenger else '',
+                success=False,
+                message='Destination not found or inactive.',
+                remaining_balance=card.balance,
+            )
             return Response({'error': 'Destination not found or inactive.'}, status=status.HTTP_404_NOT_FOUND)
 
         trip = None
@@ -363,6 +393,15 @@ def tap_view(request):
 
             trip = Trip.objects.filter(id=trip_id).first()
             if trip is None:
+                TapLog.objects.create(
+                    card_uid=card_uid,
+                    card=card,
+                    destination=destination,
+                    passenger_name=card.passenger.full_name if card.passenger else '',
+                    success=False,
+                    message='Trip not found.',
+                    remaining_balance=card.balance,
+                )
                 return Response({'error': 'Trip not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         passenger = card.passenger
@@ -389,6 +428,15 @@ def tap_view(request):
                 reason = 'Base fare applied for regular passenger.'
 
         if card.balance < fare:
+            TapLog.objects.create(
+                card_uid=card_uid,
+                card=card,
+                destination=destination,
+                passenger_name=passenger.full_name if passenger else '',
+                success=False,
+                message='Insufficient balance.',
+                remaining_balance=card.balance,
+            )
             return Response(
                 {
                     'success': False,
@@ -414,6 +462,17 @@ def tap_view(request):
             balance_after=card.balance,
         )
 
+        TapLog.objects.create(
+            card_uid=card_uid,
+            card=card,
+            destination=destination,
+            passenger_name=passenger.full_name if passenger else '',
+            success=True,
+            message=reason,
+            fare_charged=fare,
+            remaining_balance=card.balance,
+        )
+
     return Response(
         {
             'success': True,
@@ -422,6 +481,33 @@ def tap_view(request):
             'applied_fare': fare,
             'remaining_balance': card.balance,
         },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def tap_log_recent_view(request):
+    if not _has_cashier_or_admin_role(request):
+        return _role_forbidden_response('view the tap log')
+
+    logs = TapLog.objects.select_related('destination').order_by('-timestamp')[:20]
+
+    return Response(
+        [
+            {
+                'id': log.id,
+                'card_uid': log.card_uid,
+                'destination_name': log.destination.destination_name if log.destination else None,
+                'passenger_name': log.passenger_name,
+                'success': log.success,
+                'message': log.message,
+                'fare_charged': log.fare_charged,
+                'remaining_balance': log.remaining_balance,
+                'timestamp': log.timestamp,
+            }
+            for log in logs
+        ],
         status=status.HTTP_200_OK,
     )
 

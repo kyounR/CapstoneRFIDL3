@@ -19,6 +19,7 @@ from .views import (
     manifest_entry_tally_view,
     manifest_entry_untally_view,
     reports_view,
+    tap_log_recent_view,
     tap_view,
     topup_view,
 )
@@ -41,6 +42,7 @@ urlpatterns = [
     path('cards/lookup/', card_lookup_view, name='card-lookup'),
     path('topup/', topup_view, name='topup'),
     path('tap/', tap_view, name='tap'),
+    path('tap-log/recent/', tap_log_recent_view, name='tap-log-recent'),
     path('reports/', reports_view, name='reports'),
     path('manifest-entries/tally/', manifest_entry_tally_view, name='manifest-entry-tally'),
     path('manifest-entries/untally/', manifest_entry_untally_view, name='manifest-entry-untally'),

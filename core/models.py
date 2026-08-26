@@ -410,3 +410,32 @@ class Transaction(models.Model):
 
 	def __str__(self):
 		return f"{self.card.uid} - {self.transaction_type} {self.amount}"
+
+
+class TapLog(models.Model):
+	# stored as a string (not just a FK) so taps against an unknown card_uid can still be logged
+	card_uid = models.CharField(max_length=100)
+	card = models.ForeignKey(
+		Card,
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name='tap_logs',
+	)
+	destination = models.ForeignKey(
+		Destination,
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name='tap_logs',
+	)
+	# snapshot of the passenger's name at tap time, independent of later passenger record changes
+	passenger_name = models.CharField(max_length=255, blank=True)
+	success = models.BooleanField()
+	message = models.CharField(max_length=255)
+	fare_charged = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+	remaining_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+	timestamp = models.DateTimeField(auto_now_add=True)
+
+	def __str__(self):
+		return f"{self.card_uid} - {'success' if self.success else 'failed'} ({self.timestamp})"

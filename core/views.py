@@ -512,6 +512,34 @@ def tap_log_recent_view(request):
     )
 
 
+def _derive_display_name(passenger_name):
+    if not passenger_name:
+        return 'Passenger'
+    parts = passenger_name.split()
+    if len(parts) == 1:
+        return parts[0]
+    return f'{parts[0]} {parts[-1][0]}.'
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def tap_log_latest_public_view(request):
+    log = TapLog.objects.select_related('destination').order_by('-timestamp').first()
+    if log is None:
+        return Response(None, status=status.HTTP_200_OK)
+
+    payload = {
+        'display_name': _derive_display_name(log.passenger_name),
+        'destination_name': log.destination.destination_name if log.destination else None,
+        'success': log.success,
+        'timestamp': log.timestamp,
+    }
+    if not log.success:
+        payload['message'] = log.message
+
+    return Response(payload, status=status.HTTP_200_OK)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def reports_view(request):

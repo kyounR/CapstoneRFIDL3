@@ -226,9 +226,14 @@ function DailyRemittancePage() {
   const detailDispatcher = dispatchers.find((dispatcher) => dispatcher.id === remittance?.dispatcher)
 
   return (
-    <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'sans-serif' }}>
+    <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'var(--font-body)' }}>
       <h1>Daily Remittance</h1>
-      {error ? <p style={{ color: 'crimson' }}>{error}</p> : null}
+      {error ? (
+        <p>
+          <span className="status-dot status-dot--danger" style={{ marginRight: '8px' }} />
+          {error}
+        </p>
+      ) : null}
 
       {pageState === 0 ? (
         <section>
@@ -238,74 +243,100 @@ function DailyRemittancePage() {
           {remittances.map((item) => {
             const vehicle = vehicles.find((entry) => entry.id === item.vehicle)
             const driver = drivers.find((entry) => entry.id === item.driver)
-            return <button key={item.id} type="button" onClick={() => selectRemittance(item)} style={{ display: 'block', width: '100%', marginBottom: '10px', padding: '12px', textAlign: 'left' }}><strong>{driver?.full_name || item.driver}</strong> - {vehicle?.plate_number || item.vehicle} - {item.date}</button>
+            return <button key={item.id} type="button" onClick={() => selectRemittance(item)} className="card" style={{ display: 'block', width: '100%', marginBottom: '10px', textAlign: 'left', cursor: 'pointer' }}><strong>{driver?.full_name || item.driver}</strong> - {vehicle?.plate_number || item.vehicle} - {item.date}</button>
           })}
-          <button type="button" onClick={() => setPageState(1)} style={{ padding: '8px 14px' }}>Start New Remittance</button>
+          <button type="button" onClick={() => setPageState(1)} className="btn-primary">Start New Remittance</button>
         </section>
       ) : null}
 
       {pageState === 1 ? (
-        <form onSubmit={handleCreate}>
-          <h2>Start New Remittance</h2>
+        <form onSubmit={handleCreate} className="card">
+          <h2 style={{ marginTop: 0 }}>Start New Remittance</h2>
           <label htmlFor="terminal">Terminal</label>
-          <select id="terminal" value={terminalId} onChange={(event) => setTerminalId(event.target.value)} required style={{ display: 'block', width: '100%', padding: '8px', margin: '4px 0 12px' }}>
+          <select id="terminal" value={terminalId} onChange={(event) => setTerminalId(event.target.value)} required className="input" style={{ display: 'block', width: '100%', margin: '4px 0 12px' }}>
             <option value="">Select a terminal</option>
             {terminals.map((terminal) => <option key={terminal.id} value={terminal.id}>{terminal.name}</option>)}
           </select>
           <label htmlFor="vehicle">Vehicle</label>
-          <select id="vehicle" value={vehicleId} onChange={handleVehicleChange} required style={{ display: 'block', width: '100%', padding: '8px', margin: '4px 0 12px' }}>
+          <select id="vehicle" value={vehicleId} onChange={handleVehicleChange} required className="input" style={{ display: 'block', width: '100%', margin: '4px 0 12px' }}>
             <option value="">Select a vehicle</option>
             {vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.plate_number} - {vehicle.line_name}</option>)}
           </select>
           <label htmlFor="driver">Driver</label>
-          <select id="driver" value={driverId} onChange={(event) => setDriverId(event.target.value)} required style={{ display: 'block', width: '100%', padding: '8px', margin: '4px 0 12px' }}>
+          <select id="driver" value={driverId} onChange={(event) => setDriverId(event.target.value)} required className="input" style={{ display: 'block', width: '100%', margin: '4px 0 12px' }}>
             <option value="">Select a driver</option>
             {drivers.map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name}</option>)}
           </select>
-          {isSubstitution ? <div style={{ marginBottom: '12px' }}><label htmlFor="substituteFee">Substitute fee</label><input id="substituteFee" type="number" min="0" step="0.01" value={substituteFee} onChange={(event) => setSubstituteFee(event.target.value)} style={{ display: 'block', padding: '8px', marginTop: '4px' }} /><p>Fee owed by the substitute driver to the assigned driver.</p></div> : null}
+          {isSubstitution ? (
+            <div style={{ marginBottom: '12px', paddingLeft: '12px', borderLeft: '3px solid var(--accent)' }}>
+              <label htmlFor="substituteFee">Substitute fee</label>
+              <input id="substituteFee" type="number" min="0" step="0.01" value={substituteFee} onChange={(event) => setSubstituteFee(event.target.value)} className="input numeric" style={{ display: 'block', marginTop: '4px' }} />
+              <p>Fee owed by the substitute driver to the assigned driver.</p>
+            </div>
+          ) : null}
           <label htmlFor="dispatcher">Dispatcher</label>
-          <select id="dispatcher" value={dispatcherName} onChange={(event) => setDispatcherName(event.target.value)} required style={{ display: 'block', width: '100%', padding: '8px', margin: '4px 0 12px' }}>
+          <select id="dispatcher" value={dispatcherName} onChange={(event) => setDispatcherName(event.target.value)} required className="input" style={{ display: 'block', width: '100%', margin: '4px 0 12px' }}>
             <option value="">Select a dispatcher</option>
             {dispatchers.map((dispatcher) => <option key={dispatcher.id} value={dispatcher.id}>{dispatcher.full_name}</option>)}
           </select>
           <label htmlFor="remittanceDate">Date</label>
-          <input id="remittanceDate" type="date" value={date} onChange={(event) => setDate(event.target.value)} required style={{ display: 'block', padding: '8px', margin: '4px 0 12px' }} />
-          <button type="submit" disabled={busyAction === 'create'} style={{ padding: '8px 14px' }}>{busyAction === 'create' ? 'Creating...' : 'Start Remittance'}</button>
-          <button type="button" onClick={() => setPageState(0)} style={{ marginLeft: '8px', padding: '8px 14px' }}>Cancel</button>
+          <input id="remittanceDate" type="date" value={date} onChange={(event) => setDate(event.target.value)} required className="input" style={{ display: 'block', margin: '4px 0 12px' }} />
+          <button type="submit" disabled={busyAction === 'create'} className="btn-primary">{busyAction === 'create' ? 'Creating...' : 'Start Remittance'}</button>
+          <button type="button" onClick={() => setPageState(0)} className="btn-secondary" style={{ marginLeft: '8px' }}>Cancel</button>
         </form>
       ) : null}
 
       {pageState === 2 && remittance ? (
         <section>
-          <button type="button" onClick={switchRemittance} style={{ marginBottom: '12px', padding: '6px 10px' }}>Switch Remittance</button>
-          <div style={{ padding: '12px', border: '1px solid #ccc', marginBottom: '20px' }}>
-            <h2>{detailTerminal?.name || remittance.terminal} - {detailVehicle?.plate_number || remittance.vehicle}</h2>
+          <button type="button" onClick={switchRemittance} className="btn-secondary" style={{ marginBottom: '12px' }}>Switch Remittance</button>
+          <div className="card" style={{ marginBottom: '20px' }}>
+            <h2 style={{ marginTop: 0 }}>{detailTerminal?.name || remittance.terminal} - {detailVehicle?.plate_number || remittance.vehicle}</h2>
             <p><strong>Driver:</strong> {detailDriver?.full_name || remittance.driver}</p>
             <p><strong>Dispatcher:</strong> {detailDispatcher?.full_name || remittance.dispatcher}</p>
             <p><strong>Date:</strong> {remittance.date}</p>
-            {detailVehicle?.is_light_vehicle ? <span style={{ padding: '3px 6px', border: '1px solid #999' }}>Light vehicle</span> : null}
-            {remittance.substitute_fee != null ? <p>Substitute driver — original assigned driver: {originalAssignedDriver?.full_name || remittance.original_assigned_driver}, fee: {remittance.substitute_fee}</p> : null}
+            {detailVehicle?.is_light_vehicle ? <span className="badge badge--pending">Light vehicle</span> : null}
+            {remittance.substitute_fee != null ? (
+              <p style={{ paddingLeft: '12px', borderLeft: '3px solid var(--accent)' }}>
+                Substitute driver — original assigned driver: {originalAssignedDriver?.full_name || remittance.original_assigned_driver}, fee: <span className="numeric">{remittance.substitute_fee}</span>
+              </p>
+            ) : null}
           </div>
 
           <h3>Dispatch Rounds</h3>
-          {rounds.length > 0 ? <table border="1" cellPadding="6" style={{ borderCollapse: 'collapse', width: '100%', marginBottom: '12px' }}><thead><tr><th>Round</th><th>Amount</th><th>Departure Time</th></tr></thead><tbody>{rounds.map((round) => <tr key={round.id}><td>{round.round_number}</td><td>{round.amount}</td><td>{round.departure_time}</td></tr>)}</tbody></table> : <p>No rounds added yet.</p>}
-          {!remittance.is_finalized ? (rounds.length < 5 ? <form onSubmit={handleAddRound} style={{ marginBottom: '20px' }}><input type="number" min="0" step="0.01" placeholder="Amount" value={roundAmount} onChange={(event) => setRoundAmount(event.target.value)} required style={{ padding: '7px', marginRight: '8px' }} /><input type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} required style={{ padding: '7px', marginRight: '8px' }} /><button type="submit" disabled={busyAction === 'round'} style={{ padding: '7px 10px' }}>{busyAction === 'round' ? 'Adding...' : `Add Round ${rounds.length + 1}`}</button></form> : <p>All 5 dispatch rounds have been added.</p>) : null}
+          {rounds.length > 0 ? (
+            <table className="table" style={{ marginBottom: '12px' }}>
+              <thead><tr><th>Round</th><th>Amount</th><th>Departure Time</th></tr></thead>
+              <tbody>{rounds.map((round) => <tr key={round.id}><td className="numeric">{round.round_number}</td><td className="numeric">{round.amount}</td><td className="numeric">{round.departure_time}</td></tr>)}</tbody>
+            </table>
+          ) : <p>No rounds added yet.</p>}
+          {!remittance.is_finalized ? (rounds.length < 5 ? (
+            <form onSubmit={handleAddRound} style={{ marginBottom: '20px' }}>
+              <input type="number" min="0" step="0.01" placeholder="Amount" value={roundAmount} onChange={(event) => setRoundAmount(event.target.value)} required className="input numeric" style={{ marginRight: '8px' }} />
+              <input type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} required className="input" style={{ marginRight: '8px' }} />
+              <button type="submit" disabled={busyAction === 'round'} className="btn-primary">{busyAction === 'round' ? 'Adding...' : `Add Round ${rounds.length + 1}`}</button>
+            </form>
+          ) : <p>All 5 dispatch rounds have been added.</p>) : null}
 
           <h3>Computed Figures</h3>
-          <p>Gross: {remittance.gross}</p>
-          <p>Terminal Fee ({remittance.terminal_fee_percentage}%): {remittance.terminal_fee}</p>
-          <p>Subtotal: {remittance.subtotal}</p>
-          <p>Net Pay: {remittance.net_pay}</p>
+          <p className="numeric">Gross: {remittance.gross}</p>
+          <p className="numeric">Terminal Fee ({remittance.terminal_fee_percentage}%): {remittance.terminal_fee}</p>
+          <p className="numeric">Subtotal: {remittance.subtotal}</p>
+          <p className="numeric">Net Pay: {remittance.net_pay}</p>
 
           <h3>Fees</h3>
           {!remittance.is_finalized ? <>
             <form onSubmit={handleFeeUpdate}>
-              <p><strong>Terminal Fee:</strong> {remittance.terminal_fee} (computed)</p>
-              {feeFields.map(([field, label]) => <div key={field} style={{ marginBottom: '8px' }}><label htmlFor={field}>{label}</label><input id={field} type="number" min="0" step="0.01" value={feeValues[field] ?? ''} onChange={(event) => setFeeValues((current) => ({ ...current, [field]: event.target.value }))} style={{ display: 'block', padding: '6px', marginTop: '3px' }} /></div>)}
-              <button type="submit" disabled={busyAction === 'fees'} style={{ padding: '8px 14px' }}>{busyAction === 'fees' ? 'Saving...' : 'Save Fees'}</button>
+              <p className="numeric"><strong>Terminal Fee:</strong> {remittance.terminal_fee} (computed)</p>
+              {feeFields.map(([field, label]) => (
+                <div key={field} style={{ marginBottom: '8px' }}>
+                  <label htmlFor={field}>{label}</label>
+                  <input id={field} type="number" min="0" step="0.01" value={feeValues[field] ?? ''} onChange={(event) => setFeeValues((current) => ({ ...current, [field]: event.target.value }))} className="input numeric" style={{ display: 'block', marginTop: '3px' }} />
+                </div>
+              ))}
+              <button type="submit" disabled={busyAction === 'fees'} className="btn-primary">{busyAction === 'fees' ? 'Saving...' : 'Save Fees'}</button>
             </form>
-            <button type="button" onClick={handleFinalize} disabled={busyAction !== ''} style={{ marginTop: '20px', padding: '8px 14px' }}>Finalize Remittance</button>
-            <button type="button" onClick={handleCancel} disabled={busyAction !== ''} style={{ marginTop: '20px', marginLeft: '8px', padding: '8px 14px' }}>
+            <button type="button" onClick={handleFinalize} disabled={busyAction !== ''} className="btn-primary" style={{ marginTop: '20px' }}>Finalize Remittance</button>
+            <button type="button" onClick={handleCancel} disabled={busyAction !== ''} className="btn-secondary" style={{ marginTop: '20px', marginLeft: '8px' }}>
               {busyAction === 'cancel' ? 'Canceling...' : 'Cancel Remittance'}
             </button>
           </> : null}

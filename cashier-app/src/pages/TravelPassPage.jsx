@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import SectionTabs from '../components/SectionTabs'
 import api from '../api/client'
 
 function getToday() {
@@ -219,6 +220,7 @@ function TravelPassPage() {
   return (
     <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'var(--font-body)' }}>
       <h1>Travel Pass</h1>
+      <SectionTabs activePath="/travel-pass" historyPath="/travel-pass/history" />
       {error ? (
         <p>
           <span className="status-dot status-dot--danger" style={{ marginRight: '8px' }} />

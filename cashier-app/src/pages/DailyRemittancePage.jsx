@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import SectionTabs from '../components/SectionTabs'
 import api from '../api/client'
 
 function getToday() {
@@ -228,6 +229,7 @@ function DailyRemittancePage() {
   return (
     <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'var(--font-body)' }}>
       <h1>Daily Remittance</h1>
+      <SectionTabs activePath="/remittance" historyPath="/remittance/history" />
       {error ? (
         <p>
           <span className="status-dot status-dot--danger" style={{ marginRight: '8px' }} />

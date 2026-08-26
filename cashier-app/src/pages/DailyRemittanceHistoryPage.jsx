@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from 'react'
+import SectionTabs from '../components/SectionTabs'
 import api from '../api/client'
 
 function getToday() {
@@ -210,6 +211,7 @@ function DailyRemittanceHistoryPage() {
 
   return <div style={{ maxWidth: '1100px', margin: '40px auto', fontFamily: 'var(--font-body)' }}>
     <h1>Daily Remittance History</h1>
+    <SectionTabs activePath="/remittance" historyPath="/remittance/history" />
     <div style={{ marginBottom: '16px' }}><label htmlFor="historyDate">Date</label><input id="historyDate" type="date" value={date} onChange={(event) => setDate(event.target.value)} className="input" style={{ marginLeft: '8px' }} /></div>
     {error ? (
       <p>

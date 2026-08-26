@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from 'react'
+import SectionTabs from '../components/SectionTabs'
 import api from '../api/client'
 
 function getToday() {
@@ -245,6 +246,7 @@ function TravelPassHistoryPage() {
   return (
     <div style={{ maxWidth: '1000px', margin: '40px auto', fontFamily: 'var(--font-body)' }}>
       <h1>Travel Pass History</h1>
+      <SectionTabs activePath="/travel-pass" historyPath="/travel-pass/history" />
 
       <div style={{ marginBottom: '16px' }}>
         <label htmlFor="historyDate">Date</label>

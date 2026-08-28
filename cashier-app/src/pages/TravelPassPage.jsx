@@ -30,6 +30,7 @@ function TravelPassPage() {
   const [date, setDate] = useState(getToday())
   const [manifest, setManifest] = useState(null)
   const [entries, setEntries] = useState({})
+  const [tapSelection, setTapSelection] = useState(null)
   const [isLoadingPicker, setIsLoadingPicker] = useState(true)
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true)
   const [isLoadingDestinations, setIsLoadingDestinations] = useState(false)
@@ -87,9 +88,40 @@ function TravelPassPage() {
     fetchDestinations()
   }, [pageState])
 
+  useEffect(() => {
+    if (pageState !== 2 || !manifest) {
+      return
+    }
+
+    let isMounted = true
+
+    async function fetchTapSelection() {
+      try {
+        const response = await api.get('tap-destination/')
+        if (isMounted) {
+          const selection = response.data
+          setTapSelection(selection?.manifest_trip_id === manifest.id ? selection : null)
+        }
+      } catch (requestError) {
+        if (isMounted) {
+          setError(requestError.response?.data?.detail || 'Could not load the current tap destination.')
+        }
+      }
+    }
+
+    fetchTapSelection()
+    const intervalId = setInterval(fetchTapSelection, 2000)
+
+    return () => {
+      isMounted = false
+      clearInterval(intervalId)
+    }
+  }, [pageState, manifest?.id])
+
   async function selectManifest(selectedManifest) {
     setManifest(selectedManifest)
     setEntries(entriesByDestination(selectedManifest.entries))
+    setTapSelection(null)
     setDepartureTime(selectedManifest.departure_time || '')
     setShowFinalizeForm(false)
     setError('')
@@ -134,6 +166,23 @@ function TravelPassPage() {
       setEntries((currentEntries) => ({ ...currentEntries, [response.data.destination]: response.data }))
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not update tally.')
+    } finally {
+      setBusyAction('')
+    }
+  }
+
+  async function handleSetForTap(destination) {
+    const actionKey = `${destination.id}-set-for-tap`
+    setError('')
+    setBusyAction(actionKey)
+    try {
+      const response = await api.post('tap-destination/', {
+        destination_id: destination.id,
+        manifest_trip_id: manifest.id,
+      })
+      setTapSelection(response.data)
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || 'Could not set the destination for tapping.')
     } finally {
       setBusyAction('')
     }
@@ -193,6 +242,7 @@ function TravelPassPage() {
   function switchVehicle() {
     setManifest(null)
     setEntries({})
+    setTapSelection(null)
     setShowFinalizeForm(false)
     setError('')
     setPageState(0)
@@ -300,8 +350,14 @@ function TravelPassPage() {
             const regularRemoveKey = `${destination.id}-regular-remove`
             const discountRemoveKey = `${destination.id}-discount-remove`
             return (
-              <div key={destination.id} className="card" style={{ marginBottom: '12px' }}>
+              <div key={destination.id} className="card" style={{ marginBottom: '12px', borderColor: tapSelection?.destination_id === destination.id ? 'var(--success)' : 'var(--border)', boxShadow: tapSelection?.destination_id === destination.id ? '0 0 0 2px rgba(47, 191, 158, 0.18)' : 'none' }}>
                 <h3 style={{ marginTop: 0 }}>{destination.destination_name}</h3>
+                {tapSelection?.destination_id === destination.id ? (
+                  <p>
+                    <span className="status-dot status-dot--success" style={{ marginRight: '8px' }} />
+                    <span className="badge badge--success">Selected for RFID tapping</span>
+                  </p>
+                ) : null}
                 <p className="numeric">Fare: {destination.base_fare}</p>
                 <p className="numeric">Passengers: {entry.passenger_count}</p>
                 <p className="numeric">Discount passengers: {entry.discount_count}</p>
@@ -312,6 +368,9 @@ function TravelPassPage() {
                   </p>
                 ) : null}
                 {!isFinalized ? <div>
+                  <button type="button" onClick={() => handleSetForTap(destination)} disabled={busyAction !== ''} className="btn-primary" style={{ marginRight: '8px' }}>
+                    {busyAction === `${destination.id}-set-for-tap` ? 'Setting...' : 'Set for next tap'}
+                  </button>
                   <button type="button" onClick={() => handleTally(destination, 'regular', 'add')} disabled={busyAction !== ''} className="btn-primary" style={{ marginRight: '8px' }}>{busyAction === regularAddKey ? '...' : '+1 Regular'}</button>
                   <button type="button" onClick={() => handleTally(destination, 'regular', 'remove')} disabled={entry.passenger_count - entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={{ marginRight: '8px' }}>{busyAction === regularRemoveKey ? '...' : '-1 Regular'}</button>
                   {!destination.discount_exempt ? <>

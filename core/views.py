@@ -19,7 +19,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Card, DailyRemittance, Destination, DispatchRound, Dispatcher, Driver, FareManifestEntry, FeeSettings, ManifestCorrection, ManifestTrip, Passenger, RemittanceCorrection, TapLog, Terminal, Transaction, Trip, Vehicle
+from .models import Card, CurrentTapSelection, DailyRemittance, Destination, DispatchRound, Dispatcher, Driver, FareManifestEntry, FeeSettings, ManifestCorrection, ManifestTrip, Passenger, RemittanceCorrection, TapLog, Terminal, Transaction, Trip, Vehicle
 from .serializers import (
     CardSerializer,
     DailyRemittanceSerializer,
@@ -320,17 +320,58 @@ def topup_view(request):
     )
 
 
+@api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
+def tap_destination_view(request):
+    if not _has_cashier_or_admin_role(request):
+        return _role_forbidden_response('manage the tap destination')
+
+    selection = CurrentTapSelection.get_current()
+    if request.method == 'GET':
+        if selection.destination is None:
+            return Response(None, status=status.HTTP_200_OK)
+        return Response(
+            {
+                'destination_id': selection.destination_id,
+                'destination_name': selection.destination.destination_name,
+                'set_by': selection.set_by.username if selection.set_by else None,
+                'set_at': selection.set_at,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    destination = Destination.objects.filter(
+        id=request.data.get('destination_id'),
+        is_active=True,
+    ).first()
+    if destination is None:
+        return Response(
+            {'error': 'Destination does not exist or is inactive.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    selection.destination = destination
+    selection.set_by = request.user
+    selection.set_at = now()
+    selection.save(update_fields=['destination', 'set_by', 'set_at'])
+    return Response(
+        {
+            'destination_id': destination.id,
+            'destination_name': destination.destination_name,
+            'set_by': request.user.username,
+            'set_at': selection.set_at,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def tap_view(request):
     card_uid = request.data.get('card_uid')
-    trip_id = request.data.get('trip_id')
-    destination_id = request.data.get('destination_id')
 
     if not card_uid:
         return Response({'error': 'card_uid is required.'}, status=status.HTTP_400_BAD_REQUEST)
-    if not destination_id:
-        return Response({'error': 'destination_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
     with transaction.atomic():
         # of=('self',) avoids FOR UPDATE across the LEFT OUTER JOIN from nullable Card.passenger
@@ -376,34 +417,19 @@ def tap_view(request):
                 status=status.HTTP_200_OK,
             )
 
-        destination = Destination.objects.filter(id=destination_id, is_active=True).first()
+        tap_selection = CurrentTapSelection.get_current()
+        destination = tap_selection.destination
         if destination is None:
+            no_destination_message = 'No destination selected. Ask the cashier to select a destination before tapping.'
             TapLog.objects.create(
                 card_uid=card_uid,
                 card=card,
                 passenger_name=card.passenger.full_name if card.passenger else '',
                 success=False,
-                message='Destination not found or inactive.',
+                message=no_destination_message,
                 remaining_balance=card.balance,
             )
-            return Response({'error': 'Destination not found or inactive.'}, status=status.HTTP_404_NOT_FOUND)
-
-        trip = None
-        if trip_id is not None:
-            from .models import Trip
-
-            trip = Trip.objects.filter(id=trip_id).first()
-            if trip is None:
-                TapLog.objects.create(
-                    card_uid=card_uid,
-                    card=card,
-                    destination=destination,
-                    passenger_name=card.passenger.full_name if card.passenger else '',
-                    success=False,
-                    message='Trip not found.',
-                    remaining_balance=card.balance,
-                )
-                return Response({'error': 'Trip not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': no_destination_message}, status=status.HTTP_400_BAD_REQUEST)
 
         passenger = card.passenger
         passenger_discount_type: Optional[str] = None if passenger is None else passenger.discount_type
@@ -458,7 +484,6 @@ def tap_view(request):
             cashier=None,
             transaction_type=Transaction.TransactionType.FARE,
             amount=fare,
-            trip=trip,
             destination=destination,
             balance_after=card.balance,
         )
@@ -473,6 +498,11 @@ def tap_view(request):
             fare_charged=fare,
             remaining_balance=card.balance,
         )
+
+        tap_selection.destination = None
+        tap_selection.set_by = None
+        tap_selection.set_at = None
+        tap_selection.save(update_fields=['destination', 'set_by', 'set_at'])
 
     return Response(
         {

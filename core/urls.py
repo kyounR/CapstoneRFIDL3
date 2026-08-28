@@ -22,6 +22,7 @@ from .views import (
     reports_view,
     tap_log_latest_public_view,
     tap_log_recent_view,
+    tap_destination_view,
     tap_view,
     topup_view,
 )
@@ -44,6 +45,7 @@ urlpatterns = [
     path('login/', login_view, name='login'),
     path('cards/lookup/', card_lookup_view, name='card-lookup'),
     path('topup/', topup_view, name='topup'),
+    path('tap-destination/', tap_destination_view, name='tap-destination'),
     path('tap/', tap_view, name='tap'),
     path('tap-log/recent/', tap_log_recent_view, name='tap-log-recent'),
     path('tap-log/latest-public/', tap_log_latest_public_view, name='tap-log-latest-public'),

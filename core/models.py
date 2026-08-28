@@ -137,6 +137,32 @@ class FeeSettings(models.Model):
 		return 'Current fee settings'
 
 
+class CurrentTapSelection(models.Model):
+	destination = models.ForeignKey(
+		Destination,
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name='current_tap_selection',
+	)
+	set_by = models.ForeignKey(
+		settings.AUTH_USER_MODEL,
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name='tap_destination_selections',
+	)
+	set_at = models.DateTimeField(null=True, blank=True)
+
+	def save(self, *args, **kwargs):
+		self.pk = 1
+		super().save(*args, **kwargs)
+
+	@classmethod
+	def get_current(cls):
+		return cls.objects.get_or_create(pk=1)[0]
+
+
 class Vehicle(models.Model):
 	plate_number = models.CharField(max_length=20, unique=True)
 	line = models.ForeignKey(Line, on_delete=models.PROTECT, related_name='vehicles')

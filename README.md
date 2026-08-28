@@ -57,3 +57,5 @@ In another terminal, start up the Python script for RFID:
 python rfid_relay.py
 
 To access the public facing live tap feed, add /display to the localhost URL.
+
+To access the public boarding page, add /board to the localhost URL.

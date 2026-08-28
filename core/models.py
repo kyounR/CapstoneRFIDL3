@@ -152,6 +152,13 @@ class CurrentTapSelection(models.Model):
 		blank=True,
 		related_name='tap_destination_selections',
 	)
+	manifest_trip = models.ForeignKey(
+		'ManifestTrip',
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name='current_tap_selections',
+	)
 	set_at = models.DateTimeField(null=True, blank=True)
 
 	def save(self, *args, **kwargs):

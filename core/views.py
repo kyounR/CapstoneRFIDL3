@@ -328,16 +328,35 @@ def tap_destination_view(request):
 
     selection = CurrentTapSelection.get_current()
     if request.method == 'GET':
-        if selection.destination is None:
+        if selection.destination is None or selection.manifest_trip is None:
             return Response(None, status=status.HTTP_200_OK)
         return Response(
             {
                 'destination_id': selection.destination_id,
                 'destination_name': selection.destination.destination_name,
+                'manifest_trip_id': selection.manifest_trip_id,
+                'plate_number': selection.manifest_trip.vehicle.plate_number,
                 'set_by': selection.set_by.username if selection.set_by else None,
                 'set_at': selection.set_at,
             },
             status=status.HTTP_200_OK,
+        )
+
+    manifest_trip_id = request.data.get('manifest_trip_id')
+    if not manifest_trip_id:
+        return Response(
+            {'error': 'manifest_trip_id is required.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    manifest_trip = ManifestTrip.objects.select_related('vehicle').filter(
+        id=manifest_trip_id,
+        is_finalized=False,
+    ).first()
+    if manifest_trip is None:
+        return Response(
+            {'error': 'ManifestTrip does not exist or is already finalized.'},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     destination = Destination.objects.filter(
@@ -351,13 +370,16 @@ def tap_destination_view(request):
         )
 
     selection.destination = destination
+    selection.manifest_trip = manifest_trip
     selection.set_by = request.user
     selection.set_at = now()
-    selection.save(update_fields=['destination', 'set_by', 'set_at'])
+    selection.save(update_fields=['destination', 'manifest_trip', 'set_by', 'set_at'])
     return Response(
         {
             'destination_id': destination.id,
             'destination_name': destination.destination_name,
+            'manifest_trip_id': manifest_trip.id,
+            'plate_number': manifest_trip.vehicle.plate_number,
             'set_by': request.user.username,
             'set_at': selection.set_at,
         },
@@ -417,7 +439,10 @@ def tap_view(request):
                 status=status.HTTP_200_OK,
             )
 
-        tap_selection = CurrentTapSelection.get_current()
+        tap_selection = CurrentTapSelection.objects.select_for_update().select_related(
+            'destination',
+            'manifest_trip__vehicle',
+        ).get_or_create(pk=1)[0]
         destination = tap_selection.destination
         if destination is None:
             no_destination_message = 'No destination selected. Ask the cashier to select a destination before tapping.'
@@ -430,6 +455,34 @@ def tap_view(request):
                 remaining_balance=card.balance,
             )
             return Response({'error': no_destination_message}, status=status.HTTP_400_BAD_REQUEST)
+
+        manifest_trip = tap_selection.manifest_trip
+        if manifest_trip is None:
+            no_manifest_message = 'No active Travel Pass selected for tapping. Ask the cashier to select a destination from an active Travel Pass first.'
+            TapLog.objects.create(
+                card_uid=card_uid,
+                card=card,
+                destination=destination,
+                passenger_name=card.passenger.full_name if card.passenger else '',
+                success=False,
+                message=no_manifest_message,
+                remaining_balance=card.balance,
+            )
+            return Response({'error': no_manifest_message}, status=status.HTTP_400_BAD_REQUEST)
+
+        manifest_trip = ManifestTrip.objects.select_for_update().get(pk=manifest_trip.pk)
+        if manifest_trip.is_finalized:
+            no_manifest_message = 'No active Travel Pass selected for tapping. Ask the cashier to select a destination from an active Travel Pass first.'
+            TapLog.objects.create(
+                card_uid=card_uid,
+                card=card,
+                destination=destination,
+                passenger_name=card.passenger.full_name if card.passenger else '',
+                success=False,
+                message=no_manifest_message,
+                remaining_balance=card.balance,
+            )
+            return Response({'error': no_manifest_message}, status=status.HTTP_400_BAD_REQUEST)
 
         passenger = card.passenger
         passenger_discount_type: Optional[str] = None if passenger is None else passenger.discount_type
@@ -499,10 +552,31 @@ def tap_view(request):
             remaining_balance=card.balance,
         )
 
+        entry = FareManifestEntry.objects.select_for_update().filter(
+            manifest_trip=manifest_trip,
+            destination=destination,
+        ).first()
+        if entry is None:
+            entry = FareManifestEntry(
+                manifest_trip=manifest_trip,
+                destination=destination,
+                passenger_count=0,
+                discount_count=0,
+                total_fare=Decimal('0.00'),
+                source=FareManifestEntry.Source.RFID,
+            )
+
+        entry.passenger_count += 1
+        if use_discount:
+            entry.discount_count += 1
+        _recompute_manifest_entry_total(entry)
+        entry.save()
+
         tap_selection.destination = None
         tap_selection.set_by = None
         tap_selection.set_at = None
-        tap_selection.save(update_fields=['destination', 'set_by', 'set_at'])
+        tap_selection.manifest_trip = None
+        tap_selection.save(update_fields=['destination', 'manifest_trip', 'set_by', 'set_at'])
 
     return Response(
         {

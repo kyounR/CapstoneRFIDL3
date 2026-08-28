@@ -7,10 +7,13 @@ function getListData(data) {
 
 function TapTerminalPage() {
   const [destinations, setDestinations] = useState([])
+  const [activeManifests, setActiveManifests] = useState([])
   const [selectedDestinationId, setSelectedDestinationId] = useState('')
+  const [selectedManifestId, setSelectedManifestId] = useState('')
   const [currentSelection, setCurrentSelection] = useState(null)
   const [error, setError] = useState('')
   const [isLoadingDestinations, setIsLoadingDestinations] = useState(true)
+  const [isLoadingManifests, setIsLoadingManifests] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
@@ -42,6 +45,33 @@ function TapTerminalPage() {
 
   useEffect(() => {
     let isMounted = true
+
+    async function fetchActiveManifests() {
+      try {
+        const response = await api.get('manifests/', { params: { is_finalized: false } })
+        if (isMounted) {
+          setActiveManifests(getListData(response.data))
+        }
+      } catch (requestError) {
+        if (isMounted) {
+          setError(requestError.response?.data?.detail || 'Could not load active Travel Passes.')
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingManifests(false)
+        }
+      }
+    }
+
+    fetchActiveManifests()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let isMounted = true
     let hadSelection = false
 
     async function fetchCurrentSelection() {
@@ -50,6 +80,7 @@ function TapTerminalPage() {
         if (isMounted) {
           if (hadSelection && response.data === null) {
             setSelectedDestinationId('')
+            setSelectedManifestId('')
           }
           hadSelection = response.data !== null
           setCurrentSelection(response.data)
@@ -79,6 +110,7 @@ function TapTerminalPage() {
     try {
       const response = await api.post('tap-destination/', {
         destination_id: Number(selectedDestinationId),
+        manifest_trip_id: Number(selectedManifestId),
       })
       setCurrentSelection(response.data)
     } catch (requestError) {
@@ -89,11 +121,29 @@ function TapTerminalPage() {
   }
 
   const selectedDestination = destinations.find((destination) => destination.id === Number(selectedDestinationId))
+  const selectedManifest = activeManifests.find((manifest) => manifest.id === Number(selectedManifestId))
 
   return (
     <main style={{ maxWidth: '720px', margin: '40px auto', fontFamily: 'var(--font-body)' }}>
       <h1>Tap Terminal</h1>
       <form onSubmit={handleSetDestination} className="card">
+        <label htmlFor="tapManifest">Travel Pass / vehicle</label>
+        <select
+          id="tapManifest"
+          value={selectedManifestId}
+          onChange={(event) => setSelectedManifestId(event.target.value)}
+          className="input"
+          style={{ display: 'block', width: '100%', marginTop: '8px' }}
+          disabled={isLoadingManifests || isSaving}
+          required
+        >
+          <option value="">{isLoadingManifests ? 'Loading active Travel Passes...' : 'Choose a vehicle'}</option>
+          {activeManifests.map((manifest) => (
+            <option key={manifest.id} value={manifest.id}>
+              {manifest.vehicle_plate_number || manifest.vehicle} - {manifest.date}
+            </option>
+          ))}
+        </select>
         <label htmlFor="tapDestination">Destination for next tap</label>
         <select
           id="tapDestination"
@@ -101,7 +151,7 @@ function TapTerminalPage() {
           onChange={(event) => setSelectedDestinationId(event.target.value)}
           className="input"
           style={{ display: 'block', width: '100%', marginTop: '8px' }}
-          disabled={isLoadingDestinations || isSaving}
+          disabled={isLoadingDestinations || isLoadingManifests || isSaving}
           required
         >
           <option value="">{isLoadingDestinations ? 'Loading destinations...' : 'Choose a destination'}</option>
@@ -111,10 +161,11 @@ function TapTerminalPage() {
             </option>
           ))}
         </select>
-        <button type="submit" className="btn-primary" style={{ marginTop: '16px' }} disabled={isSaving || !selectedDestinationId}>
+        <button type="submit" className="btn-primary" style={{ marginTop: '16px' }} disabled={isSaving || !selectedDestinationId || !selectedManifestId}>
           {isSaving ? 'Setting...' : 'Set Destination'}
         </button>
         {selectedDestination ? <span className="numeric" style={{ marginLeft: '12px' }}>Fare: {selectedDestination.base_fare}</span> : null}
+        {selectedManifest ? <p style={{ marginBottom: 0 }}>Vehicle: {selectedManifest.vehicle_plate_number || selectedManifest.vehicle}</p> : null}
       </form>
 
       {error ? (
@@ -135,7 +186,7 @@ function TapTerminalPage() {
         <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 600 }}>
           <span className={`status-dot ${currentSelection ? 'status-dot--success' : 'status-dot--pending'}`} style={{ marginRight: '10px' }} />
           {currentSelection ? (
-            <>Ready for: {currentSelection.destination_name} <span className="numeric">({destinations.find((destination) => destination.id === currentSelection.destination_id)?.base_fare ?? 'fare unavailable'})</span></>
+            <>Ready for: {currentSelection.destination_name} <span className="numeric">({destinations.find((destination) => destination.id === currentSelection.destination_id)?.base_fare ?? 'fare unavailable'})</span> - Vehicle: {currentSelection.plate_number}</>
           ) : 'No destination selected -- choose one before the next tap'}
         </p>
       </section>

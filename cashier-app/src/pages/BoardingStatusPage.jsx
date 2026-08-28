@@ -87,7 +87,7 @@ function BoardingStatusPage() {
                           fontWeight: 600,
                         }}
                       >
-                        {vehicle.is_primary ? 'Now Boarding' : `Next Vehicle${index > 1 ? ` #${index + 1}` : ''}`}
+                        {vehicle.is_primary ? 'Now Boarding' : `Next Vehicle #${index + 1}`}
                       </p>
                       <p className="numeric" style={{ margin: '12px 0', fontSize: 'clamp(2.5rem, 5vw, 5rem)', fontWeight: 600 }}>
                         {vehicle.plate_number}

@@ -9,7 +9,6 @@ import DailyRemittanceHistoryPage from './pages/DailyRemittanceHistoryPage'
 import LoginPage from './pages/LoginPage'
 import PublicTapDisplayPage from './pages/PublicTapDisplayPage'
 import SummaryPage from './pages/SummaryPage'
-import TapTerminalPage from './pages/TapTerminalPage'
 import TapFeedPage from './pages/TapFeedPage'
 import TopupPage from './pages/TopupPage'
 import TravelPassPage from './pages/TravelPassPage'
@@ -29,7 +28,6 @@ function App() {
         <Route path="/remittance" element={<DailyRemittancePage />} />
         <Route path="/remittance/history" element={<DailyRemittanceHistoryPage />} />
         <Route path="/tap-feed" element={<TapFeedPage />} />
-        <Route path="/tap-terminal" element={<TapTerminalPage />} />
         <Route element={<RequireAdmin />}>
           <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
           <Route path="/admin/reports" element={<AdminReportPage />} />

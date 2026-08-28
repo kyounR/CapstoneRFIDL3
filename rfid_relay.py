@@ -24,7 +24,9 @@ import requests
 # ---- CONFIGURE THESE ----
 BAUD_RATE = 115200
 API_URL = "http://localhost:8000/api/tap/"
-DESTINATION_ID = 7            # a real Destination id from your database
+# Destination is no longer set here -- a cashier selects it from the
+# Tap Terminal page in the web app before each passenger taps. This
+# script now only ever sends the card UID.
 # --------------------------
 
 # Common USB-to-serial chip descriptions used on ESP32 dev boards.
@@ -109,7 +111,7 @@ def listen(ser):
 
 
 def send_tap(card_uid):
-    payload = {"card_uid": card_uid, "destination_id": DESTINATION_ID}
+    payload = {"card_uid": card_uid}
     try:
         response = requests.post(API_URL, json=payload, timeout=5)
     except requests.exceptions.RequestException as exc:

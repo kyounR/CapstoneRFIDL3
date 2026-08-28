@@ -320,13 +320,21 @@ def topup_view(request):
     )
 
 
-@api_view(['POST', 'GET'])
+@api_view(['POST', 'GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def tap_destination_view(request):
     if not _has_cashier_or_admin_role(request):
         return _role_forbidden_response('manage the tap destination')
 
     selection = CurrentTapSelection.get_current()
+    if request.method == 'DELETE':
+        selection.destination = None
+        selection.manifest_trip = None
+        selection.set_by = None
+        selection.set_at = None
+        selection.save(update_fields=['destination', 'manifest_trip', 'set_by', 'set_at'])
+        return Response(None, status=status.HTTP_200_OK)
+
     if request.method == 'GET':
         if selection.destination is None or selection.manifest_trip is None:
             return Response(None, status=status.HTTP_200_OK)

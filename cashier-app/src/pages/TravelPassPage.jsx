@@ -188,6 +188,19 @@ function TravelPassPage() {
     }
   }
 
+  async function handleClearTapSelection() {
+    setError('')
+    setBusyAction('clear-tap-selection')
+    try {
+      await api.delete('tap-destination/')
+      setTapSelection(null)
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || 'Could not clear the tap destination.')
+    } finally {
+      setBusyAction('')
+    }
+  }
+
   async function handleFinalize(event) {
     event.preventDefault()
     if (!departureTime) {
@@ -356,6 +369,9 @@ function TravelPassPage() {
                   <p>
                     <span className="status-dot status-dot--success" style={{ marginRight: '8px' }} />
                     <span className="badge badge--success">Selected for RFID tapping</span>
+                    <button type="button" onClick={handleClearTapSelection} disabled={busyAction !== ''} className="btn-secondary" style={{ marginLeft: '8px' }}>
+                      {busyAction === 'clear-tap-selection' ? 'Clearing...' : 'Clear tap selection'}
+                    </button>
                   </p>
                 ) : null}
                 <p className="numeric">Fare: {destination.base_fare}</p>

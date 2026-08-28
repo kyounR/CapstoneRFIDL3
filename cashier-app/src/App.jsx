@@ -3,6 +3,7 @@ import RequireAdmin from './components/RequireAdmin'
 import RequireAuth from './components/RequireAuth'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import AdminReportPage from './pages/AdminReportPage'
+import BoardingStatusPage from './pages/BoardingStatusPage'
 import DailyRemittancePage from './pages/DailyRemittancePage'
 import DailyRemittanceHistoryPage from './pages/DailyRemittanceHistoryPage'
 import LoginPage from './pages/LoginPage'
@@ -18,6 +19,7 @@ function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/display" element={<PublicTapDisplayPage />} />
+      <Route path="/board" element={<BoardingStatusPage />} />
       <Route element={<RequireAuth />}>
         <Route path="/topup" element={<TopupPage />} />
         <Route path="/summary" element={<SummaryPage />} />

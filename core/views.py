@@ -549,13 +549,15 @@ def tap_view(request):
             balance_after=card.balance,
         )
 
-        TapLog.objects.create(
+        tap_log = TapLog.objects.create(
             card_uid=card_uid,
             card=card,
             destination=destination,
+            manifest_trip=manifest_trip,
             passenger_name=passenger.full_name if passenger else '',
             success=True,
             message=reason,
+            fare_type=fare_type,
             fare_charged=fare,
             remaining_balance=card.balance,
         )
@@ -621,6 +623,103 @@ def tap_log_recent_view(request):
             }
             for log in logs
         ],
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def manifest_trip_recent_taps_view(request, pk):
+    if not _has_cashier_or_admin_role(request):
+        return _role_forbidden_response('view recent taps')
+
+    taps = TapLog.objects.filter(
+        manifest_trip_id=pk,
+        success=True,
+        refunded=False,
+    ).select_related('destination').order_by('-timestamp')[:10]
+
+    return Response(
+        [
+            {
+                'id': tap.id,
+                'card_uid': tap.card_uid,
+                'passenger_name': tap.passenger_name,
+                'destination_name': tap.destination.destination_name if tap.destination else None,
+                'fare_charged': tap.fare_charged,
+                'timestamp': tap.timestamp,
+            }
+            for tap in taps
+        ],
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def tap_log_cancel_boarding_view(request, pk):
+    if not _has_cashier_or_admin_role(request):
+        return _role_forbidden_response('cancel boarding')
+
+    with transaction.atomic():
+        tap_log = TapLog.objects.select_for_update().select_related('destination', 'card').filter(pk=pk).first()
+        if tap_log is None:
+            return Response({'error': 'TapLog not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if not tap_log.success:
+            return Response({'error': 'Only successful taps can be cancelled.'}, status=status.HTTP_400_BAD_REQUEST)
+        if tap_log.refunded:
+            return Response({'error': 'This tap has already been refunded.'}, status=status.HTTP_400_BAD_REQUEST)
+        if tap_log.manifest_trip_id is None:
+            return Response({'error': 'This tap is not linked to a Travel Pass.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        manifest_trip = ManifestTrip.objects.select_for_update().filter(pk=tap_log.manifest_trip_id).first()
+        if manifest_trip is None:
+            return Response({'error': 'ManifestTrip not found.'}, status=status.HTTP_400_BAD_REQUEST)
+        if manifest_trip.is_finalized:
+            return Response({'error': 'Cannot cancel a tap from a finalized ManifestTrip.'}, status=status.HTTP_400_BAD_REQUEST)
+        if tap_log.card is None or tap_log.fare_charged is None or tap_log.destination is None:
+            return Response({'error': 'This tap is missing refund data.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        card = Card.objects.select_for_update().get(pk=tap_log.card_id)
+        card.balance += tap_log.fare_charged
+        card.save(update_fields=['balance'])
+
+        Transaction.objects.create(
+            card=card,
+            cashier=request.user,
+            transaction_type=Transaction.TransactionType.REFUND,
+            amount=tap_log.fare_charged,
+            destination=tap_log.destination,
+            balance_after=card.balance,
+        )
+
+        entry = FareManifestEntry.objects.select_for_update().filter(
+            manifest_trip=manifest_trip,
+            destination=tap_log.destination,
+        ).first()
+        if entry is None:
+            return Response({'error': 'Matching manifest entry not found.'}, status=status.HTTP_400_BAD_REQUEST)
+        if entry.passenger_count <= 0:
+            return Response({'error': 'Cannot reduce passenger count below zero.'}, status=status.HTTP_400_BAD_REQUEST)
+        if tap_log.fare_type == 'discount' and entry.discount_count <= 0:
+            return Response({'error': 'Cannot reduce discount count below zero.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        entry.passenger_count -= 1
+        if tap_log.fare_type == 'discount':
+            entry.discount_count -= 1
+        _recompute_manifest_entry_total(entry)
+        entry.save(update_fields=['passenger_count', 'discount_count', 'total_fare'])
+
+        tap_log.refunded = True
+        tap_log.refunded_at = now()
+        tap_log.refunded_by = request.user
+        tap_log.save(update_fields=['refunded', 'refunded_at', 'refunded_by'])
+
+    return Response(
+        {
+            'balance': card.balance,
+            'manifest_entry': FareManifestEntrySerializer(entry).data,
+        },
         status=status.HTTP_200_OK,
     )
 

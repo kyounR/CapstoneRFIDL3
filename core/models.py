@@ -413,6 +413,7 @@ class Transaction(models.Model):
 	class TransactionType(models.TextChoices):
 		TOPUP = 'topup', 'Top-up'
 		FARE = 'fare', 'Fare'
+		REFUND = 'refund', 'Refund'
 
 	card = models.ForeignKey(Card, on_delete=models.PROTECT, related_name='transactions')
 	cashier = models.ForeignKey(
@@ -462,12 +463,29 @@ class TapLog(models.Model):
 		blank=True,
 		related_name='tap_logs',
 	)
+	manifest_trip = models.ForeignKey(
+		ManifestTrip,
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name='tap_logs',
+	)
 	# snapshot of the passenger's name at tap time, independent of later passenger record changes
 	passenger_name = models.CharField(max_length=255, blank=True)
 	success = models.BooleanField()
 	message = models.CharField(max_length=255)
+	fare_type = models.CharField(max_length=20, choices=[('base', 'Base'), ('discount', 'Discount')], null=True, blank=True)
 	fare_charged = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
 	remaining_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+	refunded = models.BooleanField(default=False)
+	refunded_at = models.DateTimeField(null=True, blank=True)
+	refunded_by = models.ForeignKey(
+		settings.AUTH_USER_MODEL,
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name='refunded_tap_logs',
+	)
 	timestamp = models.DateTimeField(auto_now_add=True)
 
 	def __str__(self):

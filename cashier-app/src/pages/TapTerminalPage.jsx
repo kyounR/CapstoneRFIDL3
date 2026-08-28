@@ -42,11 +42,16 @@ function TapTerminalPage() {
 
   useEffect(() => {
     let isMounted = true
+    let hadSelection = false
 
     async function fetchCurrentSelection() {
       try {
         const response = await api.get('tap-destination/')
         if (isMounted) {
+          if (hadSelection && response.data === null) {
+            setSelectedDestinationId('')
+          }
+          hadSelection = response.data !== null
           setCurrentSelection(response.data)
           setError('')
         }

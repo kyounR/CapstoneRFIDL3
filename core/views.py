@@ -662,7 +662,7 @@ def tap_log_cancel_boarding_view(request, pk):
         return _role_forbidden_response('cancel boarding')
 
     with transaction.atomic():
-        tap_log = TapLog.objects.select_for_update().select_related('destination', 'card').filter(pk=pk).first()
+        tap_log = TapLog.objects.select_for_update(of=('self',)).select_related('destination', 'card').filter(pk=pk).first()
         if tap_log is None:
             return Response({'error': 'TapLog not found.'}, status=status.HTTP_404_NOT_FOUND)
         if not tap_log.success:

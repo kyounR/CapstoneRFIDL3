@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     admin_dashboard_view,
     admin_reports_export_view,
+    boarding_status_view,
     DestinationViewSet,
     DispatcherViewSet,
     DriverViewSet,
@@ -39,6 +40,7 @@ urlpatterns = [
     path('health/', HealthCheckView.as_view(), name='health-check'),
     path('admin/dashboard/', admin_dashboard_view, name='admin-dashboard'),
     path('admin/reports/export/', admin_reports_export_view, name='admin-reports-export'),
+    path('boarding-status/', boarding_status_view, name='boarding-status'),
     path('login/', login_view, name='login'),
     path('cards/lookup/', card_lookup_view, name='card-lookup'),
     path('topup/', topup_view, name='topup'),

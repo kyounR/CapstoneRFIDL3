@@ -7,6 +7,7 @@ from typing import Optional
 from django.contrib.auth import authenticate
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Q, Sum
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.utils.dateparse import parse_date, parse_time
 from django.utils.timezone import localdate, now
@@ -538,6 +539,55 @@ def tap_log_latest_public_view(request):
         payload['message'] = log.message
 
     return Response(payload, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def boarding_status_view(request):
+    boarding_trips = ManifestTrip.objects.filter(
+        is_finalized=False,
+    ).select_related(
+        'vehicle__line',
+    ).annotate(
+        passenger_total=Coalesce(Sum('entries__passenger_count'), 0),
+    ).order_by('vehicle__line__name', 'id')
+
+    boarding_by_line = {}
+    for manifest in boarding_trips:
+        line_name = manifest.vehicle.line.name
+        boarding_by_line.setdefault(line_name, []).append({
+            'manifest_trip_id': manifest.id,
+            'plate_number': manifest.vehicle.plate_number,
+            'total_passengers': manifest.passenger_total,
+            'is_primary': False,
+        })
+
+    boarding = []
+    for line_name, vehicles in boarding_by_line.items():
+        vehicles[0]['is_primary'] = True
+        boarding.append({'line_name': line_name, 'vehicles': vehicles})
+
+    recently_departed = ManifestTrip.objects.filter(
+        is_finalized=True,
+        finalized_at__gte=now() - timedelta(minutes=2),
+    ).select_related(
+        'vehicle__line',
+    ).order_by('-finalized_at', '-id')
+
+    return Response(
+        {
+            'boarding': boarding,
+            'recently_departed': [
+                {
+                    'plate_number': manifest.vehicle.plate_number,
+                    'line_name': manifest.vehicle.line.name,
+                    'departure_time': manifest.departure_time,
+                }
+                for manifest in recently_departed
+            ],
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 @api_view(['GET'])

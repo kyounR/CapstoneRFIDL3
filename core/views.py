@@ -439,7 +439,7 @@ def tap_view(request):
                 status=status.HTTP_200_OK,
             )
 
-        tap_selection = CurrentTapSelection.objects.select_for_update().select_related(
+        tap_selection = CurrentTapSelection.objects.select_for_update(of=('self',)).select_related(
             'destination',
             'manifest_trip__vehicle',
         ).get_or_create(pk=1)[0]

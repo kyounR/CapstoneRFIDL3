@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import api from '../api/client'
 
 const CARD_STATUS_BADGE = {
@@ -20,10 +20,80 @@ function TopupPage() {
   const [lookupError, setLookupError] = useState('')
   const [isLookingUp, setIsLookingUp] = useState(false)
 
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [searchError, setSearchError] = useState('')
+  const searchTimeoutRef = useRef(null)
+
   const [amount, setAmount] = useState('')
   const [topupResult, setTopupResult] = useState(null)
   const [topupError, setTopupError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const amountInputRef = useRef(null)
+
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    if (!searchQuery || searchQuery.length < 2) {
+      setSearchResults([])
+      setSearchError('')
+      return
+    }
+
+    setIsSearching(true)
+    setSearchError('')
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await api.get('cards/search/', {
+          params: { q: searchQuery },
+        })
+        setSearchResults(response.data)
+      } catch (requestError) {
+        const message = requestError.response?.data?.error || 'Card search failed.'
+        setSearchError(message)
+        setSearchResults([])
+      } finally {
+        setIsSearching(false)
+      }
+    }, 400)
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [searchQuery])
+
+  function maskCardUid(uid) {
+    if (!uid || uid.length < 8) return uid
+    return `****${uid.slice(-4)}`
+  }
+
+  function handleSelectSearchResult(result) {
+    setCardUid(result.uid)
+    setCardLookup({
+      uid: result.uid,
+      balance: result.balance,
+      status: result.status,
+      passenger: result.passenger,
+    })
+    setSearchQuery('')
+    setSearchResults([])
+    setLookupMessage('Card found.')
+    setLookupError('')
+
+    // Focus on amount field after short delay for smooth UX
+    setTimeout(() => {
+      if (amountInputRef.current) {
+        amountInputRef.current.focus()
+      }
+    }, 50)
+  }
 
   async function handleLookupCard() {
     const trimmedUid = cardUid.trim()
@@ -80,6 +150,8 @@ function TopupPage() {
       setCardLookup(null)
       setLookupMessage('')
       setLookupError('')
+      setSearchQuery('')
+      setSearchResults([])
     } catch (requestError) {
       const message = requestError.response?.data?.error || 'Top-up request failed.'
       setTopupError(message)
@@ -96,6 +168,55 @@ function TopupPage() {
       </p>
 
       <form onSubmit={handleSubmit} className="card">
+        <div style={{ marginBottom: '12px' }}>
+          <label htmlFor="searchQuery">Search by name</label>
+          <input
+            id="searchQuery"
+            type="text"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Type passenger name (min 2 characters)"
+            className="input"
+            style={{ width: '100%', marginTop: '4px' }}
+          />
+          {isSearching ? <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '4px' }}>Searching...</p> : null}
+          {searchError ? <p style={{ fontSize: '0.9rem', color: 'var(--danger)', marginTop: '4px' }}>{searchError}</p> : null}
+          {searchResults.length > 0 ? (
+            <div style={{ marginTop: '8px', border: '1px solid var(--border)', borderRadius: 'var(--radius)', maxHeight: '300px', overflowY: 'auto', background: 'var(--bg-elevated)' }}>
+              {searchResults.map((result) => (
+                <button
+                  key={result.id}
+                  type="button"
+                  onClick={() => handleSelectSearchResult(result)}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    padding: '12px',
+                    textAlign: 'left',
+                    border: 'none',
+                    background: 'transparent',
+                    borderBottom: '1px solid var(--border)',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.15s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+                    {result.passenger?.full_name || 'Unknown'}
+                  </div>
+                  <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>
+                    {maskCardUid(result.uid)} · {result.passenger?.discount_type || 'N/A'}
+                  </div>
+                  <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                    Balance: <span className="numeric">{result.balance}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
         <div style={{ marginBottom: '12px' }}>
           <label htmlFor="cardUid">Card UID</label>
           <input
@@ -157,6 +278,7 @@ function TopupPage() {
         <div style={{ marginBottom: '12px' }}>
           <label htmlFor="amount">Amount</label>
           <input
+            ref={amountInputRef}
             id="amount"
             type="number"
             step="0.01"

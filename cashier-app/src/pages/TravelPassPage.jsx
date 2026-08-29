@@ -56,7 +56,7 @@ function TravelPassPage() {
   useEffect(() => {
     async function fetchVehicles() {
       try {
-        const response = await api.get('vehicles/')
+        const response = await api.get('vehicles/?active_only=true')
         setVehicles(getListData(response.data))
       } catch (requestError) {
         setError(requestError.response?.data?.detail || 'Could not load vehicles.')
@@ -77,7 +77,7 @@ function TravelPassPage() {
     async function fetchDestinations() {
       setIsLoadingDestinations(true)
       try {
-        const response = await api.get('destinations/')
+        const response = await api.get('destinations/?active_only=true')
         setDestinations(getListData(response.data))
       } catch (requestError) {
         setError(requestError.response?.data?.detail || 'Could not load destinations.')

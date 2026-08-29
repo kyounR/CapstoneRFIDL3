@@ -52,7 +52,7 @@ function DailyRemittancePage() {
       const [remittanceResponse, terminalResponse, vehicleResponse, driverResponse, dispatcherResponse] = await Promise.all([
         api.get('remittances/', { params: { is_finalized: false } }),
         api.get('terminals/'),
-        api.get('vehicles/'),
+        api.get('vehicles/?active_only=true'),
         api.get('drivers/'),
         api.get('dispatchers/'),
       ])

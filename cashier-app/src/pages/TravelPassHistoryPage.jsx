@@ -36,7 +36,7 @@ function TravelPassHistoryPage() {
   useEffect(() => {
     async function fetchVehicles() {
       try {
-        const response = await api.get('vehicles/')
+        const response = await api.get('vehicles/?active_only=true')
         setVehicles(getListData(response.data))
       } catch (requestError) {
         setError(requestError.response?.data?.detail || 'Could not load vehicles.')

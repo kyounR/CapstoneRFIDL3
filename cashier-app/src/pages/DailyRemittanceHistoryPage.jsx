@@ -49,7 +49,7 @@ function DailyRemittanceHistoryPage() {
       try {
         const [terminalResponse, vehicleResponse, driverResponse, dispatcherResponse] = await Promise.all([
           api.get('terminals/'),
-          api.get('vehicles/'),
+          api.get('vehicles/?active_only=true'),
           api.get('drivers/'),
           api.get('dispatchers/'),
         ])

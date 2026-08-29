@@ -1810,9 +1810,16 @@ def manifest_entry_untally_view(request):
 
 
 class DestinationViewSet(viewsets.ModelViewSet):
-    queryset = Destination.objects.filter(is_active=True).order_by('base_fare', 'destination_name')
     serializer_class = DestinationSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = Destination.objects.all().order_by('base_fare', 'destination_name')
+        # Apply is_active filter only if ?active_only=true is passed
+        active_only = self.request.query_params.get('active_only', '').lower() == 'true'
+        if active_only:
+            queryset = queryset.filter(is_active=True)
+        return queryset
 
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)
@@ -1834,9 +1841,16 @@ class DestinationViewSet(viewsets.ModelViewSet):
 
 
 class VehicleViewSet(viewsets.ModelViewSet):
-    queryset = Vehicle.objects.filter(is_active=True).order_by('plate_number')
     serializer_class = VehicleSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = Vehicle.objects.all().order_by('plate_number')
+        # Apply is_active filter only if ?active_only=true is passed
+        active_only = self.request.query_params.get('active_only', '').lower() == 'true'
+        if active_only:
+            queryset = queryset.filter(is_active=True)
+        return queryset
 
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)

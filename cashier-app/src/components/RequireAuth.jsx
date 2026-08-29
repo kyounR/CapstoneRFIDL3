@@ -45,6 +45,7 @@ function RequireAuth() {
           {role === 'admin' ? <>
             <span aria-hidden="true" style={{ color: 'var(--border)' }}>|</span>
             <Link to="/admin/dashboard" style={{ color: isActive('/admin/dashboard') ? 'var(--accent)' : 'var(--text-primary)', fontWeight: isActive('/admin/dashboard') ? 600 : 400, textDecoration: isActive('/admin/dashboard') ? 'underline' : 'none' }}>Admin Dashboard</Link>
+            <Link to="/admin/manage" style={{ color: isActive('/admin/manage') ? 'var(--accent)' : 'var(--text-primary)', fontWeight: isActive('/admin/manage') ? 600 : 400, textDecoration: isActive('/admin/manage') ? 'underline' : 'none' }}>Manage</Link>
             <Link to="/admin/reports" style={{ color: isActive('/admin/reports') ? 'var(--accent)' : 'var(--text-primary)', fontWeight: isActive('/admin/reports') ? 600 : 400, textDecoration: isActive('/admin/reports') ? 'underline' : 'none' }}>Reports</Link>
           </> : null}
           <button type="button" onClick={handleLogout} className="btn-secondary">

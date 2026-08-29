@@ -414,8 +414,9 @@ function TravelPassPage() {
                   </p>
                 ) : null}
                 <p className="numeric">Fare: {destination.base_fare}</p>
-                <p className="numeric">Passengers: {entry.passenger_count}</p>
-                <p className="numeric">Discount passengers: {entry.discount_count}</p>
+                <p className="numeric">Regular: {entry.passenger_count - entry.discount_count}</p>
+                <p className="numeric">Discount: {entry.discount_count}</p>
+                <p className="numeric">Total: {entry.passenger_count}</p>
                 <p className="numeric">Total fare: {entry.total_fare}</p>
                 {atCapacity ? (
                   <p style={{ color: 'var(--danger)' }}>

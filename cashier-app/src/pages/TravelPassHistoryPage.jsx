@@ -294,7 +294,7 @@ function TravelPassHistoryPage() {
                             </div>
                           )}
                           <table className="table">
-                            <thead><tr><th>Destination</th><th>Passenger Count</th><th>Discount Count</th><th>Total Fare</th></tr></thead>
+                            <thead><tr><th>Destination</th><th>Regular</th><th>Discount</th><th>Total</th><th>Total Fare</th></tr></thead>
                             <tbody>
                               {detailPass.entries?.length ? detailPass.entries.map((entry) => {
                                 const destinationName = entry.destination_details?.destination_name || entry.destination_name
@@ -302,7 +302,7 @@ function TravelPassHistoryPage() {
                                   <tr key={`${detailPass.id}-${entry.id || entry.destination}`}>
                                     <td>{destinationName}</td>
                                     <td className="numeric">
-                                      {entry.passenger_count}
+                                      {entry.passenger_count - entry.discount_count}
                                       {detailPass.is_finalized ? renderAdminEditButton('entry', entry.id, 'passenger_count', entry.passenger_count) : null}
                                       {detailPass.is_finalized && editing?.type === 'entry' && editing.id === entry.id && editing.field === 'passenger_count' ? renderEditControls('entry', entry.id, 'passenger_count', <input type="number" min="0" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input numeric" />) : null}
                                     </td>
@@ -311,10 +311,11 @@ function TravelPassHistoryPage() {
                                       {detailPass.is_finalized ? renderAdminEditButton('entry', entry.id, 'discount_count', entry.discount_count) : null}
                                       {detailPass.is_finalized && editing?.type === 'entry' && editing.id === entry.id && editing.field === 'discount_count' ? renderEditControls('entry', entry.id, 'discount_count', <input type="number" min="0" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input numeric" />) : null}
                                     </td>
+                                    <td className="numeric">{entry.passenger_count}</td>
                                     <td className="numeric">{entry.total_fare}</td>
                                   </tr>
                                 )
-                              }) : <tr><td colSpan="4">No entries recorded.</td></tr>}
+                              }) : <tr><td colSpan="5">No entries recorded.</td></tr>}
                             </tbody>
                           </table>
 

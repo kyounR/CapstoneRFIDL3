@@ -11,6 +11,7 @@ from django.db import IntegrityError, transaction
 from django.db.models.deletion import ProtectedError
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import Coalesce
+from django.forms.models import model_to_dict
 from django.http import HttpResponse
 from django.utils.dateparse import parse_date, parse_time
 from django.utils.timezone import localdate, now
@@ -22,8 +23,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Card, CurrentTapSelection, DailyRemittance, Destination, DispatchRound, Dispatcher, Driver, FareManifestEntry, FeeSettings, Line, ManifestCorrection, ManifestTrip, Passenger, RemittanceCorrection, TapLog, Terminal, Transaction, Trip, User, Vehicle
+from .models import AdminAuditLog, Card, CurrentTapSelection, DailyRemittance, Destination, DispatchRound, Dispatcher, Driver, FareManifestEntry, FeeSettings, Line, ManifestCorrection, ManifestTrip, Passenger, RemittanceCorrection, TapLog, Terminal, Transaction, Trip, User, Vehicle
 from .serializers import (
+    AdminAuditLogSerializer,
     CardSerializer,
     DailyRemittanceSerializer,
     DispatchRoundSerializer,
@@ -63,6 +65,58 @@ def _role_forbidden_response(action_label):
         {'error': f'Only cashier or admin users can {action_label}.'},
         status=status.HTTP_403_FORBIDDEN,
     )
+
+
+def _audit_value(value):
+    if hasattr(value, 'pk'):
+        return value.pk
+    if isinstance(value, Decimal):
+        return str(value)
+    if hasattr(value, 'isoformat'):
+        return value.isoformat()
+    return value
+
+
+def _audit_changes(data):
+    return {
+        field_name: '(set)' if field_name == 'password' else _audit_value(value)
+        for field_name, value in data.items()
+    }
+
+
+def log_admin_action(user, action, instance, changes=None, model_name=None, object_repr=None):
+    return AdminAuditLog.objects.create(
+        actor=user if getattr(user, 'is_authenticated', False) else None,
+        action=action,
+        model_name=model_name or instance.__class__.__name__,
+        object_repr=object_repr or str(instance),
+        changes=changes,
+    )
+
+
+class AdminAuditMixin:
+    def perform_create(self, serializer):
+        submitted_data = dict(serializer.validated_data)
+        instance = serializer.save()
+        log_admin_action(self.request.user, 'created', instance, _audit_changes(submitted_data))
+
+    def perform_update(self, serializer):
+        old_values = model_to_dict(serializer.instance)
+        instance = serializer.save()
+        changes = {
+            field_name: [_audit_value(old_values.get(field_name)), _audit_value(new_value)]
+            for field_name, new_value in serializer.validated_data.items()
+            if _audit_value(old_values.get(field_name)) != _audit_value(new_value)
+        }
+        if changes:
+            log_admin_action(self.request.user, 'updated', instance, changes)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        object_repr = str(instance)
+        self.perform_destroy(instance)
+        log_admin_action(request.user, 'deleted', instance, object_repr=object_repr)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 def _get_report_date_range(request):
@@ -327,11 +381,43 @@ def fee_settings_view(request):
 
     elif request.method == 'PATCH':
         fee_settings = FeeSettings.get_current()
+        old_values = model_to_dict(fee_settings)
         serializer = FeeSettingsSerializer(fee_settings, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save()
+            updated_settings = serializer.save()
+            changes = {
+                field_name: [_audit_value(old_values.get(field_name)), _audit_value(new_value)]
+                for field_name, new_value in serializer.validated_data.items()
+                if _audit_value(old_values.get(field_name)) != _audit_value(new_value)
+            }
+            if changes:
+                log_admin_action(request.user, 'updated', updated_settings, changes)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def audit_log_view(request):
+    if not _has_admin_role(request):
+        return _role_forbidden_response('access the audit log')
+
+    logs = AdminAuditLog.objects.select_related('actor').order_by('-timestamp')
+    model_name = request.query_params.get('model_name')
+    if model_name:
+        logs = logs.filter(model_name=model_name)
+
+    date_param = request.query_params.get('date')
+    if date_param:
+        audit_date = parse_date(date_param)
+        if audit_date is None:
+            return Response(
+                {'error': 'Invalid date format. Use YYYY-MM-DD.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        logs = logs.filter(timestamp__date=audit_date)
+
+    return Response(AdminAuditLogSerializer(logs[:100], many=True).data)
 
 
 @api_view(['POST'])
@@ -1010,9 +1096,13 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
                 remittance=remittance,
             ).count()
             had_rounds = round_count > 0
+            vehicle_plate = remittance.vehicle.plate_number
+            driver_name = remittance.driver.full_name if remittance.driver else 'No driver'
+            object_repr = f'{vehicle_plate} - {driver_name} - {remittance.date} (had_rounds={had_rounds}, round_count={round_count})'
 
             DispatchRound.objects.filter(remittance=remittance).delete()
             remittance.delete()
+            log_admin_action(request.user, 'deleted', remittance, model_name='DailyRemittance', object_repr=object_repr)
 
         return Response(
             {
@@ -1350,9 +1440,11 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
                 passenger_count__gt=0,
             ).aggregate(total=Sum('passenger_count'))['total'] or 0
             had_passengers = passenger_count > 0
+            object_repr = f'{manifest.vehicle.plate_number} - {manifest.date} (had_passengers={had_passengers}, passenger_count={passenger_count})'
 
             FareManifestEntry.objects.filter(manifest_trip=manifest).delete()
             manifest.delete()
+            log_admin_action(request.user, 'deleted', manifest, model_name='ManifestTrip', object_repr=object_repr)
 
         return Response(
             {
@@ -1812,7 +1904,7 @@ def manifest_entry_untally_view(request):
     return Response(FareManifestEntrySerializer(entry).data, status=status.HTTP_200_OK)
 
 
-class DestinationViewSet(viewsets.ModelViewSet):
+class DestinationViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     serializer_class = DestinationSerializer
     permission_classes = [IsAuthenticated]
 
@@ -1843,7 +1935,7 @@ class DestinationViewSet(viewsets.ModelViewSet):
             )
 
 
-class VehicleViewSet(viewsets.ModelViewSet):
+class VehicleViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     serializer_class = VehicleSerializer
     permission_classes = [IsAuthenticated]
 
@@ -1874,7 +1966,7 @@ class VehicleViewSet(viewsets.ModelViewSet):
             )
 
 
-class LineViewSet(viewsets.ModelViewSet):
+class LineViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     queryset = Line.objects.all().order_by('name')
     serializer_class = LineSerializer
     permission_classes = [IsAuthenticated]
@@ -1898,7 +1990,7 @@ class LineViewSet(viewsets.ModelViewSet):
             )
 
 
-class TerminalViewSet(viewsets.ModelViewSet):
+class TerminalViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     queryset = Terminal.objects.all().order_by('name')
     serializer_class = TerminalSerializer
     permission_classes = [IsAuthenticated]
@@ -1922,7 +2014,7 @@ class TerminalViewSet(viewsets.ModelViewSet):
             )
 
 
-class DriverViewSet(viewsets.ModelViewSet):
+class DriverViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     queryset = Driver.objects.all().order_by('full_name')
     serializer_class = DriverSerializer
     permission_classes = [IsAuthenticated]
@@ -1946,7 +2038,7 @@ class DriverViewSet(viewsets.ModelViewSet):
             )
 
 
-class DispatcherViewSet(viewsets.ModelViewSet):
+class DispatcherViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     queryset = Dispatcher.objects.all().order_by('full_name')
     serializer_class = DispatcherSerializer
     permission_classes = [IsAuthenticated]
@@ -1970,7 +2062,7 @@ class DispatcherViewSet(viewsets.ModelViewSet):
             )
 
 
-class PassengerViewSet(viewsets.ModelViewSet):
+class PassengerViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     queryset = Passenger.objects.all().order_by('full_name')
     serializer_class = PassengerSerializer
     permission_classes = [IsAuthenticated]
@@ -1994,7 +2086,7 @@ class PassengerViewSet(viewsets.ModelViewSet):
             )
 
 
-class CardViewSet(viewsets.ModelViewSet):
+class CardViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     queryset = Card.objects.all().order_by('-date_issued')
     serializer_class = CardSerializer
     permission_classes = [IsAuthenticated]
@@ -2012,7 +2104,7 @@ class CardViewSet(viewsets.ModelViewSet):
         # Default status to 'active' if not provided
         if 'status' not in self.request.data:
             serializer.validated_data['status'] = Card.Status.ACTIVE
-        serializer.save()
+        super().perform_create(serializer)
 
     def destroy(self, request, *args, **kwargs):
         try:
@@ -2024,7 +2116,7 @@ class CardViewSet(viewsets.ModelViewSet):
             )
 
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('username')
     serializer_class = UserAdminSerializer
     permission_classes = [IsAuthenticated]
@@ -2070,4 +2162,10 @@ class UserViewSet(viewsets.ModelViewSet):
 
         user.set_password(new_password)
         user.save(update_fields=['password'])
+        log_admin_action(
+            request.user,
+            'updated',
+            user,
+            changes={'password': ['(reset)', '(reset)']},
+        )
         return Response({'message': 'Password reset successfully.'})

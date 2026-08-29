@@ -18,6 +18,29 @@ class User(AbstractUser):
 		return f"{self.username} ({self.role})"
 
 
+class AdminAuditLog(models.Model):
+	class Action(models.TextChoices):
+		CREATED = 'created', 'Created'
+		UPDATED = 'updated', 'Updated'
+		DELETED = 'deleted', 'Deleted'
+
+	actor = models.ForeignKey(
+		User,
+		null=True,
+		blank=True,
+		on_delete=models.SET_NULL,
+		related_name='admin_audit_logs',
+	)
+	action = models.CharField(max_length=20, choices=Action.choices)
+	model_name = models.CharField(max_length=100)
+	object_repr = models.CharField(max_length=255)
+	changes = models.JSONField(null=True, blank=True)
+	timestamp = models.DateTimeField(auto_now_add=True)
+
+	def __str__(self):
+		return f"{self.actor} {self.action} {self.model_name}: {self.object_repr}"
+
+
 class Passenger(models.Model):
 	class DiscountType(models.TextChoices):
 		REGULAR = 'regular', 'Regular'

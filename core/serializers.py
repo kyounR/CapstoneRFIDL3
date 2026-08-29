@@ -3,6 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 
 from .models import (
     Card,
+    AdminAuditLog,
     DailyRemittance,
     Destination,
     Dispatcher,
@@ -21,6 +22,14 @@ from .models import (
     User,
     Vehicle,
 )
+
+
+class AdminAuditLogSerializer(serializers.ModelSerializer):
+    actor_username = serializers.CharField(source='actor.username', read_only=True, allow_null=True)
+
+    class Meta:
+        model = AdminAuditLog
+        fields = ['id', 'actor', 'actor_username', 'action', 'model_name', 'object_repr', 'changes', 'timestamp']
 
 
 class UserAdminSerializer(serializers.ModelSerializer):

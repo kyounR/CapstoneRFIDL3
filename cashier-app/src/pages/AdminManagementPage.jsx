@@ -122,6 +122,154 @@ function FeeSettingsForm() {
   )
 }
 
+function getErrorMessage(requestError, fallbackMessage) {
+  const details = requestError.response?.data
+  if (details && typeof details === 'object') {
+    return Object.values(details).flat().join(' ')
+  }
+  return fallbackMessage
+}
+
+function UserManager() {
+  const [users, setUsers] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newUser, setNewUser] = useState({ username: '', password: '', role: 'cashier' })
+  const [editingUser, setEditingUser] = useState(null)
+  const [editValues, setEditValues] = useState({ role: 'cashier', is_active: true })
+  const [resetUser, setResetUser] = useState(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+
+  async function fetchUsers() {
+    setIsLoading(true)
+    try {
+      const response = await api.get('users/')
+      setUsers(Array.isArray(response.data) ? response.data : response.data.results || [])
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, 'Could not load users.'))
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchUsers()
+  }, [])
+
+  function resetFeedback() {
+    setError('')
+    setMessage('')
+  }
+
+  async function handleCreateUser(event) {
+    event.preventDefault()
+    setIsSaving(true)
+    resetFeedback()
+    try {
+      await api.post('users/', newUser)
+      setNewUser({ username: '', password: '', role: 'cashier' })
+      setShowAddForm(false)
+      setMessage('User created.')
+      fetchUsers()
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, 'Could not create user.'))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  function openEditUser(user) {
+    resetFeedback()
+    setEditingUser(user)
+    setEditValues({ role: user.role, is_active: user.is_active })
+  }
+
+  async function handleEditUser(event) {
+    event.preventDefault()
+    setIsSaving(true)
+    resetFeedback()
+    try {
+      await api.patch(`users/${editingUser.id}/`, editValues)
+      setEditingUser(null)
+      setMessage('User updated.')
+      fetchUsers()
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, 'Could not update user.'))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  function openResetPassword(user) {
+    resetFeedback()
+    setResetUser(user)
+    setNewPassword('')
+    setConfirmPassword('')
+  }
+
+  async function handleResetPassword(event) {
+    event.preventDefault()
+    resetFeedback()
+    if (newPassword !== confirmPassword) {
+      setError('New password and confirmation do not match.')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const response = await api.post(`users/${resetUser.id}/reset-password/`, { new_password: newPassword })
+      setResetUser(null)
+      setNewPassword('')
+      setConfirmPassword('')
+      setMessage(response.data.message || 'Password reset successfully.')
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, 'Could not reset password.'))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <section className="card">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '16px' }}>
+        <h2 style={{ margin: 0 }}>Users</h2>
+        <button type="button" onClick={() => { resetFeedback(); setShowAddForm(true) }} className="btn-primary">Add New User</button>
+      </div>
+      {error ? <p style={{ color: 'var(--danger)' }}>{error}</p> : null}
+      {message ? <p style={{ color: 'var(--success)' }}>{message}</p> : null}
+
+      {showAddForm ? <form onSubmit={handleCreateUser} style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginBottom: '20px' }}>
+        <h3 style={{ marginTop: 0 }}>Add New User</h3>
+        <div style={{ marginBottom: '12px' }}><label htmlFor="newUsername">Username</label><input id="newUsername" type="text" value={newUser.username} onChange={(event) => setNewUser((current) => ({ ...current, username: event.target.value }))} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required /></div>
+        <div style={{ marginBottom: '12px' }}><label htmlFor="newPassword">Password</label><input id="newPassword" type="password" value={newUser.password} onChange={(event) => setNewUser((current) => ({ ...current, password: event.target.value }))} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required /></div>
+        <div style={{ marginBottom: '12px' }}><label htmlFor="newUserRole">Role</label><select id="newUserRole" value={newUser.role} onChange={(event) => setNewUser((current) => ({ ...current, role: event.target.value }))} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }}><option value="cashier">Cashier</option><option value="admin">Admin</option></select></div>
+        <button type="submit" disabled={isSaving} className="btn-primary">{isSaving ? 'Creating...' : 'Create User'}</button>
+        <button type="button" onClick={() => setShowAddForm(false)} disabled={isSaving} className="btn-secondary" style={{ marginLeft: '8px' }}>Cancel</button>
+      </form> : null}
+
+      {editingUser ? <form onSubmit={handleEditUser} style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginBottom: '20px' }}>
+        <h3 style={{ marginTop: 0 }}>Edit {editingUser.username}</h3>
+        <div style={{ marginBottom: '12px' }}><label htmlFor="editUserRole">Role</label><select id="editUserRole" value={editValues.role} onChange={(event) => setEditValues((current) => ({ ...current, role: event.target.value }))} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }}><option value="cashier">Cashier</option><option value="admin">Admin</option></select></div>
+        <label><input type="checkbox" checked={editValues.is_active} onChange={(event) => setEditValues((current) => ({ ...current, is_active: event.target.checked }))} /> Active</label>
+        <div style={{ marginTop: '16px' }}><button type="submit" disabled={isSaving} className="btn-primary">{isSaving ? 'Saving...' : 'Save Changes'}</button><button type="button" onClick={() => setEditingUser(null)} disabled={isSaving} className="btn-secondary" style={{ marginLeft: '8px' }}>Cancel</button></div>
+      </form> : null}
+
+      {resetUser ? <form onSubmit={handleResetPassword} style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginBottom: '20px' }}>
+        <h3 style={{ marginTop: 0 }}>Reset Password for {resetUser.username}</h3>
+        <div style={{ marginBottom: '12px' }}><label htmlFor="resetPassword">New Password</label><input id="resetPassword" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required /></div>
+        <div style={{ marginBottom: '12px' }}><label htmlFor="confirmPassword">Confirm New Password</label><input id="confirmPassword" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required /></div>
+        <button type="submit" disabled={isSaving} className="btn-primary">{isSaving ? 'Resetting...' : 'Reset Password'}</button><button type="button" onClick={() => setResetUser(null)} disabled={isSaving} className="btn-secondary" style={{ marginLeft: '8px' }}>Cancel</button>
+      </form> : null}
+
+      {isLoading ? <p>Loading users...</p> : <div style={{ overflowX: 'auto' }}><table className="table"><thead><tr><th>Username</th><th>Role</th><th>Status</th><th>Date Joined</th><th>Actions</th></tr></thead><tbody>{users.length ? users.map((user) => <tr key={user.id}><td>{user.username}</td><td>{user.role}</td><td><span className={`badge ${user.is_active ? 'badge--success' : 'badge--danger'}`}><span className={`status-dot ${user.is_active ? 'status-dot--success' : 'status-dot--danger'}`} style={{ marginRight: '6px' }} />{user.is_active ? 'Active' : 'Inactive'}</span></td><td>{new Date(user.date_joined).toLocaleString()}</td><td><button type="button" onClick={() => openEditUser(user)} className="btn-secondary">Edit</button><button type="button" onClick={() => openResetPassword(user)} className="btn-secondary" style={{ marginLeft: '8px' }}>Reset Password</button></td></tr>) : <tr><td colSpan="5">No users found.</td></tr>}</tbody></table></div>}
+    </section>
+  )
+}
+
 function AdminManagementPage() {
   const [activeTab, setActiveTab] = useState(MANAGEMENT_TABS[0].label)
   const selectedTab = MANAGEMENT_TABS.find((tab) => tab.label === activeTab)
@@ -131,9 +279,10 @@ function AdminManagementPage() {
       <h1>Admin Management</h1>
       <nav aria-label="Management sections" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
         {MANAGEMENT_TABS.map((tab) => <button key={tab.label} type="button" onClick={() => setActiveTab(tab.label)} className={activeTab === tab.label ? 'btn-primary' : 'btn-secondary'}>{tab.label}</button>)}
+        <button type="button" onClick={() => setActiveTab('Users')} className={activeTab === 'Users' ? 'btn-primary' : 'btn-secondary'}>Users</button>
         <button type="button" onClick={() => setActiveTab('Fee Settings')} className={activeTab === 'Fee Settings' ? 'btn-primary' : 'btn-secondary'}>Fee Settings</button>
       </nav>
-      {activeTab === 'Fee Settings' ? <FeeSettingsForm /> : <EntityManager key={selectedTab.label} endpoint={selectedTab.endpoint} title={selectedTab.label} fields={selectedTab.fields} />}
+      {activeTab === 'Fee Settings' ? <FeeSettingsForm /> : activeTab === 'Users' ? <UserManager /> : <EntityManager key={selectedTab.label} endpoint={selectedTab.endpoint} title={selectedTab.label} fields={selectedTab.fields} />}
     </div>
   )
 }

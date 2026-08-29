@@ -276,6 +276,21 @@ const AUDIT_ACTION_STYLES = {
   deleted: { badge: 'badge--danger', dot: 'status-dot--danger' },
 }
 
+const AUDIT_MODEL_NAMES = [
+  'Vehicle',
+  'Destination',
+  'Line',
+  'Terminal',
+  'Driver',
+  'Dispatcher',
+  'Passenger',
+  'Card',
+  'User',
+  'FeeSettings',
+  'ManifestTrip',
+  'DailyRemittance',
+]
+
 function AuditLogManager() {
   const [logs, setLogs] = useState([])
   const [modelName, setModelName] = useState('')
@@ -305,8 +320,6 @@ function AuditLogManager() {
     fetchAuditLogs()
   }, [modelName, date])
 
-  const modelNames = [...new Set(logs.map((log) => log.model_name))].sort()
-
   return (
     <section className="card">
       <h2 style={{ marginTop: 0 }}>Audit Log</h2>
@@ -315,7 +328,7 @@ function AuditLogManager() {
           <label htmlFor="auditModelName">Model</label>
           <select id="auditModelName" value={modelName} onChange={(event) => setModelName(event.target.value)} className="input" style={{ display: 'block', marginTop: '4px' }}>
             <option value="">All models</option>
-            {modelNames.map((name) => <option key={name} value={name}>{name}</option>)}
+            {AUDIT_MODEL_NAMES.map((name) => <option key={name} value={name}>{name}</option>)}
           </select>
         </div>
         <div>

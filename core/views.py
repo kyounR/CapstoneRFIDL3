@@ -114,7 +114,13 @@ class AdminAuditMixin:
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         object_repr = str(instance)
-        self.perform_destroy(instance)
+        try:
+            self.perform_destroy(instance)
+        except ProtectedError:
+            return Response(
+                {'error': f"This {instance._meta.verbose_name} is still in use and can't be deleted."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         log_admin_action(request.user, 'deleted', instance, object_repr=object_repr)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -1925,15 +1931,6 @@ class DestinationViewSet(AdminAuditMixin, viewsets.ModelViewSet):
             if not _has_admin_role(request):
                 raise PermissionDenied('Only admin users can modify destinations.')
 
-    def destroy(self, request, *args, **kwargs):
-        try:
-            return super().destroy(request, *args, **kwargs)
-        except ProtectedError:
-            return Response(
-                {'error': 'This destination is still in use and can\'t be deleted.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
 
 class VehicleViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     serializer_class = VehicleSerializer
@@ -1956,15 +1953,6 @@ class VehicleViewSet(AdminAuditMixin, viewsets.ModelViewSet):
             if not _has_admin_role(request):
                 raise PermissionDenied('Only admin users can modify vehicles.')
 
-    def destroy(self, request, *args, **kwargs):
-        try:
-            return super().destroy(request, *args, **kwargs)
-        except ProtectedError:
-            return Response(
-                {'error': 'This vehicle is still in use and can\'t be deleted.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
 
 class LineViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     queryset = Line.objects.all().order_by('name')
@@ -1979,15 +1967,6 @@ class LineViewSet(AdminAuditMixin, viewsets.ModelViewSet):
         if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
             if not _has_admin_role(request):
                 raise PermissionDenied('Only admin users can modify lines.')
-
-    def destroy(self, request, *args, **kwargs):
-        try:
-            return super().destroy(request, *args, **kwargs)
-        except ProtectedError:
-            return Response(
-                {'error': 'This line is still in use and can\'t be deleted.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
 
 class TerminalViewSet(AdminAuditMixin, viewsets.ModelViewSet):
@@ -2004,15 +1983,6 @@ class TerminalViewSet(AdminAuditMixin, viewsets.ModelViewSet):
             if not _has_admin_role(request):
                 raise PermissionDenied('Only admin users can modify terminals.')
 
-    def destroy(self, request, *args, **kwargs):
-        try:
-            return super().destroy(request, *args, **kwargs)
-        except ProtectedError:
-            return Response(
-                {'error': 'This terminal is still in use and can\'t be deleted.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
 
 class DriverViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     queryset = Driver.objects.all().order_by('full_name')
@@ -2027,15 +1997,6 @@ class DriverViewSet(AdminAuditMixin, viewsets.ModelViewSet):
         if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
             if not _has_admin_role(request):
                 raise PermissionDenied('Only admin users can modify drivers.')
-
-    def destroy(self, request, *args, **kwargs):
-        try:
-            return super().destroy(request, *args, **kwargs)
-        except ProtectedError:
-            return Response(
-                {'error': 'This driver is still in use and can\'t be deleted.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
 
 class DispatcherViewSet(AdminAuditMixin, viewsets.ModelViewSet):
@@ -2052,15 +2013,6 @@ class DispatcherViewSet(AdminAuditMixin, viewsets.ModelViewSet):
             if not _has_admin_role(request):
                 raise PermissionDenied('Only admin users can modify dispatchers.')
 
-    def destroy(self, request, *args, **kwargs):
-        try:
-            return super().destroy(request, *args, **kwargs)
-        except ProtectedError:
-            return Response(
-                {'error': 'This dispatcher is still in use and can\'t be deleted.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
 
 class PassengerViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     queryset = Passenger.objects.all().order_by('full_name')
@@ -2075,15 +2027,6 @@ class PassengerViewSet(AdminAuditMixin, viewsets.ModelViewSet):
         if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
             if not _has_admin_role(request):
                 raise PermissionDenied('Only admin users can modify passengers.')
-
-    def destroy(self, request, *args, **kwargs):
-        try:
-            return super().destroy(request, *args, **kwargs)
-        except ProtectedError:
-            return Response(
-                {'error': 'This passenger is still in use and can\'t be deleted.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
 
 class CardViewSet(AdminAuditMixin, viewsets.ModelViewSet):
@@ -2105,15 +2048,6 @@ class CardViewSet(AdminAuditMixin, viewsets.ModelViewSet):
         if 'status' not in self.request.data:
             serializer.validated_data['status'] = Card.Status.ACTIVE
         super().perform_create(serializer)
-
-    def destroy(self, request, *args, **kwargs):
-        try:
-            return super().destroy(request, *args, **kwargs)
-        except ProtectedError:
-            return Response(
-                {'error': 'This card is still in use and can\'t be deleted.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
 
 class UserViewSet(AdminAuditMixin, viewsets.ModelViewSet):

@@ -269,6 +269,44 @@ def card_lookup_view(request):
     )
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def card_search_view(request):
+    if not _has_cashier_or_admin_role(request):
+        return _role_forbidden_response('search cards')
+
+    q = request.query_params.get('q', '').strip()
+    if not q or len(q) < 2:
+        return Response(
+            {'error': 'Query parameter q must be at least 2 characters long.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Search cards by passenger full_name (case-insensitive partial match)
+    cards = Card.objects.filter(
+        passenger__full_name__icontains=q,
+    ).select_related('passenger').order_by('passenger__full_name')[:10]
+
+    results = []
+    for card in cards:
+        passenger_data = None
+        if card.passenger is not None:
+            passenger_data = {
+                'full_name': card.passenger.full_name,
+                'discount_type': card.passenger.discount_type,
+            }
+
+        results.append({
+            'id': card.id,
+            'uid': card.uid,
+            'balance': card.balance,
+            'status': card.status,
+            'passenger': passenger_data,
+        })
+
+    return Response(results, status=status.HTTP_200_OK)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def topup_view(request):

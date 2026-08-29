@@ -5,6 +5,8 @@ from decimal import Decimal
 from typing import Optional
 
 from django.contrib.auth import authenticate
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models.deletion import ProtectedError
 from django.db.models import Count, Q, Sum
@@ -20,7 +22,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Card, CurrentTapSelection, DailyRemittance, Destination, DispatchRound, Dispatcher, Driver, FareManifestEntry, FeeSettings, Line, ManifestCorrection, ManifestTrip, Passenger, RemittanceCorrection, TapLog, Terminal, Transaction, Trip, Vehicle
+from .models import Card, CurrentTapSelection, DailyRemittance, Destination, DispatchRound, Dispatcher, Driver, FareManifestEntry, FeeSettings, Line, ManifestCorrection, ManifestTrip, Passenger, RemittanceCorrection, TapLog, Terminal, Transaction, Trip, User, Vehicle
 from .serializers import (
     CardSerializer,
     DailyRemittanceSerializer,
@@ -36,6 +38,7 @@ from .serializers import (
     PassengerSerializer,
     RemittanceCorrectionSerializer,
     TerminalSerializer,
+    UserAdminSerializer,
     VehicleSerializer,
 )
 
@@ -2019,3 +2022,52 @@ class CardViewSet(viewsets.ModelViewSet):
                 {'error': 'This card is still in use and can\'t be deleted.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all().order_by('username')
+    serializer_class = UserAdminSerializer
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post', 'patch', 'head', 'options']
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if not _has_admin_role(request):
+            raise PermissionDenied('Only admin users can access user management.')
+
+    def partial_update(self, request, *args, **kwargs):
+        update_data = {
+            field: request.data[field]
+            for field in ('role', 'is_active')
+            if field in request.data
+        }
+        serializer = self.get_serializer(
+            self.get_object(),
+            data=update_data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='reset-password')
+    def reset_password(self, request, pk=None):
+        new_password = request.data.get('new_password')
+        if not new_password:
+            return Response(
+                {'new_password': ['This field is required.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = self.get_object()
+        try:
+            validate_password(new_password, user=user)
+        except ValidationError as error:
+            return Response(
+                {'new_password': error.messages},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
+        user.save(update_fields=['password'])
+        return Response({'message': 'Password reset successfully.'})

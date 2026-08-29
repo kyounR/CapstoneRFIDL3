@@ -13,6 +13,7 @@ from .views import (
     LineViewSet,
     PassengerViewSet,
     TerminalViewSet,
+    UserViewSet,
     VehicleViewSet,
     card_lookup_view,
     card_search_view,
@@ -43,6 +44,7 @@ router.register('drivers', DriverViewSet, basename='driver')
 router.register('dispatchers', DispatcherViewSet, basename='dispatcher')
 router.register('passengers', PassengerViewSet, basename='passenger')
 router.register('cards', CardViewSet, basename='card')
+router.register('users', UserViewSet, basename='user')
 router.register('remittances', DailyRemittanceViewSet, basename='remittance')
 router.register('manifests', ManifestTripViewSet, basename='manifest')
 router.register('manifest-entries', FareManifestEntryViewSet, basename='manifest-entry')

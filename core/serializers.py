@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.contrib.auth.password_validation import validate_password
 
 from .models import (
     Card,
@@ -17,8 +18,29 @@ from .models import (
     Terminal,
     Transaction,
     Trip,
+    User,
     Vehicle,
 )
+
+
+class UserAdminSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'password', 'role', 'is_active', 'date_joined']
+        read_only_fields = ['id', 'date_joined']
+
+    def validate_password(self, value):
+        validate_password(value)
+        return value
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
 
 
 class PassengerSerializer(serializers.ModelSerializer):

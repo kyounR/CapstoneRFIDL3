@@ -270,6 +270,82 @@ function UserManager() {
   )
 }
 
+const AUDIT_ACTION_STYLES = {
+  created: { badge: 'badge--success', dot: 'status-dot--success' },
+  updated: { badge: 'badge--pending', dot: 'status-dot--pending' },
+  deleted: { badge: 'badge--danger', dot: 'status-dot--danger' },
+}
+
+function AuditLogManager() {
+  const [logs, setLogs] = useState([])
+  const [modelName, setModelName] = useState('')
+  const [date, setDate] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    async function fetchAuditLogs() {
+      setIsLoading(true)
+      setError('')
+      try {
+        const response = await api.get('audit-log/', {
+          params: {
+            ...(modelName ? { model_name: modelName } : {}),
+            ...(date ? { date } : {}),
+          },
+        })
+        setLogs(Array.isArray(response.data) ? response.data : response.data.results || [])
+      } catch (requestError) {
+        setError(getErrorMessage(requestError, 'Could not load the audit log.'))
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchAuditLogs()
+  }, [modelName, date])
+
+  const modelNames = [...new Set(logs.map((log) => log.model_name))].sort()
+
+  return (
+    <section className="card">
+      <h2 style={{ marginTop: 0 }}>Audit Log</h2>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+        <div>
+          <label htmlFor="auditModelName">Model</label>
+          <select id="auditModelName" value={modelName} onChange={(event) => setModelName(event.target.value)} className="input" style={{ display: 'block', marginTop: '4px' }}>
+            <option value="">All models</option>
+            {modelNames.map((name) => <option key={name} value={name}>{name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="auditDate">Date</label>
+          <input id="auditDate" type="date" value={date} onChange={(event) => setDate(event.target.value)} className="input" style={{ display: 'block', marginTop: '4px' }} />
+        </div>
+      </div>
+      {error ? <p style={{ color: 'var(--danger)' }}>{error}</p> : null}
+      {isLoading ? <p>Loading audit log...</p> : <div style={{ overflowX: 'auto' }}>
+        <table className="table">
+          <thead><tr><th>Timestamp</th><th>Actor</th><th>Action</th><th>Model</th><th>Record</th><th>Changes</th></tr></thead>
+          <tbody>
+            {logs.length ? logs.map((log) => {
+              const actionStyle = AUDIT_ACTION_STYLES[log.action] || AUDIT_ACTION_STYLES.updated
+              return <tr key={log.id}>
+                <td>{new Date(log.timestamp).toLocaleString()}</td>
+                <td>{log.actor_username || 'System'}</td>
+                <td><span className={`badge ${actionStyle.badge}`}><span className={`status-dot ${actionStyle.dot}`} style={{ marginRight: '6px' }} />{log.action}</span></td>
+                <td>{log.model_name}</td>
+                <td>{log.object_repr}</td>
+                <td>{log.action === 'updated' && log.changes ? <details><summary>View changes</summary><div style={{ marginTop: '8px' }}>{Object.entries(log.changes).map(([field, [oldValue, newValue]]) => <div key={field} className="numeric">{field}: {String(oldValue)} -&gt; {String(newValue)}</div>)}</div></details> : '-'}</td>
+              </tr>
+            }) : <tr><td colSpan="6">No audit entries found.</td></tr>}
+          </tbody>
+        </table>
+      </div>}
+    </section>
+  )
+}
+
 function AdminManagementPage() {
   const [activeTab, setActiveTab] = useState(MANAGEMENT_TABS[0].label)
   const selectedTab = MANAGEMENT_TABS.find((tab) => tab.label === activeTab)
@@ -281,8 +357,9 @@ function AdminManagementPage() {
         {MANAGEMENT_TABS.map((tab) => <button key={tab.label} type="button" onClick={() => setActiveTab(tab.label)} className={activeTab === tab.label ? 'btn-primary' : 'btn-secondary'}>{tab.label}</button>)}
         <button type="button" onClick={() => setActiveTab('Users')} className={activeTab === 'Users' ? 'btn-primary' : 'btn-secondary'}>Users</button>
         <button type="button" onClick={() => setActiveTab('Fee Settings')} className={activeTab === 'Fee Settings' ? 'btn-primary' : 'btn-secondary'}>Fee Settings</button>
+        <button type="button" onClick={() => setActiveTab('Audit Log')} className={activeTab === 'Audit Log' ? 'btn-primary' : 'btn-secondary'}>Audit Log</button>
       </nav>
-      {activeTab === 'Fee Settings' ? <FeeSettingsForm /> : activeTab === 'Users' ? <UserManager /> : <EntityManager key={selectedTab.label} endpoint={selectedTab.endpoint} title={selectedTab.label} fields={selectedTab.fields} />}
+      {activeTab === 'Fee Settings' ? <FeeSettingsForm /> : activeTab === 'Users' ? <UserManager /> : activeTab === 'Audit Log' ? <AuditLogManager /> : <EntityManager key={selectedTab.label} endpoint={selectedTab.endpoint} title={selectedTab.label} fields={selectedTab.fields} />}
     </div>
   )
 }

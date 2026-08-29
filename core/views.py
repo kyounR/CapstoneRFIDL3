@@ -6,6 +6,7 @@ from typing import Optional
 
 from django.contrib.auth import authenticate
 from django.db import IntegrityError, transaction
+from django.db.models.deletion import ProtectedError
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
@@ -19,17 +20,20 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Card, CurrentTapSelection, DailyRemittance, Destination, DispatchRound, Dispatcher, Driver, FareManifestEntry, FeeSettings, ManifestCorrection, ManifestTrip, Passenger, RemittanceCorrection, TapLog, Terminal, Transaction, Trip, Vehicle
+from .models import Card, CurrentTapSelection, DailyRemittance, Destination, DispatchRound, Dispatcher, Driver, FareManifestEntry, FeeSettings, Line, ManifestCorrection, ManifestTrip, Passenger, RemittanceCorrection, TapLog, Terminal, Transaction, Trip, Vehicle
 from .serializers import (
     CardSerializer,
     DailyRemittanceSerializer,
     DispatchRoundSerializer,
     FareManifestEntrySerializer,
+    FeeSettingsSerializer,
+    LineSerializer,
     ManifestCorrectionSerializer,
     ManifestTripSerializer,
     DestinationSerializer,
     DispatcherSerializer,
     DriverSerializer,
+    PassengerSerializer,
     RemittanceCorrectionSerializer,
     TerminalSerializer,
     VehicleSerializer,
@@ -305,6 +309,26 @@ def card_search_view(request):
         })
 
     return Response(results, status=status.HTTP_200_OK)
+
+
+@api_view(['GET', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def fee_settings_view(request):
+    if not _has_admin_role(request):
+        return _role_forbidden_response('access fee settings')
+
+    if request.method == 'GET':
+        fee_settings = FeeSettings.get_current()
+        serializer = FeeSettingsSerializer(fee_settings)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    elif request.method == 'PATCH':
+        fee_settings = FeeSettings.get_current()
+        serializer = FeeSettingsSerializer(fee_settings, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -1785,7 +1809,7 @@ def manifest_entry_untally_view(request):
     return Response(FareManifestEntrySerializer(entry).data, status=status.HTTP_200_OK)
 
 
-class DestinationViewSet(viewsets.ReadOnlyModelViewSet):
+class DestinationViewSet(viewsets.ModelViewSet):
     queryset = Destination.objects.filter(is_active=True).order_by('base_fare', 'destination_name')
     serializer_class = DestinationSerializer
     permission_classes = [IsAuthenticated]
@@ -1794,9 +1818,22 @@ class DestinationViewSet(viewsets.ReadOnlyModelViewSet):
         super().initial(request, *args, **kwargs)
         if not _has_cashier_or_admin_role(request):
             raise PermissionDenied('Only cashier or admin users can access this endpoint.')
+        # For write operations (create, update, delete), admin only
+        if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
+            if not _has_admin_role(request):
+                raise PermissionDenied('Only admin users can modify destinations.')
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {'error': 'This destination is still in use and can\'t be deleted.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
-class VehicleViewSet(viewsets.ReadOnlyModelViewSet):
+class VehicleViewSet(viewsets.ModelViewSet):
     queryset = Vehicle.objects.filter(is_active=True).order_by('plate_number')
     serializer_class = VehicleSerializer
     permission_classes = [IsAuthenticated]
@@ -1805,9 +1842,46 @@ class VehicleViewSet(viewsets.ReadOnlyModelViewSet):
         super().initial(request, *args, **kwargs)
         if not _has_cashier_or_admin_role(request):
             raise PermissionDenied('Only cashier or admin users can access this endpoint.')
+        # For write operations (create, update, delete), admin only
+        if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
+            if not _has_admin_role(request):
+                raise PermissionDenied('Only admin users can modify vehicles.')
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {'error': 'This vehicle is still in use and can\'t be deleted.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
-class TerminalViewSet(viewsets.ReadOnlyModelViewSet):
+class LineViewSet(viewsets.ModelViewSet):
+    queryset = Line.objects.all().order_by('name')
+    serializer_class = LineSerializer
+    permission_classes = [IsAuthenticated]
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if not _has_cashier_or_admin_role(request):
+            raise PermissionDenied('Only cashier or admin users can access this endpoint.')
+        # For write operations (create, update, delete), admin only
+        if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
+            if not _has_admin_role(request):
+                raise PermissionDenied('Only admin users can modify lines.')
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {'error': 'This line is still in use and can\'t be deleted.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+class TerminalViewSet(viewsets.ModelViewSet):
     queryset = Terminal.objects.all().order_by('name')
     serializer_class = TerminalSerializer
     permission_classes = [IsAuthenticated]
@@ -1816,9 +1890,22 @@ class TerminalViewSet(viewsets.ReadOnlyModelViewSet):
         super().initial(request, *args, **kwargs)
         if not _has_cashier_or_admin_role(request):
             raise PermissionDenied('Only cashier or admin users can access this endpoint.')
+        # For write operations (create, update, delete), admin only
+        if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
+            if not _has_admin_role(request):
+                raise PermissionDenied('Only admin users can modify terminals.')
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {'error': 'This terminal is still in use and can\'t be deleted.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
-class DriverViewSet(viewsets.ReadOnlyModelViewSet):
+class DriverViewSet(viewsets.ModelViewSet):
     queryset = Driver.objects.all().order_by('full_name')
     serializer_class = DriverSerializer
     permission_classes = [IsAuthenticated]
@@ -1827,9 +1914,22 @@ class DriverViewSet(viewsets.ReadOnlyModelViewSet):
         super().initial(request, *args, **kwargs)
         if not _has_cashier_or_admin_role(request):
             raise PermissionDenied('Only cashier or admin users can access this endpoint.')
+        # For write operations (create, update, delete), admin only
+        if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
+            if not _has_admin_role(request):
+                raise PermissionDenied('Only admin users can modify drivers.')
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {'error': 'This driver is still in use and can\'t be deleted.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
-class DispatcherViewSet(viewsets.ReadOnlyModelViewSet):
+class DispatcherViewSet(viewsets.ModelViewSet):
     queryset = Dispatcher.objects.all().order_by('full_name')
     serializer_class = DispatcherSerializer
     permission_classes = [IsAuthenticated]
@@ -1838,3 +1938,70 @@ class DispatcherViewSet(viewsets.ReadOnlyModelViewSet):
         super().initial(request, *args, **kwargs)
         if not _has_cashier_or_admin_role(request):
             raise PermissionDenied('Only cashier or admin users can access this endpoint.')
+        # For write operations (create, update, delete), admin only
+        if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
+            if not _has_admin_role(request):
+                raise PermissionDenied('Only admin users can modify dispatchers.')
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {'error': 'This dispatcher is still in use and can\'t be deleted.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+class PassengerViewSet(viewsets.ModelViewSet):
+    queryset = Passenger.objects.all().order_by('full_name')
+    serializer_class = PassengerSerializer
+    permission_classes = [IsAuthenticated]
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if not _has_cashier_or_admin_role(request):
+            raise PermissionDenied('Only cashier or admin users can access this endpoint.')
+        # For write operations (create, update, delete), admin only
+        if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
+            if not _has_admin_role(request):
+                raise PermissionDenied('Only admin users can modify passengers.')
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {'error': 'This passenger is still in use and can\'t be deleted.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+class CardViewSet(viewsets.ModelViewSet):
+    queryset = Card.objects.all().order_by('-date_issued')
+    serializer_class = CardSerializer
+    permission_classes = [IsAuthenticated]
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if not _has_cashier_or_admin_role(request):
+            raise PermissionDenied('Only cashier or admin users can access this endpoint.')
+        # For write operations (create, update, delete), admin only
+        if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
+            if not _has_admin_role(request):
+                raise PermissionDenied('Only admin users can modify cards.')
+
+    def perform_create(self, serializer):
+        # Default status to 'active' if not provided
+        if 'status' not in self.request.data:
+            serializer.validated_data['status'] = Card.Status.ACTIVE
+        serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {'error': 'This card is still in use and can\'t be deleted.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )

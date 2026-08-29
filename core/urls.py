@@ -5,9 +5,13 @@ from .views import (
     admin_dashboard_view,
     admin_reports_export_view,
     boarding_status_view,
+    CardViewSet,
     DestinationViewSet,
     DispatcherViewSet,
     DriverViewSet,
+    fee_settings_view,
+    LineViewSet,
+    PassengerViewSet,
     TerminalViewSet,
     VehicleViewSet,
     card_lookup_view,
@@ -33,9 +37,12 @@ from .views import (
 router = DefaultRouter()
 router.register('destinations', DestinationViewSet, basename='destination')
 router.register('vehicles', VehicleViewSet, basename='vehicle')
+router.register('lines', LineViewSet, basename='line')
 router.register('terminals', TerminalViewSet, basename='terminal')
 router.register('drivers', DriverViewSet, basename='driver')
 router.register('dispatchers', DispatcherViewSet, basename='dispatcher')
+router.register('passengers', PassengerViewSet, basename='passenger')
+router.register('cards', CardViewSet, basename='card')
 router.register('remittances', DailyRemittanceViewSet, basename='remittance')
 router.register('manifests', ManifestTripViewSet, basename='manifest')
 router.register('manifest-entries', FareManifestEntryViewSet, basename='manifest-entry')
@@ -48,6 +55,7 @@ urlpatterns = [
     path('login/', login_view, name='login'),
     path('cards/lookup/', card_lookup_view, name='card-lookup'),
     path('cards/search/', card_search_view, name='card-search'),
+    path('fee-settings/', fee_settings_view, name='fee-settings'),
     path('topup/', topup_view, name='topup'),
     path('tap-destination/', tap_destination_view, name='tap-destination'),
     path('tap/', tap_view, name='tap'),

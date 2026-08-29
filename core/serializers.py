@@ -6,12 +6,14 @@ from .models import (
     Destination,
     Dispatcher,
     DispatchRound,
+    Driver,
     FareManifestEntry,
+    FeeSettings,
+    Line,
     ManifestCorrection,
     ManifestTrip,
     Passenger,
     RemittanceCorrection,
-    Driver,
     Terminal,
     Transaction,
     Trip,
@@ -82,6 +84,18 @@ class DestinationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Destination
+        fields = '__all__'
+
+
+class LineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Line
+        fields = '__all__'
+
+
+class FeeSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FeeSettings
         fields = '__all__'
 
 

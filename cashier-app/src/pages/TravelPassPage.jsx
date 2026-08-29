@@ -154,6 +154,36 @@ function TravelPassPage() {
     }
   }, [pageState, manifest?.id])
 
+  useEffect(() => {
+    if (pageState !== 2 || !manifest) {
+      return
+    }
+
+    let isMounted = true
+
+    async function fetchManifestEntries() {
+      try {
+        const response = await api.get('manifest-entries/', {
+          params: { manifest_trip: manifest.id },
+        })
+        if (isMounted) {
+          setEntries(entriesByDestination(getListData(response.data)))
+        }
+      } catch (requestError) {
+        // Silent fail: if polling fails, just skip this update and retry next interval
+        // This prevents UI errors from interrupting the polling loop
+      }
+    }
+
+    fetchManifestEntries()
+    const intervalId = setInterval(fetchManifestEntries, 3000)
+
+    return () => {
+      isMounted = false
+      clearInterval(intervalId)
+    }
+  }, [pageState, manifest?.id])
+
   async function selectManifest(selectedManifest) {
     setManifest(selectedManifest)
     setEntries(entriesByDestination(selectedManifest.entries))

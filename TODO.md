@@ -1,5 +1,5 @@
 - Make the Daily Summary page clearer with the topups, "Total Top-ups: 50" doesn't really make sense to show that they topped up 50. And to make it clear to who they topped up.
-- Allow the cashier/admin to be easily look up existing cards by typing a name or something so top-up process is easy.
+- Allow the cashier/admin to be easily look up existing cards by typing a name or something so top-up process is easy. (DONE)
 - (MAJOR) Add boarding status page to be viewed by the public (DONE)
 - Refinement of user interface and user experience
 - (MAJOR) Actual user-facing admin management page, instead of django backend management by superadmins

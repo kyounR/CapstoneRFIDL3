@@ -35,7 +35,6 @@ function TravelPassPage() {
   const [isLoadingPicker, setIsLoadingPicker] = useState(true)
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true)
   const [isLoadingDestinations, setIsLoadingDestinations] = useState(false)
-  const [isLoadingRecentTaps, setIsLoadingRecentTaps] = useState(false)
   const [busyAction, setBusyAction] = useState('')
   const [showFinalizeForm, setShowFinalizeForm] = useState(false)
   const [departureTime, setDepartureTime] = useState('')
@@ -97,86 +96,32 @@ function TravelPassPage() {
 
     let isMounted = true
 
-    async function fetchTapSelection() {
+    async function pollAllBoardData() {
       try {
-        const response = await api.get('tap-destination/')
+        const [tapSelResponse, recentTapsResponse, entriesResponse] = await Promise.all([
+          api.get('tap-destination/'),
+          api.get(`manifests/${manifest.id}/recent-taps/`),
+          api.get('manifest-entries/', {
+            params: { manifest_trip: manifest.id },
+          }),
+        ])
+
         if (isMounted) {
-          const selection = response.data
+          // Update tap selection with manifest_trip_id guard
+          const selection = tapSelResponse.data
           setTapSelection(selection?.manifest_trip_id === manifest.id ? selection : null)
+
+          // Update recent taps and entries together (React batches into one render)
+          setRecentTaps(getListData(recentTapsResponse.data))
+          setEntries(entriesByDestination(getListData(entriesResponse.data)))
         }
       } catch (requestError) {
-        if (isMounted) {
-          setError(requestError.response?.data?.detail || 'Could not load the current tap destination.')
-        }
+        // Silent fail for polling: retry on next cycle without interrupting
       }
     }
 
-    fetchTapSelection()
-    const intervalId = setInterval(fetchTapSelection, 2000)
-
-    return () => {
-      isMounted = false
-      clearInterval(intervalId)
-    }
-  }, [pageState, manifest?.id])
-
-  useEffect(() => {
-    if (pageState !== 2 || !manifest) {
-      return
-    }
-
-    let isMounted = true
-
-    async function fetchRecentTaps() {
-      setIsLoadingRecentTaps(true)
-      try {
-        const response = await api.get(`manifests/${manifest.id}/recent-taps/`)
-        if (isMounted) {
-          setRecentTaps(getListData(response.data))
-        }
-      } catch (requestError) {
-        if (isMounted) {
-          setError(requestError.response?.data?.detail || 'Could not load recent taps.')
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingRecentTaps(false)
-        }
-      }
-    }
-
-    fetchRecentTaps()
-    const intervalId = setInterval(fetchRecentTaps, 3000)
-
-    return () => {
-      isMounted = false
-      clearInterval(intervalId)
-    }
-  }, [pageState, manifest?.id])
-
-  useEffect(() => {
-    if (pageState !== 2 || !manifest) {
-      return
-    }
-
-    let isMounted = true
-
-    async function fetchManifestEntries() {
-      try {
-        const response = await api.get('manifest-entries/', {
-          params: { manifest_trip: manifest.id },
-        })
-        if (isMounted) {
-          setEntries(entriesByDestination(getListData(response.data)))
-        }
-      } catch (requestError) {
-        // Silent fail: if polling fails, just skip this update and retry next interval
-        // This prevents UI errors from interrupting the polling loop
-      }
-    }
-
-    fetchManifestEntries()
-    const intervalId = setInterval(fetchManifestEntries, 3000)
+    pollAllBoardData()
+    const intervalId = setInterval(pollAllBoardData, 3000)
 
     return () => {
       isMounted = false
@@ -494,31 +439,27 @@ function TravelPassPage() {
           {!isFinalized && recentTaps.length > 0 ? (
             <div className="card" style={{ marginTop: '20px', marginBottom: '20px' }}>
               <h3 style={{ marginTop: 0, marginBottom: '12px' }}>Cancel a tap</h3>
-              {isLoadingRecentTaps ? (
-                <p>Loading recent taps...</p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {recentTaps.map((tap) => (
-                    <div key={tap.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius)', fontSize: '0.95rem' }}>
-                      <div style={{ flex: 1 }}>
-                        <span className="numeric" style={{ fontWeight: 600 }}>{tap.passenger_name || tap.card_uid}</span>
-                        {' '} → <span>{tap.destination_name}</span>
-                        {' '} · <span className="numeric">{tap.fare_charged}</span>
-                        {' '} · <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{new Date(tap.timestamp).toLocaleTimeString()}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleCancelBoarding(tap)}
-                        disabled={busyAction !== ''}
-                        className="btn-secondary"
-                        style={{ marginLeft: '12px', padding: '4px 12px', fontSize: '0.9rem' }}
-                      >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {recentTaps.map((tap) => (
+                  <div key={tap.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius)', fontSize: '0.95rem' }}>
+                    <div style={{ flex: 1 }}>
+                      <span className="numeric" style={{ fontWeight: 600 }}>{tap.passenger_name || tap.card_uid}</span>
+                      {' '} → <span>{tap.destination_name}</span>
+                      {' '} · <span className="numeric">{tap.fare_charged}</span>
+                      {' '} · <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{new Date(tap.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCancelBoarding(tap)}
+                      disabled={busyAction !== ''}
+                      className="btn-secondary"
+                      style={{ marginLeft: '12px', padding: '4px 12px', fontSize: '0.9rem' }}
+                    >
                         {busyAction === `cancel-boarding-${tap.id}` ? 'Canceling...' : 'Cancel this boarding'}
                       </button>
                     </div>
                   ))}
                 </div>
-              )}
             </div>
           ) : null}
           <div className="card numeric" style={{ marginTop: '20px' }}><strong>Running tally:</strong> {totals.passengerCount} passengers, {totals.totalFare.toFixed(2)} total fare</div>

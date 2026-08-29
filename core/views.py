@@ -1010,6 +1010,45 @@ def reports_view(request):
     )
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def cashier_transactions_report_view(request):
+    if not _has_cashier_or_admin_role(request):
+        return _role_forbidden_response('access cashier transactions')
+
+    cashier_id = request.query_params.get('cashier_id')
+    date_param = request.query_params.get('date')
+    if not cashier_id or not date_param:
+        return Response(
+            {'error': 'cashier_id and date are required.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    report_date = parse_date(date_param)
+    if report_date is None:
+        return Response(
+            {'error': 'Invalid date format. Use YYYY-MM-DD.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    transactions = Transaction.objects.filter(
+        cashier_id=cashier_id,
+        timestamp__date=report_date,
+        transaction_type=Transaction.TransactionType.TOPUP,
+    ).select_related('card__passenger').order_by('-timestamp')
+
+    return Response([
+        {
+            'card_uid': transaction.card.uid,
+            'passenger_name': transaction.card.passenger.full_name if transaction.card.passenger else '',
+            'amount': transaction.amount,
+            'balance_after': transaction.balance_after,
+            'timestamp': transaction.timestamp,
+        }
+        for transaction in transactions
+    ])
+
+
 class DailyRemittanceViewSet(viewsets.ModelViewSet):
     queryset = DailyRemittance.objects.all().order_by('-date', '-id')
     serializer_class = DailyRemittanceSerializer

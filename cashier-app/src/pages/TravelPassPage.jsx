@@ -240,6 +240,7 @@ function TravelPassPage() {
   }
 
   async function handleFinalize(event) {
+    if (!window.confirm('Finalize this Travel Pass? It cannot be edited afterward.')) return
     event.preventDefault()
     if (!departureTime) {
       setError('Departure time is required to finalize the Travel Pass.')

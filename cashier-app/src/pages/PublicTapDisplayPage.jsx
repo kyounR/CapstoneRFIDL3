@@ -80,6 +80,9 @@ function PublicTapDisplayPage() {
           {tap.destination_name ? (
             <p style={{ fontSize: '3rem', margin: 0, fontFamily: 'var(--font-body)' }}>{tap.destination_name}</p>
           ) : null}
+          {isSuccess && tap.fare_charged != null ? (
+            <p style={{ fontSize: '3rem', margin: 0, fontFamily: 'var(--font-body)' }}>Fare: ₱{tap.fare_charged} deducted</p>
+          ) : null}
           {isFailure ? <p style={{ fontSize: '2.5rem', margin: 0, fontFamily: 'var(--font-body)' }}>{tap.message}</p> : null}
         </>
       ) : (

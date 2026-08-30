@@ -912,7 +912,9 @@ def tap_log_latest_public_view(request):
         'success': log.success,
         'timestamp': log.timestamp,
     }
-    if not log.success:
+    if log.success:
+        payload['fare_charged'] = log.fare_charged
+    else:
         payload['message'] = log.message
 
     return Response(payload, status=status.HTTP_200_OK)

@@ -771,7 +771,7 @@ def tap_log_recent_view(request):
     if not _has_cashier_or_admin_role(request):
         return _role_forbidden_response('view the tap log')
 
-    logs = TapLog.objects.select_related('destination').order_by('-timestamp')[:20]
+    logs = TapLog.objects.filter(source='rfid').select_related('destination').order_by('-timestamp')[:20]
 
     return Response(
         [
@@ -802,6 +802,7 @@ def manifest_trip_recent_taps_view(request, pk):
         manifest_trip_id=pk,
         success=True,
         refunded=False,
+        source='rfid',
     ).select_related('destination').order_by('-timestamp')[:10]
 
     return Response(
@@ -901,7 +902,7 @@ def _derive_display_name(passenger_name):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def tap_log_latest_public_view(request):
-    log = TapLog.objects.select_related('destination').order_by('-timestamp').first()
+    log = TapLog.objects.filter(source='rfid').select_related('destination').order_by('-timestamp').first()
     if log is None:
         return Response(None, status=status.HTTP_200_OK)
 

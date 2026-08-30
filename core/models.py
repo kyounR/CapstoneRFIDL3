@@ -470,6 +470,10 @@ class Transaction(models.Model):
 
 
 class TapLog(models.Model):
+	class Source(models.TextChoices):
+		RFID = 'rfid', 'RFID'
+		MANUAL = 'manual', 'Manual'
+
 	# stored as a string (not just a FK) so taps against an unknown card_uid can still be logged
 	card_uid = models.CharField(max_length=100)
 	card = models.ForeignKey(
@@ -508,6 +512,14 @@ class TapLog(models.Model):
 		null=True,
 		blank=True,
 		related_name='refunded_tap_logs',
+	)
+	source = models.CharField(max_length=20, choices=Source.choices, default=Source.RFID)
+	cashier = models.ForeignKey(
+		settings.AUTH_USER_MODEL,
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name='manual_tap_logs',
 	)
 	timestamp = models.DateTimeField(auto_now_add=True)
 

@@ -568,6 +568,7 @@ def tap_view(request):
                 card_uid=card_uid,
                 success=False,
                 message='Card not found.',
+                source='rfid',
             )
             return Response({'error': 'Card not found.'}, status=status.HTTP_404_NOT_FOUND)
         if card.status != Card.Status.ACTIVE:
@@ -578,6 +579,7 @@ def tap_view(request):
                 success=False,
                 message='Card is not active.',
                 remaining_balance=card.balance,
+                source='rfid',
             )
             return Response({'error': 'Card is not active.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -594,6 +596,7 @@ def tap_view(request):
                 success=False,
                 message=cooldown_message,
                 remaining_balance=card.balance,
+                source='rfid',
             )
             return Response(
                 {
@@ -618,6 +621,7 @@ def tap_view(request):
                 success=False,
                 message=no_destination_message,
                 remaining_balance=card.balance,
+                source='rfid',
             )
             return Response({'error': no_destination_message}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -632,6 +636,7 @@ def tap_view(request):
                 success=False,
                 message=no_manifest_message,
                 remaining_balance=card.balance,
+                source='rfid',
             )
             return Response({'error': no_manifest_message}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -646,6 +651,7 @@ def tap_view(request):
                 success=False,
                 message=no_manifest_message,
                 remaining_balance=card.balance,
+                source='rfid',
             )
             return Response({'error': no_manifest_message}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -681,6 +687,7 @@ def tap_view(request):
                 success=False,
                 message='Insufficient balance.',
                 remaining_balance=card.balance,
+                source='rfid',
             )
             return Response(
                 {
@@ -717,6 +724,7 @@ def tap_view(request):
             fare_type=fare_type,
             fare_charged=fare,
             remaining_balance=card.balance,
+            source='rfid',
         )
 
         entry = FareManifestEntry.objects.select_for_update().filter(
@@ -998,6 +1006,36 @@ def reports_view(request):
         for row in cashier_breakdown_qs
     ]
 
+    # Cash fares: manual TapLog entries with success=True
+    cash_fares_qs = TapLog.objects.filter(
+        source='manual',
+        success=True,
+        timestamp__date=report_date,
+    )
+
+    cash_fare_totals = cash_fares_qs.aggregate(
+        total_cash_fares=Sum('fare_charged'),
+        cash_fare_count=Count('id'),
+    )
+
+    # Cashier breakdown for cash fares
+    cash_fare_breakdown_qs = (
+        cash_fares_qs.filter(cashier__isnull=False)
+        .values('cashier', 'cashier__username')
+        .annotate(total_cash_fares=Sum('fare_charged'), cash_fare_count=Count('id'))
+        .order_by('cashier__username')
+    )
+
+    cashier_cash_fare_breakdown = [
+        {
+            'cashier_id': row['cashier'],
+            'cashier_username': row['cashier__username'],
+            'total_cash_fares': row['total_cash_fares'] or Decimal('0.00'),
+            'cash_fare_count': row['cash_fare_count'],
+        }
+        for row in cash_fare_breakdown_qs
+    ]
+
     return Response(
         {
             'date': report_date,
@@ -1005,6 +1043,9 @@ def reports_view(request):
             'total_fare_amount': totals['total_fares'] or Decimal('0.00'),
             'transaction_count': totals['transaction_count'] or 0,
             'cashier_topup_breakdown': cashier_breakdown,
+            'cash_fare_total_amount': cash_fare_totals['total_cash_fares'] or Decimal('0.00'),
+            'cash_fare_count': cash_fare_totals['cash_fare_count'] or 0,
+            'cashier_cash_fare_breakdown': cashier_cash_fare_breakdown,
         },
         status=status.HTTP_200_OK,
     )
@@ -1046,6 +1087,45 @@ def cashier_transactions_report_view(request):
             'timestamp': transaction.timestamp,
         }
         for transaction in transactions
+    ])
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def cashier_cash_fares_report_view(request):
+    if not _has_cashier_or_admin_role(request):
+        return _role_forbidden_response('access cashier cash fares')
+
+    cashier_id = request.query_params.get('cashier_id')
+    date_param = request.query_params.get('date')
+    if not cashier_id or not date_param:
+        return Response(
+            {'error': 'cashier_id and date are required.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    report_date = parse_date(date_param)
+    if report_date is None:
+        return Response(
+            {'error': 'Invalid date format. Use YYYY-MM-DD.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    tap_logs = TapLog.objects.filter(
+        source='manual',
+        success=True,
+        cashier_id=cashier_id,
+        timestamp__date=report_date,
+    ).select_related('destination').order_by('-timestamp')
+
+    return Response([
+        {
+            'destination_name': tap_log.destination.name if tap_log.destination else '',
+            'fare_type': tap_log.fare_type,
+            'fare_charged': tap_log.fare_charged,
+            'timestamp': tap_log.timestamp,
+        }
+        for tap_log in tap_logs
     ])
 
 
@@ -1847,6 +1927,18 @@ def manifest_entry_tally_view(request):
         if manifest is None:
             return Response({'error': 'ManifestTrip not found.'}, status=status.HTTP_404_NOT_FOUND)
         if manifest.is_finalized:
+            TapLog.objects.create(
+                source='manual',
+                cashier=request.user,
+                card=None,
+                card_uid='',
+                passenger_name='',
+                destination_id=destination_id,
+                manifest_trip_id=manifest_trip_id,
+                fare_type='discount' if passenger_type == 'discount' else 'base',
+                success=False,
+                message='Cannot tally a finalized ManifestTrip.',
+            )
             return Response(
                 {'error': 'Cannot tally a finalized ManifestTrip.'},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -1854,8 +1946,32 @@ def manifest_entry_tally_view(request):
 
         destination = Destination.objects.filter(id=destination_id, is_active=True).first()
         if destination is None:
+            TapLog.objects.create(
+                source='manual',
+                cashier=request.user,
+                card=None,
+                card_uid='',
+                passenger_name='',
+                destination=None,
+                manifest_trip_id=manifest_trip_id,
+                fare_type='discount' if passenger_type == 'discount' else 'base',
+                success=False,
+                message='Destination not found or inactive.',
+            )
             return Response({'error': 'Destination not found or inactive.'}, status=status.HTTP_404_NOT_FOUND)
         if passenger_type == 'discount' and destination.discount_exempt:
+            TapLog.objects.create(
+                source='manual',
+                cashier=request.user,
+                card=None,
+                card_uid='',
+                passenger_name='',
+                destination=destination,
+                manifest_trip=manifest,
+                fare_type='discount',
+                success=False,
+                message='This destination does not allow discount fares.',
+            )
             return Response(
                 {'error': 'This destination does not allow discount fares.'},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -1875,11 +1991,31 @@ def manifest_entry_tally_view(request):
                 source=FareManifestEntry.Source.MANUAL,
             )
 
+        # Determine the fare for this single tap (not the cumulative entry total)
+        single_passenger_fare = (
+            destination.discount_fare if passenger_type == 'discount' else destination.base_fare
+        )
+
         entry.passenger_count += 1
         if passenger_type == 'discount':
             entry.discount_count += 1
         _recompute_manifest_entry_total(entry)
         entry.save()
+
+        # Log successful manual tap
+        TapLog.objects.create(
+            source='manual',
+            cashier=request.user,
+            card=None,
+            card_uid='',
+            passenger_name='',
+            destination=destination,
+            manifest_trip=manifest,
+            fare_type='discount' if passenger_type == 'discount' else 'base',
+            success=True,
+            message=f"Tally recorded for {passenger_type} passenger.",
+            fare_charged=single_passenger_fare,
+        )
 
     return Response(FareManifestEntrySerializer(entry).data, status=status.HTTP_200_OK)
 

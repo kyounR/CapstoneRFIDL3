@@ -323,7 +323,7 @@ function TravelPassPage() {
   return (
     <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'var(--font-body)' }}>
       <h1>Travel Pass</h1>
-      <SectionTabs activePath="/travel-pass" historyPath="/travel-pass/history" />
+      {pageState !== 2 ? <SectionTabs activePath="/travel-pass" historyPath="/travel-pass/history" /> : null}
       {error ? (
         <p>
           <span className="status-dot status-dot--danger" style={{ marginRight: '8px' }} />
@@ -373,74 +373,58 @@ function TravelPassPage() {
 
       {pageState === 2 && manifest ? (
         <section>
-          <button type="button" onClick={switchVehicle} className="btn-secondary" style={{ marginBottom: '12px' }}>Switch Vehicle</button>
-          <div className="card" style={{ marginBottom: '20px' }}>
-            <h2 style={{ marginTop: 0 }}>
-              {selectedVehicle?.plate_number || manifest.vehicle}{' '}
-              <span className={`badge ${selectedPassIndex === 0 ? 'badge--success' : 'badge--pending'}`} style={{ fontSize: '0.55em', verticalAlign: 'middle' }}>{selectedPassLabel}</span>
-              {' '}- {manifest.date}
-            </h2>
-            {isFinalized ? (
-              <p>
-                <span className="status-dot status-dot--success" style={{ marginRight: '8px' }} />
-                <span className="badge badge--success">Finalized</span>
-                {manifest.departure_time ? ` at ${manifest.departure_time}` : ''}{manifest.finalized_at ? ` (${manifest.finalized_at})` : ''}
-              </p>
-            ) : (
-              <p>
-                <span className="status-dot status-dot--pending" style={{ marginRight: '8px' }} />
-                <span className="badge badge--pending">In Progress</span>
-                {' '}Active and ready for boarding tally.
-              </p>
-            )}
+          <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '12px 16px', marginBottom: '12px', flexWrap: 'nowrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, whiteSpace: 'nowrap' }}>
+              <strong>{selectedVehicle?.plate_number || manifest.vehicle}</strong>
+              <span className={`badge ${selectedPassIndex === 0 ? 'badge--success' : 'badge--pending'}`}>{selectedPassLabel}</span>
+              <span>{manifest.date}</span>
+              <span className={`badge ${isFinalized ? 'badge--success' : 'badge--pending'}`}>{isFinalized ? 'Finalized' : 'In Progress'}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+              <button type="button" onClick={switchVehicle} className="btn-secondary" style={{ padding: '6px 10px' }}>Switch Vehicle</button>
+              <SectionTabs activePath="/travel-pass" historyPath="/travel-pass/history" compact />
+            </div>
           </div>
           {isLoadingDestinations ? <p>Loading destinations...</p> : null}
-          {destinations.map((destination) => {
-            const entry = entries[destination.id] || { passenger_count: 0, discount_count: 0, total_fare: '0.00' }
-            const atCapacity = destination.capacity_limit != null && destination.capacity_limit > 0 && entry.passenger_count >= destination.capacity_limit
-            const regularAddKey = `${destination.id}-regular-add`
-            const discountAddKey = `${destination.id}-discount-add`
-            const regularRemoveKey = `${destination.id}-regular-remove`
-            const discountRemoveKey = `${destination.id}-discount-remove`
-            return (
-              <div key={destination.id} className="card" style={{ marginBottom: '12px', borderColor: tapSelection?.destination_id === destination.id ? 'var(--success)' : 'var(--border)', boxShadow: tapSelection?.destination_id === destination.id ? '0 0 0 2px rgba(47, 191, 158, 0.18)' : 'none' }}>
-                <h3 style={{ marginTop: 0 }}>{destination.destination_name}</h3>
-                {tapSelection?.destination_id === destination.id ? (
-                  <p>
-                    <span className="status-dot status-dot--success" style={{ marginRight: '8px' }} />
-                    <span className="badge badge--success">Selected for RFID tapping</span>
-                    <button type="button" onClick={handleClearTapSelection} disabled={busyAction !== ''} className="btn-secondary" style={{ marginLeft: '8px' }}>
-                      {busyAction === 'clear-tap-selection' ? 'Clearing...' : 'Clear tap selection'}
-                    </button>
-                  </p>
-                ) : null}
-                <p className="numeric">Fare: {destination.base_fare}</p>
-                <p className="numeric">Regular: {entry.passenger_count - entry.discount_count}</p>
-                <p className="numeric">Discount: {entry.discount_count}</p>
-                <p className="numeric">Total: {entry.passenger_count}</p>
-                <p className="numeric">Total fare: {entry.total_fare}</p>
-                {atCapacity ? (
-                  <p style={{ color: 'var(--danger)' }}>
-                    At capacity (<span className="numeric">{entry.passenger_count}/{destination.capacity_limit}</span>) for this vehicle — tally additional passengers heading here under the NEXT vehicle&apos;s Travel Pass instead. <button type="button" onClick={switchVehicle} className="btn-secondary">Switch Vehicle</button>
-                  </p>
-                ) : null}
-                {!isFinalized ? <div>
-                  <button type="button" onClick={() => handleSetForTap(destination)} disabled={busyAction !== ''} className="btn-primary" style={{ marginRight: '8px' }}>
-                    {busyAction === `${destination.id}-set-for-tap` ? 'Setting...' : 'Set for next tap'}
-                  </button>
-                  <button type="button" onClick={() => handleTally(destination, 'regular', 'add')} disabled={busyAction !== ''} className="btn-primary" style={{ marginRight: '8px' }}>{busyAction === regularAddKey ? '...' : '+1 Regular'}</button>
-                  <button type="button" onClick={() => handleTally(destination, 'regular', 'remove')} disabled={entry.passenger_count - entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={{ marginRight: '8px' }}>{busyAction === regularRemoveKey ? '...' : '-1 Regular'}</button>
-                  {!destination.discount_exempt ? <>
-                    <button type="button" onClick={() => handleTally(destination, 'discount', 'add')} disabled={busyAction !== ''} className="btn-primary" style={{ marginRight: '8px' }}>{busyAction === discountAddKey ? '...' : '+1 Discount'}</button>
-                    <button type="button" onClick={() => handleTally(destination, 'discount', 'remove')} disabled={entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary">{busyAction === discountRemoveKey ? '...' : '-1 Discount'}</button>
-                  </> : <span>No discount on this destination.</span>}
-                </div> : null}
-              </div>
-            )
-          })}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
+            {destinations.map((destination) => {
+              const entry = entries[destination.id] || { passenger_count: 0, discount_count: 0, total_fare: '0.00' }
+              const atCapacity = destination.capacity_limit != null && destination.capacity_limit > 0 && entry.passenger_count >= destination.capacity_limit
+              const regularAddKey = `${destination.id}-regular-add`
+              const discountAddKey = `${destination.id}-discount-add`
+              const regularRemoveKey = `${destination.id}-regular-remove`
+              const discountRemoveKey = `${destination.id}-discount-remove`
+              const isSelectedForTap = tapSelection?.destination_id === destination.id
+              const compactButtonStyle = { minWidth: '32px', height: '32px', padding: '0 8px' }
+              return (
+                <div key={destination.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', borderColor: isSelectedForTap ? 'var(--success)' : 'var(--border)', boxShadow: isSelectedForTap ? '0 0 0 2px rgba(47, 191, 158, 0.18)' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', minWidth: 0 }}>
+                    <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{destination.destination_name}</strong>
+                    <span className="numeric" style={{ whiteSpace: 'nowrap' }}>{destination.base_fare}</span>
+                    {atCapacity ? <><span style={{ color: 'var(--danger)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>at capacity</span><button type="button" onClick={switchVehicle} className="btn-secondary" style={{ padding: 0, border: 0, background: 'none', color: 'var(--danger)', fontSize: '0.8rem' }}>Switch</button></> : null}
+                  </div>
+                  <div className="numeric" style={{ fontSize: '0.9rem' }}>R {entry.passenger_count - entry.discount_count} - D {entry.discount_count} - T {entry.passenger_count}</div>
+                  {isSelectedForTap ? <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--success)' }}><span className="badge badge--success">Tap armed</span><button type="button" onClick={handleClearTapSelection} disabled={busyAction !== ''} className="btn-secondary" style={{ padding: '2px 6px', fontSize: '0.75rem' }}>{busyAction === 'clear-tap-selection' ? 'Clearing...' : 'Clear'}</button></div> : null}
+                  {!isFinalized ? <>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button type="button" onClick={() => handleSetForTap(destination)} disabled={busyAction !== ''} className="btn-primary" style={{ ...compactButtonStyle, padding: 0 }} title="Tap" aria-label={`Set ${destination.destination_name} for next tap`}>
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M12 2v4M12 18v4M2 12h4M18 12h4" fill="none" stroke="currentColor" strokeWidth="2" /></svg>
+                      </button>
+                      <button type="button" onClick={() => handleTally(destination, 'regular', 'remove')} disabled={entry.passenger_count - entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={compactButtonStyle} aria-label={`Remove regular passenger from ${destination.destination_name}`}>{busyAction === regularRemoveKey ? '...' : '-'}</button>
+                      <button type="button" onClick={() => handleTally(destination, 'regular', 'add')} disabled={busyAction !== ''} className="btn-primary" style={compactButtonStyle} aria-label={`Add regular passenger to ${destination.destination_name}`}>{busyAction === regularAddKey ? '...' : '+'}</button>
+                    </div>
+                    {!destination.discount_exempt ? <div style={{ display: 'flex', gap: '6px', minHeight: '32px' }}>
+                      <button type="button" onClick={() => handleTally(destination, 'discount', 'remove')} disabled={entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={compactButtonStyle} aria-label={`Remove discount passenger from ${destination.destination_name}`}>{busyAction === discountRemoveKey ? '...' : '-'}</button>
+                      <button type="button" onClick={() => handleTally(destination, 'discount', 'add')} disabled={busyAction !== ''} className="btn-primary" style={compactButtonStyle} aria-label={`Add discount passenger to ${destination.destination_name}`}>{busyAction === discountAddKey ? '...' : '+'}</button>
+                    </div> : <div aria-hidden="true" style={{ minHeight: '32px' }} />}
+                  </> : <div aria-hidden="true" style={{ minHeight: '72px' }} />}
+                </div>
+              )
+            })}
+          </div>
           {!isFinalized && recentTaps.length > 0 ? (
-            <div className="card" style={{ marginTop: '20px', marginBottom: '20px' }}>
-              <h3 style={{ marginTop: 0, marginBottom: '12px' }}>Cancel a tap</h3>
+            <details className="card" style={{ marginTop: '12px', padding: '10px 12px' }}>
+              <summary className="btn-secondary" style={{ display: 'inline-block', cursor: 'pointer' }}>Cancel tap ({recentTaps.length})</summary>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {recentTaps.map((tap) => (
                   <div key={tap.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius)', fontSize: '0.95rem' }}>
@@ -462,24 +446,19 @@ function TravelPassPage() {
                     </div>
                   ))}
                 </div>
-            </div>
+            </details>
           ) : null}
-          <div className="card numeric" style={{ marginTop: '20px' }}><strong>Running tally:</strong> {totals.passengerCount} passengers, {totals.totalFare.toFixed(2)} total fare</div>
-          {selectedVehicle?.passenger_capacity != null && selectedVehicle.passenger_capacity > 0 && totals.passengerCount >= selectedVehicle.passenger_capacity ? (
-            <p style={{ color: 'var(--danger)' }}>
-              This vehicle&apos;s usual capacity (<span className="numeric">{selectedVehicle.passenger_capacity}</span>) has been reached.
-            </p>
-          ) : null}
-          {!isFinalized ? (showFinalizeForm ? <form onSubmit={handleFinalize} className="card" style={{ marginTop: '16px' }}>
-            <label htmlFor="departureTime">Departure time</label>
-            <input id="departureTime" type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} className="input" style={{ marginLeft: '8px' }} required />
-            <button type="submit" disabled={busyAction === 'finalize'} className="btn-primary" style={{ marginLeft: '8px' }}>{busyAction === 'finalize' ? 'Finalizing...' : 'Confirm Finalize'}</button>
-          </form> : <div style={{ marginTop: '16px' }}>
-            <button type="button" onClick={() => setShowFinalizeForm(true)} className="btn-primary">Finalize Travel Pass</button>
-            <button type="button" onClick={handleCancel} disabled={busyAction !== ''} className="btn-secondary" style={{ marginLeft: '8px' }}>
-              {busyAction === 'cancel' ? 'Canceling...' : 'Cancel Travel Pass'}
-            </button>
-          </div>) : null}
+          <div className="card" style={{ position: 'sticky', bottom: 0, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginTop: '12px', padding: '12px 16px' }}>
+            <div className="numeric"><strong>Running tally:</strong> {totals.passengerCount} passengers, {totals.totalFare.toFixed(2)} total fare{selectedVehicle?.passenger_capacity != null && selectedVehicle.passenger_capacity > 0 && totals.passengerCount >= selectedVehicle.passenger_capacity ? <span style={{ color: 'var(--danger)' }}> (vehicle at capacity)</span> : null}</div>
+            {!isFinalized ? (showFinalizeForm ? <form onSubmit={handleFinalize} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label htmlFor="departureTime">Departure time</label>
+              <input id="departureTime" type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} className="input" required />
+              <button type="submit" disabled={busyAction === 'finalize'} className="btn-primary">{busyAction === 'finalize' ? 'Finalizing...' : 'Confirm Finalize'}</button>
+            </form> : <div style={{ display: 'flex', gap: '8px', whiteSpace: 'nowrap' }}>
+              <button type="button" onClick={() => setShowFinalizeForm(true)} className="btn-primary">Finalize Travel Pass</button>
+              <button type="button" onClick={handleCancel} disabled={busyAction !== ''} className="btn-secondary">{busyAction === 'cancel' ? 'Canceling...' : 'Cancel Travel Pass'}</button>
+            </div>) : null}
+          </div>
         </section>
       ) : null}
     </div>

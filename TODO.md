@@ -15,3 +15,4 @@
 - More detail for audit log when a travel pass is canceled, with actual flavor text instead of "had_passengers = false"
 - Added granularity to CALTRANSCO management report, to be determined once UAT and feedback from client
 - General UI pass for every tab, current formatting has Travel Pass being larger than the rest of the tabs
+- Native implementation within web-app of card scanning function, maybe add a new tab to check card UID instead of a python script handling it in a code terminal

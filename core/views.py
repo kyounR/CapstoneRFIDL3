@@ -657,7 +657,7 @@ def tap_view(request):
 
         passenger = card.passenger
         passenger_discount_type: Optional[str] = None if passenger is None else passenger.discount_type
-        use_discount = (
+        is_discount_eligible = (
             passenger_discount_type
             in {
                 Passenger.DiscountType.STUDENT,
@@ -666,13 +666,23 @@ def tap_view(request):
             }
         )
 
-        if use_discount:
+        if is_discount_eligible and destination.discount_exempt:
+            fare = destination.base_fare
+            fare_type = 'base'
+            reason = (
+                'Base fare applied - no discount available at this destination '
+                f'(passenger type: {passenger_discount_type}).'
+            )
+            use_discount = False
+        elif is_discount_eligible:
             fare = destination.discount_fare
             fare_type = 'discount'
             reason = f'Discount fare applied for passenger type: {passenger_discount_type}.'
+            use_discount = True
         else:
             fare = destination.base_fare
             fare_type = 'base'
+            use_discount = False
             if passenger is None:
                 reason = 'Base fare applied because card has no linked passenger.'
             else:

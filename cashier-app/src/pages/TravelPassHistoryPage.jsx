@@ -244,7 +244,7 @@ function TravelPassHistoryPage() {
   }
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '40px auto', fontFamily: 'var(--font-body)' }}>
+    <div style={{ width: '100%', maxWidth: '1600px', margin: '40px auto', padding: '0 24px', fontFamily: 'var(--font-body)' }}>
       <h1>Travel Pass History</h1>
       <SectionTabs activePath="/travel-pass" historyPath="/travel-pass/history" />
 

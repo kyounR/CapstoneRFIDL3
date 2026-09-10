@@ -209,7 +209,7 @@ function DailyRemittanceHistoryPage() {
     </div>
   }
 
-  return <div style={{ maxWidth: '1100px', margin: '40px auto', fontFamily: 'var(--font-body)' }}>
+  return <div style={{ width: '100%', maxWidth: '1600px', margin: '40px auto', padding: '0 24px', fontFamily: 'var(--font-body)' }}>
     <h1>Daily Remittance History</h1>
     <SectionTabs activePath="/remittance" historyPath="/remittance/history" />
     <div style={{ marginBottom: '16px' }}><label htmlFor="historyDate">Date</label><input id="historyDate" type="date" value={date} onChange={(event) => setDate(event.target.value)} className="input" style={{ marginLeft: '8px' }} /></div>

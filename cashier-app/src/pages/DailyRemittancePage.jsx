@@ -227,7 +227,7 @@ function DailyRemittancePage() {
   const detailDispatcher = dispatchers.find((dispatcher) => dispatcher.id === remittance?.dispatcher)
 
   return (
-    <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'var(--font-body)' }}>
+    <div style={{ width: '100%', maxWidth: '1600px', margin: '40px auto', padding: '0 24px', fontFamily: 'var(--font-body)' }}>
       <h1>Daily Remittance</h1>
       <SectionTabs activePath="/remittance" historyPath="/remittance/history" />
       {error ? (

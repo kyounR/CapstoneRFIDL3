@@ -245,7 +245,7 @@ function DailyRemittancePage() {
           {remittances.map((item) => {
             const vehicle = vehicles.find((entry) => entry.id === item.vehicle)
             const driver = drivers.find((entry) => entry.id === item.driver)
-            return <button key={item.id} type="button" onClick={() => selectRemittance(item)} className="card" style={{ display: 'block', width: '100%', marginBottom: '10px', textAlign: 'left', cursor: 'pointer' }}><strong>{driver?.full_name || item.driver}</strong> - {vehicle?.plate_number || item.vehicle} - {item.date}</button>
+            return <button key={item.id} type="button" onClick={() => selectRemittance(item)} className="card" style={{ display: 'block', width: '100%', marginBottom: '10px', textAlign: 'left', cursor: 'pointer', color: 'var(--text-primary)' }}><strong>{driver?.full_name || item.driver}</strong> - {vehicle?.plate_number || item.vehicle} - {item.date}</button>
           })}
           <button type="button" onClick={() => setPageState(1)} className="btn-primary">Start New Remittance</button>
         </section>
@@ -290,7 +290,7 @@ function DailyRemittancePage() {
 
       {pageState === 2 && remittance ? (
         <section>
-          <button type="button" onClick={switchRemittance} className="btn-secondary" style={{ marginBottom: '12px' }}>Switch Remittance</button>
+          <button type="button" onClick={switchRemittance} className="btn-secondary" style={{ marginBottom: '12px' }}>Back to Remittances</button>
           <div className="card" style={{ marginBottom: '20px' }}>
             <h2 style={{ marginTop: 0 }}>{detailTerminal?.name || remittance.terminal} - {detailVehicle?.plate_number || remittance.vehicle}</h2>
             <p><strong>Driver:</strong> {detailDriver?.full_name || remittance.driver}</p>

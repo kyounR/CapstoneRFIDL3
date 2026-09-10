@@ -324,7 +324,7 @@ function TravelPassPage() {
     <div style={{ width: '100%', maxWidth: '1600px', margin: '40px auto', padding: '0 24px', fontFamily: 'var(--font-body)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '20px' }}>
         <h1 style={{ margin: 0 }}>Travel Pass</h1>
-        {pageState !== 2 ? <SectionTabs activePath="/travel-pass" historyPath="/travel-pass/history" compact /> : null}
+        <SectionTabs activePath="/travel-pass" historyPath="/travel-pass/history" compact />
       </div>
       {error ? (
         <p>
@@ -383,8 +383,7 @@ function TravelPassPage() {
               <span className={`badge ${isFinalized ? 'badge--success' : 'badge--pending'}`}>{isFinalized ? 'Finalized' : 'In Progress'}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
-              <button type="button" onClick={switchVehicle} className="btn-secondary" style={{ padding: '6px 10px' }}>Switch Vehicle</button>
-              <SectionTabs activePath="/travel-pass" historyPath="/travel-pass/history" compact />
+              <button type="button" onClick={switchVehicle} className="btn-secondary" style={{ padding: '6px 10px' }}>Back to Travel Passes</button>
             </div>
           </div>
           {isLoadingDestinations ? <p>Loading destinations...</p> : null}

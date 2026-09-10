@@ -245,8 +245,10 @@ function TravelPassHistoryPage() {
 
   return (
     <div style={{ width: '100%', maxWidth: '1600px', margin: '40px auto', padding: '0 24px', fontFamily: 'var(--font-body)' }}>
-      <h1>Travel Pass History</h1>
-      <SectionTabs activePath="/travel-pass" historyPath="/travel-pass/history" />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '20px' }}>
+        <h1 style={{ margin: 0 }}>Travel Pass History</h1>
+        <SectionTabs activePath="/travel-pass" historyPath="/travel-pass/history" compact />
+      </div>
 
       <div style={{ marginBottom: '16px' }}>
         <label htmlFor="historyDate">Date</label>

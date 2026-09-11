@@ -5,8 +5,11 @@ function RfidReaderStatus() {
   const [isSupported, setIsSupported] = useState(null)
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
+  const [lastTap, setLastTap] = useState(null)
   const portRef = useRef(null)
   const readerRef = useRef(null)
+  const connectToPortRef = useRef(null)
+  const disconnectReaderRef = useRef(null)
 
   useEffect(() => {
     let isMounted = true
@@ -53,13 +56,30 @@ function RfidReaderStatus() {
       api.post('tap/', { card_uid: uid })
         .then((response) => {
           console.log('RFID tap response:', response.status, response.data)
+          setLastTap({
+            uid,
+            passenger_name: response.data.passenger_name || '',
+            success: response.data.success === true,
+            message: response.data.message || response.data.error || response.data.reason || '',
+            fare_charged: response.data.fare_charged ?? response.data.applied_fare ?? null,
+            destination_name: response.data.destination_name || '',
+            timestamp: new Date().toISOString(),
+          })
         })
         .catch((requestError) => {
-          console.error(
-            'RFID tap request failed:',
-            requestError.response?.status,
-            requestError.response?.data || requestError.message,
-          )
+          const response = requestError.response
+          console.error('RFID tap request failed:', response?.status, response?.data || requestError.message)
+          if (response) {
+            setLastTap({
+              uid,
+              passenger_name: response.data.passenger_name || '',
+              success: false,
+              message: response.data.message || response.data.error || 'Tap failed.',
+              fare_charged: null,
+              destination_name: response.data.destination_name || '',
+              timestamp: new Date().toISOString(),
+            })
+          }
         })
     }
 
@@ -138,10 +158,13 @@ function RfidReaderStatus() {
       }
     }
 
+    connectToPortRef.current = connectToPort
+    disconnectReaderRef.current = stopReading
+
     function handleDisconnect(event) {
       const disconnectedPort = event.port || event.target
       if (disconnectedPort === portRef.current) {
-        stopReading(disconnectedPort)
+        void stopReading(disconnectedPort)
       }
     }
 
@@ -165,7 +188,9 @@ function RfidReaderStatus() {
     return () => {
       isMounted = false
       navigator.serial.removeEventListener('disconnect', handleDisconnect)
-      stopReading()
+      void stopReading()
+      connectToPortRef.current = null
+      disconnectReaderRef.current = null
     }
   }, [])
 
@@ -176,67 +201,25 @@ function RfidReaderStatus() {
 
     setIsConnecting(true)
     try {
-      const port = await navigator.serial.requestPort()
-      await port.open({ baudRate: 115200 })
-      portRef.current = port
-
-      if (!port.readable) {
-        throw new Error('The selected RFID reader does not provide a readable serial stream.')
-      }
-
-      const decodedStream = port.readable.pipeThrough(new TextDecoderStream())
-      const reader = decodedStream.getReader()
-      readerRef.current = reader
-      setIsConnected(true)
-      let bufferedText = ''
-
-      while (portRef.current === port) {
-        const { value, done } = await reader.read()
-        if (done) {
-          break
-        }
-
-        bufferedText += value
-        const lines = bufferedText.split(/\r?\n/)
-        bufferedText = lines.pop()
-        lines.forEach((line) => {
-          const message = line.trim()
-          if (message === 'READY') {
-            console.log('RFID reader ready.')
-          } else if (message.startsWith('TAP:')) {
-            const uid = message.slice(4).trim()
-            if (uid) {
-              api.post('tap/', { card_uid: uid })
-                .then((response) => console.log('RFID tap response:', response.status, response.data))
-                .catch((requestError) => console.error('RFID tap request failed:', requestError.response?.status, requestError.response?.data || requestError.message))
-            }
-          }
-        })
-      }
+      const port = await navigator.serial.requestPort({
+        filters: [{ usbVendorId: 0x10C4 }, { usbVendorId: 0x1A86 }],
+      })
+      await connectToPortRef.current?.(port)
     } catch (connectionError) {
-      console.error('Could not connect RFID reader:', connectionError)
-    } finally {
-      const reader = readerRef.current
-      readerRef.current = null
-      if (reader) {
-        try {
-          await reader.cancel()
-        } catch {
-          // The reader may have already ended.
-        }
-        reader.releaseLock()
-      }
-      const port = portRef.current
-      portRef.current = null
-      if (port) {
-        try {
-          await port.close()
-        } catch {
-          // The port may already be closed.
-        }
-      }
-      setIsConnected(false)
+      console.error('Could not select RFID reader:', connectionError)
       setIsConnecting(false)
+    }
+  }
+
+  async function handleCopyUid() {
+    if (!lastTap?.uid) {
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(lastTap.uid)
+    } catch (clipboardError) {
+      console.error('Could not copy RFID UID:', clipboardError)
     }
   }
 
@@ -245,11 +228,25 @@ function RfidReaderStatus() {
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
-      <span className={`status-dot ${isConnected ? 'status-dot--success' : 'status-dot--pending'}`} />
-      <span className={`badge ${isConnected ? 'badge--success' : 'badge--pending'}`}>Reader: {isConnected ? 'Connected' : 'Not connected'}</span>
-      {!isConnected ? <button type="button" onClick={handleConnect} disabled={isConnecting || isSupported !== true} className="btn-secondary">{isConnecting ? 'Connecting...' : 'Connect Reader'}</button> : null}
-    </div>
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+        <span className={`status-dot ${isConnected ? 'status-dot--success' : 'status-dot--pending'}`} />
+        <span className={`badge ${isConnected ? 'badge--success' : 'badge--pending'}`}>Reader: {isConnected ? 'Connected' : 'Not connected'}</span>
+        {!isConnected ? <button type="button" onClick={handleConnect} disabled={isConnecting || isSupported !== true} className="btn-secondary">{isConnecting ? 'Connecting...' : 'Connect Reader'}</button> : <button type="button" onClick={() => void disconnectReaderRef.current?.()} className="btn-secondary">Disconnect Reader</button>}
+      </div>
+      {lastTap ? (
+        <aside className="card" style={{ position: 'fixed', left: '24px', top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: '260px', padding: '14px', fontFamily: 'var(--font-body)' }}>
+          <strong>Last RFID tap</strong>
+          <p style={{ margin: '10px 0 4px' }}>{lastTap.passenger_name || 'Unregistered card'}</p>
+          <p className="numeric" style={{ margin: '0 0 10px', color: 'var(--text-secondary)' }}>{lastTap.uid}</p>
+          {lastTap.success ? <>
+            {lastTap.destination_name ? <p style={{ margin: '0 0 4px' }}>{lastTap.destination_name}</p> : null}
+            {lastTap.fare_charged != null ? <p className="numeric" style={{ margin: 0 }}>Fare charged: {lastTap.fare_charged}</p> : null}
+          </> : <p style={{ margin: 0, color: 'var(--danger)' }}>{lastTap.message}</p>}
+          <button type="button" onClick={handleCopyUid} className="btn-secondary" style={{ marginTop: '12px' }}>Copy UID</button>
+        </aside>
+      ) : null}
+    </>
   )
 }
 

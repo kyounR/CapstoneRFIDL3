@@ -581,7 +581,13 @@ def tap_view(request):
                 remaining_balance=card.balance,
                 source='rfid',
             )
-            return Response({'error': 'Card is not active.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    'error': 'Card is not active.',
+                    'passenger_name': card.passenger.full_name if card.passenger else '',
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         last_fare_txn = Transaction.objects.filter(
             card=card,
@@ -603,6 +609,7 @@ def tap_view(request):
                     'success': False,
                     'error': cooldown_message,
                     'remaining_balance': card.balance,
+                    'passenger_name': card.passenger.full_name if card.passenger else '',
                 },
                 status=status.HTTP_200_OK,
             )
@@ -623,7 +630,13 @@ def tap_view(request):
                 remaining_balance=card.balance,
                 source='rfid',
             )
-            return Response({'error': no_destination_message}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    'error': no_destination_message,
+                    'passenger_name': card.passenger.full_name if card.passenger else '',
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         manifest_trip = tap_selection.manifest_trip
         if manifest_trip is None:
@@ -638,7 +651,13 @@ def tap_view(request):
                 remaining_balance=card.balance,
                 source='rfid',
             )
-            return Response({'error': no_manifest_message}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    'error': no_manifest_message,
+                    'passenger_name': card.passenger.full_name if card.passenger else '',
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         manifest_trip = ManifestTrip.objects.select_for_update().get(pk=manifest_trip.pk)
         if manifest_trip.is_finalized:
@@ -653,7 +672,13 @@ def tap_view(request):
                 remaining_balance=card.balance,
                 source='rfid',
             )
-            return Response({'error': no_manifest_message}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    'error': no_manifest_message,
+                    'passenger_name': card.passenger.full_name if card.passenger else '',
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         passenger = card.passenger
         passenger_discount_type: Optional[str] = None if passenger is None else passenger.discount_type
@@ -707,6 +732,8 @@ def tap_view(request):
                     'remaining_balance': card.balance,
                     'fare_type': fare_type,
                     'reason': reason,
+                    'passenger_name': passenger.full_name if passenger else '',
+                    'destination_name': destination.destination_name,
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -770,6 +797,8 @@ def tap_view(request):
             'reason': reason,
             'applied_fare': fare,
             'remaining_balance': card.balance,
+            'passenger_name': passenger.full_name if passenger else '',
+            'destination_name': destination.destination_name,
         },
         status=status.HTTP_200_OK,
     )

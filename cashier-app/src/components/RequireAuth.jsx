@@ -1,4 +1,5 @@
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import RfidReaderStatus from './RfidReaderStatus'
 
 function RequireAuth() {
   const navigate = useNavigate()
@@ -36,6 +37,7 @@ function RequireAuth() {
     <>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', padding: '12px 16px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)', fontFamily: 'var(--font-body)' }}>
         <span>Logged in as {username} ({role})</span>
+        <RfidReaderStatus />
         <nav aria-label="Primary navigation" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {navItems.map((item) => (
             <Link key={item.path} to={item.path} style={{ color: isActive(item.path) ? 'var(--accent)' : 'var(--text-primary)', fontWeight: isActive(item.path) ? 600 : 400, textDecoration: isActive(item.path) ? 'underline' : 'none' }}>

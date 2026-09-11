@@ -303,7 +303,7 @@ function RfidReaderStatus() {
               toggleTapPanel()
             }}
             aria-label={isTapPanelExpanded ? 'Collapse last RFID tap' : 'Show last RFID tap'}
-            style={{ width: '10px', minWidth: '10px', padding: 0, border: 0, borderRadius: 0, background: 'var(--accent)', cursor: 'pointer' }}
+            style={{ width: '10px', minWidth: '10px', height: '120px', padding: 0, border: 0, borderRadius: 0, background: 'var(--accent)', cursor: 'pointer' }}
           />
           {isTapPanelExpanded ? <div className="card" style={{ width: '260px', padding: '14px', margin: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}>
             <strong>Last RFID tap</strong>

@@ -24,6 +24,7 @@ function EntityManager({ endpoint, title, fields }) {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
+  const [searchText, setSearchText] = useState('')
 
   async function fetchRecords() {
     setIsLoading(true)
@@ -70,6 +71,11 @@ function EntityManager({ endpoint, title, fields }) {
     }
     return record[field.key] ?? '-'
   }
+
+  const normalizedSearchText = searchText.trim().toLowerCase()
+  const visibleRecords = normalizedSearchText
+    ? records.filter((record) => fields.some((field) => String(getDisplayValue(record, field)).toLowerCase().includes(normalizedSearchText)))
+    : records
 
   function openAddForm() {
     setEditingRecord({})
@@ -174,11 +180,21 @@ function EntityManager({ endpoint, title, fields }) {
       ) : null}
 
       {isLoading ? <p>Loading {title.toLowerCase()}...</p> : (
-        <div style={{ overflowX: 'auto' }}>
+        <>
+          <input
+            type="search"
+            value={searchText}
+            onChange={(event) => setSearchText(event.target.value)}
+            placeholder={`Search ${title.toLowerCase()}...`}
+            aria-label={`Search ${title}`}
+            className="input"
+            style={{ display: 'block', width: '100%', marginBottom: '12px' }}
+          />
+          <div style={{ overflowX: 'auto' }}>
           <table className="table">
             <thead><tr>{fields.map((field) => <th key={field.key}>{field.label}</th>)}<th>Actions</th></tr></thead>
             <tbody>
-              {records.length ? records.map((record) => (
+              {visibleRecords.length ? visibleRecords.map((record) => (
                 <tr key={record.id}>
                   {fields.map((field) => <td key={field.key} className={field.type === 'number' ? 'numeric' : undefined}>{getDisplayValue(record, field)}</td>)}
                   <td>
@@ -186,10 +202,11 @@ function EntityManager({ endpoint, title, fields }) {
                     <button type="button" onClick={() => handleDelete(record)} className="btn-secondary" style={{ marginLeft: '8px' }}>Delete</button>
                   </td>
                 </tr>
-              )) : <tr><td colSpan={fields.length + 1}>No records found.</td></tr>}
+              )) : <tr><td colSpan={fields.length + 1}>{normalizedSearchText ? 'No matching records found.' : 'No records found.'}</td></tr>}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
     </section>
   )

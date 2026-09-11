@@ -6,10 +6,14 @@ function RfidReaderStatus() {
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
   const [lastTap, setLastTap] = useState(null)
+  const [isTapPanelExpanded, setIsTapPanelExpanded] = useState(false)
+  const [justCopied, setJustCopied] = useState(false)
   const portRef = useRef(null)
   const readerRef = useRef(null)
   const connectToPortRef = useRef(null)
   const disconnectReaderRef = useRef(null)
+  const panelCollapseTimeoutRef = useRef(null)
+  const copiedTimeoutRef = useRef(null)
 
   useEffect(() => {
     let isMounted = true
@@ -32,7 +36,7 @@ function RfidReaderStatus() {
       }
     }
 
-    async function stopReading(port = portRef.current) {
+    async function stopReading(port = portRef.current, explicitlyDisconnected = false) {
       const reader = readerRef.current
       readerRef.current = null
 
@@ -50,6 +54,16 @@ function RfidReaderStatus() {
       }
       await closePort(port)
       setConnectionState(false)
+      if (explicitlyDisconnected) {
+        if (typeof port?.forget === 'function') {
+          try {
+            await port.forget()
+          } catch (forgetError) {
+            console.error('Could not forget RFID reader permission:', forgetError)
+          }
+        }
+        localStorage.setItem('rfidReaderDisconnected', 'true')
+      }
     }
 
     function submitTap(uid) {
@@ -159,7 +173,7 @@ function RfidReaderStatus() {
     }
 
     connectToPortRef.current = connectToPort
-    disconnectReaderRef.current = stopReading
+    disconnectReaderRef.current = (port) => stopReading(port, true)
 
     function handleDisconnect(event) {
       const disconnectedPort = event.port || event.target
@@ -177,7 +191,7 @@ function RfidReaderStatus() {
     navigator.serial.addEventListener('disconnect', handleDisconnect)
     navigator.serial.getPorts()
       .then((ports) => {
-        if (isMounted && ports[0]) {
+        if (isMounted && localStorage.getItem('rfidReaderDisconnected') !== 'true' && ports[0]) {
           connectToPort(ports[0])
         }
       })
@@ -191,6 +205,12 @@ function RfidReaderStatus() {
       void stopReading()
       connectToPortRef.current = null
       disconnectReaderRef.current = null
+      if (panelCollapseTimeoutRef.current) {
+        clearTimeout(panelCollapseTimeoutRef.current)
+      }
+      if (copiedTimeoutRef.current) {
+        clearTimeout(copiedTimeoutRef.current)
+      }
     }
   }, [])
 
@@ -199,6 +219,7 @@ function RfidReaderStatus() {
       return
     }
 
+    localStorage.removeItem('rfidReaderDisconnected')
     setIsConnecting(true)
     try {
       const port = await navigator.serial.requestPort({
@@ -218,9 +239,43 @@ function RfidReaderStatus() {
 
     try {
       await navigator.clipboard.writeText(lastTap.uid)
+      setJustCopied(true)
+      if (copiedTimeoutRef.current) {
+        clearTimeout(copiedTimeoutRef.current)
+      }
+      copiedTimeoutRef.current = setTimeout(() => {
+        setJustCopied(false)
+        copiedTimeoutRef.current = null
+      }, 1500)
     } catch (clipboardError) {
       console.error('Could not copy RFID UID:', clipboardError)
     }
+  }
+
+  function expandTapPanel() {
+    if (panelCollapseTimeoutRef.current) {
+      clearTimeout(panelCollapseTimeoutRef.current)
+      panelCollapseTimeoutRef.current = null
+    }
+    setIsTapPanelExpanded(true)
+  }
+
+  function collapseTapPanelSoon() {
+    if (panelCollapseTimeoutRef.current) {
+      clearTimeout(panelCollapseTimeoutRef.current)
+    }
+    panelCollapseTimeoutRef.current = setTimeout(() => {
+      setIsTapPanelExpanded(false)
+      panelCollapseTimeoutRef.current = null
+    }, 300)
+  }
+
+  function toggleTapPanel() {
+    if (panelCollapseTimeoutRef.current) {
+      clearTimeout(panelCollapseTimeoutRef.current)
+      panelCollapseTimeoutRef.current = null
+    }
+    setIsTapPanelExpanded((expanded) => !expanded)
   }
 
   if (isSupported === false) {
@@ -235,15 +290,31 @@ function RfidReaderStatus() {
         {!isConnected ? <button type="button" onClick={handleConnect} disabled={isConnecting || isSupported !== true} className="btn-secondary">{isConnecting ? 'Connecting...' : 'Connect Reader'}</button> : <button type="button" onClick={() => void disconnectReaderRef.current?.()} className="btn-secondary">Disconnect Reader</button>}
       </div>
       {lastTap ? (
-        <aside className="card" style={{ position: 'fixed', left: '24px', top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: '260px', padding: '14px', fontFamily: 'var(--font-body)' }}>
-          <strong>Last RFID tap</strong>
-          <p style={{ margin: '10px 0 4px' }}>{lastTap.passenger_name || 'Unregistered card'}</p>
-          <p className="numeric" style={{ margin: '0 0 10px', color: 'var(--text-secondary)' }}>{lastTap.uid}</p>
-          {lastTap.success ? <>
-            {lastTap.destination_name ? <p style={{ margin: '0 0 4px' }}>{lastTap.destination_name}</p> : null}
-            {lastTap.fare_charged != null ? <p className="numeric" style={{ margin: 0 }}>Fare charged: {lastTap.fare_charged}</p> : null}
-          </> : <p style={{ margin: 0, color: 'var(--danger)' }}>{lastTap.message}</p>}
-          <button type="button" onClick={handleCopyUid} className="btn-secondary" style={{ marginTop: '12px' }}>Copy UID</button>
+        <aside
+          style={{ position: 'fixed', left: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 10, display: 'flex', alignItems: 'stretch', fontFamily: 'var(--font-body)' }}
+          onMouseEnter={expandTapPanel}
+          onMouseLeave={collapseTapPanelSoon}
+        >
+          <button
+            type="button"
+            onClick={toggleTapPanel}
+            onTouchStart={(event) => {
+              event.preventDefault()
+              toggleTapPanel()
+            }}
+            aria-label={isTapPanelExpanded ? 'Collapse last RFID tap' : 'Show last RFID tap'}
+            style={{ width: '10px', minWidth: '10px', padding: 0, border: 0, borderRadius: 0, background: 'var(--accent)', cursor: 'pointer' }}
+          />
+          {isTapPanelExpanded ? <div className="card" style={{ width: '260px', padding: '14px', margin: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}>
+            <strong>Last RFID tap</strong>
+            <p style={{ margin: '10px 0 4px' }}>{lastTap.passenger_name || 'Unregistered card'}</p>
+            <p className="numeric" style={{ margin: '0 0 10px', color: 'var(--text-secondary)' }}>{lastTap.uid}</p>
+            {lastTap.success ? <>
+              {lastTap.destination_name ? <p style={{ margin: '0 0 4px' }}>{lastTap.destination_name}</p> : null}
+              {lastTap.fare_charged != null ? <p className="numeric" style={{ margin: 0 }}>Fare charged: {lastTap.fare_charged}</p> : null}
+            </> : <p style={{ margin: 0, color: 'var(--danger)' }}>{lastTap.message}</p>}
+            <button type="button" onClick={handleCopyUid} className="btn-secondary" style={{ marginTop: '12px' }}>{justCopied ? 'Copied!' : 'Copy UID'}</button>
+          </div> : null}
         </aside>
       ) : null}
     </>

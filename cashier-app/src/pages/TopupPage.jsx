@@ -195,6 +195,7 @@ function TopupPage() {
                     textAlign: 'left',
                     border: 'none',
                     background: 'transparent',
+                    color: 'var(--text-primary)',
                     borderBottom: '1px solid var(--border)',
                     cursor: 'pointer',
                     transition: 'background-color 0.15s',

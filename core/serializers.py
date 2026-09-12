@@ -139,6 +139,8 @@ class DispatchRoundSerializer(serializers.ModelSerializer):
 
 class DailyRemittanceSerializer(serializers.ModelSerializer):
     cashier = serializers.PrimaryKeyRelatedField(read_only=True)
+    cashier_full_name = serializers.CharField(source='cashier.full_name', read_only=True)
+    cashier_username = serializers.CharField(source='cashier.username', read_only=True)
     is_finalized = serializers.BooleanField(read_only=True)
     finalized_at = serializers.DateTimeField(read_only=True)
     terminal_fee_percentage = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)

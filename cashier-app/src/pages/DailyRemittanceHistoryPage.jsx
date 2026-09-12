@@ -234,13 +234,14 @@ function DailyRemittanceHistoryPage() {
         return <section key={key} style={{ marginBottom: '28px' }}>
           <h2><span className={terminalTagClass} style={{ marginRight: '10px' }}>{group.name}</span></h2>
           <p className="numeric">Day totals — Gross: {totals.gross.toFixed(2)}, Terminal Fees: {totals.terminal.toFixed(2)}, Subtotal: {totals.subtotal.toFixed(2)}, Net Pay: {totals.netPay.toFixed(2)}</p>
-          <table className="table"><thead><tr><th>Driver</th><th>Vehicle</th><th>Gross</th><th>Terminal Fee</th><th>Subtotal</th><th>Net Pay</th><th>Status</th></tr></thead><tbody>
+          <table className="table"><thead><tr><th>Driver</th><th>Cashier</th><th>Vehicle</th><th>Gross</th><th>Terminal Fee</th><th>Subtotal</th><th>Net Pay</th><th>Status</th></tr></thead><tbody>
             {group.items.map((item) => {
               const vehicle = vehicles.find((entry) => entry.id === item.vehicle)
               const driver = drivers.find((entry) => entry.id === item.driver)
               return <Fragment key={item.id}>
                 <tr onClick={() => toggleDetail(item.id)} style={{ cursor: 'pointer' }}>
                   <td>{driver?.full_name || item.driver}</td>
+                  <td>{item.cashier_full_name || item.cashier_username || item.cashier}</td>
                   <td>{vehicle?.plate_number || item.vehicle}</td>
                   <td className="numeric">{item.gross}</td>
                   <td className="numeric">{item.terminal_fee}</td>
@@ -251,7 +252,7 @@ function DailyRemittanceHistoryPage() {
                     <span className={`badge ${item.is_finalized ? 'badge--success' : 'badge--pending'}`}>{item.is_finalized ? 'Finalized' : 'In Progress'}</span>
                   </td>
                 </tr>
-                {expandedId === item.id ? <tr><td colSpan="7">{isLoadingDetail || !detail ? <p>Loading details...</p> : <>
+                {expandedId === item.id ? <tr><td colSpan="8">{isLoadingDetail || !detail ? <p>Loading details...</p> : <>
                   {renderHeader(detail)}
                   <h3>Dispatch Rounds</h3>
                   <table className="table"><thead><tr><th>Round</th><th>Amount</th><th>Time</th></tr></thead><tbody>{rounds.map((round) => <tr key={round.id}><td className="numeric">{round.round_number}</td><td className="numeric">{round.amount}{editButton('round', round.id, 'amount', round.amount)}</td><td className="numeric">{round.departure_time}{editButton('round', round.id, 'departure_time', round.departure_time)}</td></tr>)}</tbody></table>

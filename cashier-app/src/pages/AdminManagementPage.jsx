@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import EntityManager from '../components/EntityManager'
+import PassengerManager from '../components/PassengerManager'
 import api from '../api/client'
 
 const MANAGEMENT_TABS = [
@@ -31,16 +32,6 @@ const MANAGEMENT_TABS = [
   { label: 'Dispatchers', endpoint: 'dispatchers/', fields: [
     { key: 'full_name', label: 'Full Name', type: 'text', required: true },
     { key: 'contact_number', label: 'Contact Number', type: 'text' },
-  ] },
-  { label: 'Passengers', endpoint: 'passengers/', fields: [
-    { key: 'full_name', label: 'Full Name', type: 'text', required: true },
-    { key: 'contact_number', label: 'Contact Number', type: 'text' },
-    { key: 'discount_type', label: 'Discount Type', type: 'select', required: true, default: 'regular', options: [
-      { value: 'regular', label: 'Regular' },
-      { value: 'student', label: 'Student' },
-      { value: 'senior', label: 'Senior' },
-      { value: 'pwd', label: 'PWD' },
-    ] },
   ] },
   { label: 'Cards', endpoint: 'cards/', fields: [
     { key: 'uid', label: 'Card UID', type: 'text', required: true },
@@ -368,11 +359,12 @@ function AdminManagementPage() {
       <h1>Admin Management</h1>
       <nav aria-label="Management sections" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
         {MANAGEMENT_TABS.map((tab) => <button key={tab.label} type="button" onClick={() => setActiveTab(tab.label)} className={activeTab === tab.label ? 'btn-primary' : 'btn-secondary'}>{tab.label}</button>)}
+        <button type="button" onClick={() => setActiveTab('Passengers')} className={activeTab === 'Passengers' ? 'btn-primary' : 'btn-secondary'}>Passengers</button>
         <button type="button" onClick={() => setActiveTab('Users')} className={activeTab === 'Users' ? 'btn-primary' : 'btn-secondary'}>Users</button>
         <button type="button" onClick={() => setActiveTab('Fee Settings')} className={activeTab === 'Fee Settings' ? 'btn-primary' : 'btn-secondary'}>Fee Settings</button>
         <button type="button" onClick={() => setActiveTab('Audit Log')} className={activeTab === 'Audit Log' ? 'btn-primary' : 'btn-secondary'}>Audit Log</button>
       </nav>
-      {activeTab === 'Fee Settings' ? <FeeSettingsForm /> : activeTab === 'Users' ? <UserManager /> : activeTab === 'Audit Log' ? <AuditLogManager /> : <EntityManager key={selectedTab.label} endpoint={selectedTab.endpoint} title={selectedTab.label} fields={selectedTab.fields} />}
+      {activeTab === 'Fee Settings' ? <FeeSettingsForm /> : activeTab === 'Users' ? <UserManager /> : activeTab === 'Audit Log' ? <AuditLogManager /> : activeTab === 'Passengers' ? <PassengerManager /> : <EntityManager key={selectedTab.label} endpoint={selectedTab.endpoint} title={selectedTab.label} fields={selectedTab.fields} />}
     </div>
   )
 }

@@ -139,7 +139,7 @@ function SummaryPage() {
                   return (
                     <Fragment key={item.cashier_id}>
                       <tr onClick={() => toggleCashierTransactions(item.cashier_id)} style={{ cursor: 'pointer' }}>
-                        <td>{item.cashier_username}</td>
+                        <td>{item.cashier_full_name || item.cashier_username}</td>
                         <td className="numeric">{item.total_topups}</td>
                         <td className="numeric">{item.topup_count}</td>
                       </tr>
@@ -185,7 +185,7 @@ function SummaryPage() {
                   return (
                     <Fragment key={`cashfare-${item.cashier_id}`}>
                       <tr onClick={() => toggleCashierCashFares(item.cashier_id)} style={{ cursor: 'pointer' }}>
-                        <td>{item.cashier_username}</td>
+                        <td>{item.cashier_full_name || item.cashier_username}</td>
                         <td className="numeric">{item.total_cash_fares}</td>
                         <td className="numeric">{item.cash_fare_count}</td>
                       </tr>

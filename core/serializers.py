@@ -26,10 +26,11 @@ from .models import (
 
 class AdminAuditLogSerializer(serializers.ModelSerializer):
     actor_username = serializers.CharField(source='actor.username', read_only=True, allow_null=True)
+    actor_full_name = serializers.CharField(source='actor.full_name', read_only=True, allow_null=True)
 
     class Meta:
         model = AdminAuditLog
-        fields = ['id', 'actor', 'actor_username', 'action', 'model_name', 'object_repr', 'changes', 'timestamp']
+        fields = ['id', 'actor', 'actor_username', 'actor_full_name', 'action', 'model_name', 'object_repr', 'changes', 'timestamp']
 
 
 class UserAdminSerializer(serializers.ModelSerializer):
@@ -37,7 +38,7 @@ class UserAdminSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'password', 'role', 'is_active', 'date_joined']
+        fields = ['id', 'username', 'full_name', 'password', 'role', 'is_active', 'date_joined']
         read_only_fields = ['id', 'date_joined']
 
     def validate_password(self, value):
@@ -163,6 +164,7 @@ class ManifestEntrySummarySerializer(serializers.ModelSerializer):
 class ManifestTripSerializer(serializers.ModelSerializer):
     cashier = serializers.PrimaryKeyRelatedField(read_only=True)
     cashier_username = serializers.CharField(source='cashier.username', read_only=True)
+    cashier_full_name = serializers.CharField(source='cashier.full_name', read_only=True)
     is_finalized = serializers.BooleanField(read_only=True)
     finalized_at = serializers.DateTimeField(read_only=True)
     total_passengers = serializers.IntegerField(read_only=True)
@@ -218,6 +220,7 @@ class FareManifestEntrySerializer(serializers.ModelSerializer):
 
 class ManifestCorrectionSerializer(serializers.ModelSerializer):
     admin_username = serializers.CharField(source='admin.username', read_only=True)
+    admin_full_name = serializers.CharField(source='admin.full_name', read_only=True)
     destination_name = serializers.CharField(
         source='entry.destination.destination_name',
         read_only=True,
@@ -231,6 +234,7 @@ class ManifestCorrectionSerializer(serializers.ModelSerializer):
 
 class RemittanceCorrectionSerializer(serializers.ModelSerializer):
     admin_username = serializers.CharField(source='admin.username', read_only=True)
+    admin_full_name = serializers.CharField(source='admin.full_name', read_only=True)
     dispatch_round_number = serializers.IntegerField(source='dispatch_round.round_number', read_only=True)
 
     class Meta:

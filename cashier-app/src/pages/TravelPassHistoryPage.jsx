@@ -275,7 +275,7 @@ function TravelPassHistoryPage() {
                 <Fragment key={travelPass.id}>
                   <tr onClick={() => toggleExpanded(travelPass.id)} style={{ cursor: 'pointer' }}>
                     <td>{vehicle?.plate_number || travelPass.vehicle}</td>
-                    <td>{travelPass.cashier_username || travelPass.cashier}</td>
+                    <td>{travelPass.cashier_full_name || travelPass.cashier_username || travelPass.cashier}</td>
                     <td>{travelPass.departure_time || 'Not yet finalized'}</td>
                     <td className="numeric">{travelPass.total_passengers}</td>
                     <td className="numeric">{travelPass.total_fare}</td>
@@ -328,7 +328,7 @@ function TravelPassHistoryPage() {
                             {!isLoadingCorrections && corrections.length > 0 ? (
                               <table className="table">
                                 <thead><tr><th>Field</th><th>Destination</th><th>Old Value</th><th>New Value</th><th>Admin</th><th>When</th><th>Reason</th></tr></thead>
-                                <tbody>{corrections.map((correction) => <tr key={correction.id}><td>{correction.field_name}</td><td>{correction.destination_name || 'Travel Pass'}</td><td className="numeric">{correction.old_value}</td><td className="numeric">{correction.new_value}</td><td>{correction.admin_username}</td><td>{correction.corrected_at}</td><td>{correction.reason}</td></tr>)}</tbody>
+                                <tbody>{corrections.map((correction) => <tr key={correction.id}><td>{correction.field_name}</td><td>{correction.destination_name || 'Travel Pass'}</td><td className="numeric">{correction.old_value}</td><td className="numeric">{correction.new_value}</td><td>{correction.admin_full_name || correction.admin_username}</td><td>{correction.corrected_at}</td><td>{correction.reason}</td></tr>)}</tbody>
                               </table>
                             ) : null}
                           </section>

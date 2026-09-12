@@ -298,6 +298,7 @@ def login_view(request):
         {
             'token': token.key,
             'username': user.username,
+            'full_name': user.full_name,
             'role': getattr(user, 'role', None),
         },
         status=status.HTTP_200_OK,
@@ -1046,7 +1047,7 @@ def reports_view(request):
 
     cashier_breakdown_qs = (
         tx_qs.filter(transaction_type=Transaction.TransactionType.TOPUP, cashier__isnull=False)
-        .values('cashier', 'cashier__username')
+        .values('cashier', 'cashier__username', 'cashier__full_name')
         .annotate(total_topups=Sum('amount'), topup_count=Count('id'))
         .order_by('cashier__username')
     )
@@ -1055,6 +1056,7 @@ def reports_view(request):
         {
             'cashier_id': row['cashier'],
             'cashier_username': row['cashier__username'],
+            'cashier_full_name': row['cashier__full_name'],
             'total_topups': row['total_topups'] or Decimal('0.00'),
             'topup_count': row['topup_count'],
         }
@@ -1076,7 +1078,7 @@ def reports_view(request):
     # Cashier breakdown for cash fares
     cash_fare_breakdown_qs = (
         cash_fares_qs.filter(cashier__isnull=False)
-        .values('cashier', 'cashier__username')
+        .values('cashier', 'cashier__username', 'cashier__full_name')
         .annotate(total_cash_fares=Sum('fare_charged'), cash_fare_count=Count('id'))
         .order_by('cashier__username')
     )
@@ -1085,6 +1087,7 @@ def reports_view(request):
         {
             'cashier_id': row['cashier'],
             'cashier_username': row['cashier__username'],
+            'cashier_full_name': row['cashier__full_name'],
             'total_cash_fares': row['total_cash_fares'] or Decimal('0.00'),
             'cash_fare_count': row['cash_fare_count'],
         }
@@ -2294,7 +2297,7 @@ class UserViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         update_data = {
             field: request.data[field]
-            for field in ('role', 'is_active')
+            for field in ('full_name', 'role', 'is_active')
             if field in request.data
         }
         serializer = self.get_serializer(

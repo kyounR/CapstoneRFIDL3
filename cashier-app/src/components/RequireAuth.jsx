@@ -7,6 +7,7 @@ function RequireAuth() {
   const token = localStorage.getItem('authToken')
   const role = localStorage.getItem('userRole')
   const username = localStorage.getItem('username')
+  const fullName = localStorage.getItem('fullName')
 
   if (!token) {
     return <Navigate to="/login" replace />
@@ -20,6 +21,7 @@ function RequireAuth() {
     localStorage.removeItem('authToken')
     localStorage.removeItem('userRole')
     localStorage.removeItem('username')
+    localStorage.removeItem('fullName')
     navigate('/login')
   }
 
@@ -36,7 +38,7 @@ function RequireAuth() {
   return (
     <>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', padding: '12px 16px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)', fontFamily: 'var(--font-body)' }}>
-        <span>Logged in as {username} ({role})</span>
+        <span>Logged in as {fullName || username} ({role})</span>
         <RfidReaderStatus />
         <nav aria-label="Primary navigation" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {navItems.map((item) => (

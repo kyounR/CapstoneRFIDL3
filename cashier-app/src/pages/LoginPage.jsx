@@ -19,6 +19,7 @@ function LoginPage() {
       localStorage.setItem('authToken', response.data.token)
       localStorage.setItem('userRole', response.data.role)
       localStorage.setItem('username', response.data.username)
+      localStorage.setItem('fullName', response.data.full_name || '')
       navigate('/topup')
     } catch (requestError) {
       const message = requestError.response?.data?.error || 'Login failed.'

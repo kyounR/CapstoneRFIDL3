@@ -12,6 +12,7 @@ class User(AbstractUser):
 		ADMIN = 'admin', 'Admin'
 		CASHIER = 'cashier', 'Cashier'
 
+	full_name = models.CharField(max_length=255, blank=True)
 	role = models.CharField(max_length=20, choices=Role.choices, default=Role.CASHIER)
 
 	def __str__(self):

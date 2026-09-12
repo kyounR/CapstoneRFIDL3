@@ -128,9 +128,9 @@ function UserManager() {
   const [message, setMessage] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newUser, setNewUser] = useState({ username: '', password: '', role: 'cashier' })
+  const [newUser, setNewUser] = useState({ username: '', full_name: '', password: '', role: 'cashier' })
   const [editingUser, setEditingUser] = useState(null)
-  const [editValues, setEditValues] = useState({ role: 'cashier', is_active: true })
+  const [editValues, setEditValues] = useState({ full_name: '', role: 'cashier', is_active: true })
   const [resetUser, setResetUser] = useState(null)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -162,7 +162,7 @@ function UserManager() {
     resetFeedback()
     try {
       await api.post('users/', newUser)
-      setNewUser({ username: '', password: '', role: 'cashier' })
+      setNewUser({ username: '', full_name: '', password: '', role: 'cashier' })
       setShowAddForm(false)
       setMessage('User created.')
       fetchUsers()
@@ -176,7 +176,7 @@ function UserManager() {
   function openEditUser(user) {
     resetFeedback()
     setEditingUser(user)
-    setEditValues({ role: user.role, is_active: user.is_active })
+    setEditValues({ full_name: user.full_name || '', role: user.role, is_active: user.is_active })
   }
 
   async function handleEditUser(event) {
@@ -236,6 +236,7 @@ function UserManager() {
       {showAddForm ? <form onSubmit={handleCreateUser} style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginBottom: '20px' }}>
         <h3 style={{ marginTop: 0 }}>Add New User</h3>
         <div style={{ marginBottom: '12px' }}><label htmlFor="newUsername">Username</label><input id="newUsername" type="text" value={newUser.username} onChange={(event) => setNewUser((current) => ({ ...current, username: event.target.value }))} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required /></div>
+        <div style={{ marginBottom: '12px' }}><label htmlFor="newUserFullName">Full Name</label><input id="newUserFullName" type="text" value={newUser.full_name} onChange={(event) => setNewUser((current) => ({ ...current, full_name: event.target.value }))} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} /></div>
         <div style={{ marginBottom: '12px' }}><label htmlFor="newPassword">Password</label><input id="newPassword" type="password" value={newUser.password} onChange={(event) => setNewUser((current) => ({ ...current, password: event.target.value }))} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required /></div>
         <div style={{ marginBottom: '12px' }}><label htmlFor="newUserRole">Role</label><select id="newUserRole" value={newUser.role} onChange={(event) => setNewUser((current) => ({ ...current, role: event.target.value }))} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }}><option value="cashier">Cashier</option><option value="admin">Admin</option></select></div>
         <button type="submit" disabled={isSaving} className="btn-primary">{isSaving ? 'Creating...' : 'Create User'}</button>
@@ -244,6 +245,7 @@ function UserManager() {
 
       {editingUser ? <form onSubmit={handleEditUser} style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginBottom: '20px' }}>
         <h3 style={{ marginTop: 0 }}>Edit {editingUser.username}</h3>
+        <div style={{ marginBottom: '12px' }}><label htmlFor="editUserFullName">Full Name</label><input id="editUserFullName" type="text" value={editValues.full_name} onChange={(event) => setEditValues((current) => ({ ...current, full_name: event.target.value }))} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} /></div>
         <div style={{ marginBottom: '12px' }}><label htmlFor="editUserRole">Role</label><select id="editUserRole" value={editValues.role} onChange={(event) => setEditValues((current) => ({ ...current, role: event.target.value }))} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }}><option value="cashier">Cashier</option><option value="admin">Admin</option></select></div>
         <label><input type="checkbox" checked={editValues.is_active} onChange={(event) => setEditValues((current) => ({ ...current, is_active: event.target.checked }))} /> Active</label>
         <div style={{ marginTop: '16px' }}><button type="submit" disabled={isSaving} className="btn-primary">{isSaving ? 'Saving...' : 'Save Changes'}</button><button type="button" onClick={() => setEditingUser(null)} disabled={isSaving} className="btn-secondary" style={{ marginLeft: '8px' }}>Cancel</button></div>
@@ -256,7 +258,7 @@ function UserManager() {
         <button type="submit" disabled={isSaving} className="btn-primary">{isSaving ? 'Resetting...' : 'Reset Password'}</button><button type="button" onClick={() => setResetUser(null)} disabled={isSaving} className="btn-secondary" style={{ marginLeft: '8px' }}>Cancel</button>
       </form> : null}
 
-      {isLoading ? <p>Loading users...</p> : <div style={{ overflowX: 'auto' }}><table className="table"><thead><tr><th>Username</th><th>Role</th><th>Status</th><th>Date Joined</th><th>Actions</th></tr></thead><tbody>{users.length ? users.map((user) => <tr key={user.id}><td>{user.username}</td><td>{user.role}</td><td><span className={`badge ${user.is_active ? 'badge--success' : 'badge--danger'}`}><span className={`status-dot ${user.is_active ? 'status-dot--success' : 'status-dot--danger'}`} style={{ marginRight: '6px' }} />{user.is_active ? 'Active' : 'Inactive'}</span></td><td>{new Date(user.date_joined).toLocaleString()}</td><td><button type="button" onClick={() => openEditUser(user)} className="btn-secondary">Edit</button><button type="button" onClick={() => openResetPassword(user)} className="btn-secondary" style={{ marginLeft: '8px' }}>Reset Password</button></td></tr>) : <tr><td colSpan="5">No users found.</td></tr>}</tbody></table></div>}
+      {isLoading ? <p>Loading users...</p> : <div style={{ overflowX: 'auto' }}><table className="table"><thead><tr><th>Username</th><th>Full Name</th><th>Role</th><th>Status</th><th>Date Joined</th><th>Actions</th></tr></thead><tbody>{users.length ? users.map((user) => <tr key={user.id}><td>{user.username}</td><td>{user.full_name || user.username}</td><td>{user.role}</td><td><span className={`badge ${user.is_active ? 'badge--success' : 'badge--danger'}`}><span className={`status-dot ${user.is_active ? 'status-dot--success' : 'status-dot--danger'}`} style={{ marginRight: '6px' }} />{user.is_active ? 'Active' : 'Inactive'}</span></td><td>{new Date(user.date_joined).toLocaleString()}</td><td><button type="button" onClick={() => openEditUser(user)} className="btn-secondary">Edit</button><button type="button" onClick={() => openResetPassword(user)} className="btn-secondary" style={{ marginLeft: '8px' }}>Reset Password</button></td></tr>) : <tr><td colSpan="6">No users found.</td></tr>}</tbody></table></div>}
     </section>
   )
 }
@@ -336,7 +338,7 @@ function AuditLogManager() {
               const actionStyle = AUDIT_ACTION_STYLES[log.action] || AUDIT_ACTION_STYLES.updated
               return <tr key={log.id}>
                 <td>{new Date(log.timestamp).toLocaleString()}</td>
-                <td>{log.actor_username || 'System'}</td>
+                <td>{log.actor_full_name || log.actor_username || 'System'}</td>
                 <td><span className={`badge ${actionStyle.badge}`}><span className={`status-dot ${actionStyle.dot}`} style={{ marginRight: '6px' }} />{log.action}</span></td>
                 <td>{log.model_name}</td>
                 <td>{log.object_repr}</td>

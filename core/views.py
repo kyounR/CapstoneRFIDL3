@@ -810,7 +810,20 @@ def tap_log_recent_view(request):
     if not _has_cashier_or_admin_role(request):
         return _role_forbidden_response('view the tap log')
 
-    logs = TapLog.objects.filter(source='rfid').select_related('destination').order_by('-timestamp')[:20]
+    date_param = request.query_params.get('date')
+    if date_param is None:
+        logs = TapLog.objects.filter(source='rfid').select_related('destination').order_by('-timestamp')[:20]
+    else:
+        tap_date = parse_date(date_param)
+        if tap_date is None:
+            return Response(
+                {'error': 'Invalid date format. Use YYYY-MM-DD.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        logs = TapLog.objects.filter(
+            source='rfid',
+            timestamp__date=tap_date,
+        ).select_related('destination').order_by('-timestamp')[:200]
 
     return Response(
         [

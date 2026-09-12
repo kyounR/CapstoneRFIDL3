@@ -30,7 +30,6 @@ function TopupPage() {
   const [topupResult, setTopupResult] = useState(null)
   const [topupError, setTopupError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showReversalForm, setShowReversalForm] = useState(false)
   const [reversalReason, setReversalReason] = useState('')
   const [reversalError, setReversalError] = useState('')
   const [isReversing, setIsReversing] = useState(false)
@@ -78,7 +77,14 @@ function TopupPage() {
     return `****${uid.slice(-4)}`
   }
 
+  function clearImmediateTopupResult() {
+    setTopupResult(null)
+    setReversalReason('')
+    setReversalError('')
+  }
+
   function handleSelectSearchResult(result) {
+    clearImmediateTopupResult()
     setCardUid(result.uid)
     setCardLookup({
       uid: result.uid,
@@ -136,8 +142,13 @@ function TopupPage() {
 
   async function handleSubmit(event) {
     event.preventDefault()
+    const topupTarget = cardLookup?.passenger?.full_name || cardUid.trim()
+    if (!window.confirm(`Top up ${amount} to ${topupTarget}?`)) {
+      return
+    }
+
     setTopupError('')
-    setTopupResult(null)
+    clearImmediateTopupResult()
     setIsSubmitting(true)
 
     try {
@@ -147,7 +158,6 @@ function TopupPage() {
       })
 
       setTopupResult(response.data)
-      setShowReversalForm(false)
       setReversalReason('')
       setReversalError('')
 
@@ -185,7 +195,6 @@ function TopupPage() {
         balance: response.data.balance,
         is_reversed: true,
       }))
-      setShowReversalForm(false)
       setReversalReason('')
     } catch (requestError) {
       setReversalError(requestError.response?.data?.error || 'Top-up reversal failed.')
@@ -258,7 +267,7 @@ function TopupPage() {
             id="cardUid"
             type="text"
             value={cardUid}
-            onChange={(event) => setCardUid(event.target.value)}
+            onChange={(event) => { clearImmediateTopupResult(); setCardUid(event.target.value) }}
             className="input"
             style={{ width: '100%', marginTop: '4px' }}
             required
@@ -319,7 +328,7 @@ function TopupPage() {
             step="0.01"
             min="0.01"
             value={amount}
-            onChange={(event) => setAmount(event.target.value)}
+            onChange={(event) => { clearImmediateTopupResult(); setAmount(event.target.value) }}
             className="input numeric"
             style={{ width: '100%', marginTop: '4px' }}
             required
@@ -347,21 +356,14 @@ function TopupPage() {
           <p className="numeric">Card UID: {topupResult.card_uid}</p>
           <p className="numeric">Updated Balance: {topupResult.balance}</p>
           {topupResult.id && !topupResult.is_reversed ? (
-            <>
-              {!showReversalForm ? (
-                <button type="button" onClick={() => { setShowReversalForm(true); setReversalError('') }} className="btn-secondary">Undo this top-up</button>
-              ) : (
-                <div style={{ marginTop: '12px' }}>
-                  <label htmlFor="topupReversalReason">Reason for reversal</label>
-                  <input id="topupReversalReason" type="text" value={reversalReason} onChange={(event) => setReversalReason(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required />
-                  {reversalError ? <p style={{ color: 'var(--danger)' }}>{reversalError}</p> : null}
-                  <button type="button" onClick={handleReverseTopup} disabled={isReversing || !reversalReason.trim()} className="btn-primary">{isReversing ? 'Reversing...' : 'Confirm reversal'}</button>
-                  <button type="button" onClick={() => { setShowReversalForm(false); setReversalError('') }} disabled={isReversing} className="btn-secondary" style={{ marginLeft: '8px' }}>Cancel</button>
-                </div>
-              )}
-            </>
+            <div style={{ marginTop: '12px' }}>
+              <label htmlFor="topupReversalReason">Reason for reversal</label>
+              <input id="topupReversalReason" type="text" value={reversalReason} onChange={(event) => setReversalReason(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required />
+              {reversalError ? <p style={{ color: 'var(--danger)' }}>{reversalError}</p> : null}
+              <button type="button" onClick={handleReverseTopup} disabled={isReversing || !reversalReason.trim()} className="btn-primary">{isReversing ? 'Reversing...' : 'Undo this top-up'}</button>
+            </div>
           ) : null}
-          {reversalError && !showReversalForm ? <p style={{ color: 'var(--danger)' }}>{reversalError}</p> : null}
+          {reversalError ? <p style={{ color: 'var(--danger)' }}>{reversalError}</p> : null}
         </div>
       ) : null}
     </div>

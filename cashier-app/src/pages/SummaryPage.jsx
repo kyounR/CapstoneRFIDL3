@@ -8,6 +8,7 @@ function SummaryPage() {
   const [expandedId, setExpandedId] = useState(null)
   const [cashierTransactions, setCashierTransactions] = useState([])
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false)
+  const [reversingTransactionId, setReversingTransactionId] = useState(null)
   const [expandedCashFareId, setExpandedCashFareId] = useState(null)
   const [cashierCashFares, setCashierCashFares] = useState([])
   const [isLoadingCashFares, setIsLoadingCashFares] = useState(false)
@@ -41,15 +42,7 @@ function SummaryPage() {
     }
   }
 
-  async function toggleCashierTransactions(cashierId) {
-    if (expandedId === cashierId) {
-      setExpandedId(null)
-      setCashierTransactions([])
-      return
-    }
-
-    setExpandedId(cashierId)
-    setCashierTransactions([])
+  async function fetchCashierTransactions(cashierId) {
     setIsLoadingTransactions(true)
     try {
       const response = await api.get('reports/cashier-transactions/', {
@@ -60,6 +53,43 @@ function SummaryPage() {
       setError(requestError.response?.data?.error || 'Could not load cashier transactions.')
     } finally {
       setIsLoadingTransactions(false)
+    }
+  }
+
+  async function toggleCashierTransactions(cashierId) {
+    if (expandedId === cashierId) {
+      setExpandedId(null)
+      setCashierTransactions([])
+      return
+    }
+
+    setExpandedId(cashierId)
+    setCashierTransactions([])
+    await fetchCashierTransactions(cashierId)
+  }
+
+  async function handleReverseTransaction(transaction) {
+    const reason = window.prompt('Reason for reversing this top-up:')
+    if (reason === null) return
+    if (!reason.trim()) {
+      setError('A non-empty reason is required.')
+      return
+    }
+
+    const cashierId = expandedId
+    setReversingTransactionId(transaction.id)
+    setError('')
+    try {
+      await api.post(`transactions/${transaction.id}/reverse/`, { reason: reason.trim() })
+      await fetchSummary(date)
+      if (cashierId !== null) {
+        setExpandedId(cashierId)
+        await fetchCashierTransactions(cashierId)
+      }
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || 'Top-up reversal failed.')
+    } finally {
+      setReversingTransactionId(null)
     }
   }
 
@@ -146,7 +176,7 @@ function SummaryPage() {
                       {isExpanded ? <tr><td colSpan="3">
                         {isLoadingTransactions ? <p>Loading cashier transactions...</p> : (
                           <table className="table">
-                            <thead><tr><th>Passenger</th><th>Card UID</th><th>Amount</th><th>Timestamp</th><th>Status</th></tr></thead>
+                            <thead><tr><th>Passenger</th><th>Card UID</th><th>Amount</th><th>Timestamp</th><th>Status</th><th>Action</th></tr></thead>
                             <tbody>
                               {cashierTransactions.length ? cashierTransactions.map((transaction) => <tr key={transaction.id}>
                                 <td>{transaction.passenger_name || 'Unregistered card'}</td>
@@ -154,7 +184,12 @@ function SummaryPage() {
                                 <td className="numeric">{transaction.amount}</td>
                                 <td>{new Date(transaction.timestamp).toLocaleString()}</td>
                                 <td><span className={`badge ${transaction.is_reversed ? 'badge--pending' : 'badge--success'}`}>{transaction.is_reversed ? 'Reversed' : 'Active'}</span></td>
-                              </tr>) : <tr><td colSpan="5">No top-up transactions found.</td></tr>}
+                                <td>
+                                  {transaction.is_reversed ? 'Reversed' : <button type="button" onClick={(event) => { event.stopPropagation(); handleReverseTransaction(transaction) }} disabled={reversingTransactionId === transaction.id} className="btn-secondary">
+                                    {reversingTransactionId === transaction.id ? 'Reversing...' : 'Reverse'}
+                                  </button>}
+                                </td>
+                              </tr>) : <tr><td colSpan="6">No top-up transactions found.</td></tr>}
                             </tbody>
                           </table>
                         )}

@@ -35,6 +35,7 @@ from .views import (
     tap_log_recent_view,
     tap_destination_view,
     tap_view,
+    transaction_reverse_view,
     topup_view,
 )
 
@@ -63,6 +64,7 @@ urlpatterns = [
     path('cards/search/', card_search_view, name='card-search'),
     path('fee-settings/', fee_settings_view, name='fee-settings'),
     path('topup/', topup_view, name='topup'),
+    path('transactions/<int:pk>/reverse/', transaction_reverse_view, name='transaction-reverse'),
     path('tap-destination/', tap_destination_view, name='tap-destination'),
     path('tap/', tap_view, name='tap'),
     path('tap-log/recent/', tap_log_recent_view, name='tap-log-recent'),

@@ -436,6 +436,7 @@ class RemittanceCorrection(models.Model):
 class Transaction(models.Model):
 	class TransactionType(models.TextChoices):
 		TOPUP = 'topup', 'Top-up'
+		TOPUP_REVERSAL = 'topup_reversal', 'Top-up reversal'
 		FARE = 'fare', 'Fare'
 		REFUND = 'refund', 'Refund'
 
@@ -449,6 +450,15 @@ class Transaction(models.Model):
 	)
 	transaction_type = models.CharField(max_length=20, choices=TransactionType.choices)
 	amount = models.DecimalField(max_digits=12, decimal_places=2)
+	is_reversed = models.BooleanField(default=False)
+	reversed_at = models.DateTimeField(null=True, blank=True)
+	reversed_by = models.ForeignKey(
+		settings.AUTH_USER_MODEL,
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+	)
+	reversal_reason = models.TextField(null=True, blank=True)
 	trip = models.ForeignKey(
 		Trip,
 		on_delete=models.PROTECT,

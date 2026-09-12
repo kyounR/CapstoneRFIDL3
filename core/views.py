@@ -460,7 +460,7 @@ def topup_view(request):
         card.balance = card.balance + amount
         card.save(update_fields=['balance'])
 
-        Transaction.objects.create(
+        topup_transaction = Transaction.objects.create(
             card=card,
             cashier=request.user,
             transaction_type=Transaction.TransactionType.TOPUP,
@@ -471,7 +471,73 @@ def topup_view(request):
     return Response(
         {
             'message': 'Top-up successful.',
+            'id': topup_transaction.id,
             'card_uid': card.uid,
+            'balance': card.balance,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def transaction_reverse_view(request, pk):
+    if not _has_cashier_or_admin_role(request):
+        return _role_forbidden_response('reverse top-ups')
+
+    reason = request.data.get('reason')
+    if not isinstance(reason, str) or not reason.strip():
+        return Response(
+            {'error': 'A non-empty reason is required.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    with transaction.atomic():
+        try:
+            original_transaction = Transaction.objects.select_for_update().get(pk=pk)
+        except Transaction.DoesNotExist:
+            return Response({'error': 'Transaction not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if original_transaction.transaction_type != Transaction.TransactionType.TOPUP:
+            return Response(
+                {'error': 'Only top-up transactions can be reversed.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if original_transaction.is_reversed:
+            return Response(
+                {'error': 'This top-up has already been reversed.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        card = Card.objects.select_for_update().get(pk=original_transaction.card_id)
+        if card.balance < original_transaction.amount:
+            return Response(
+                {
+                    'error': "This card's balance is now lower than the original top-up amount and can't be fully reversed -- some of it may have already been spent.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        card.balance = card.balance - original_transaction.amount
+        card.save(update_fields=['balance'])
+
+        Transaction.objects.create(
+            card=card,
+            cashier=request.user,
+            transaction_type=Transaction.TransactionType.TOPUP_REVERSAL,
+            amount=original_transaction.amount,
+            balance_after=card.balance,
+        )
+
+        original_transaction.is_reversed = True
+        original_transaction.reversed_at = now()
+        original_transaction.reversed_by = request.user
+        original_transaction.reversal_reason = reason.strip()
+        original_transaction.save(update_fields=['is_reversed', 'reversed_at', 'reversed_by', 'reversal_reason'])
+
+    return Response(
+        {
+            'message': 'Top-up reversed successfully.',
             'balance': card.balance,
         },
         status=status.HTTP_200_OK,
@@ -1138,10 +1204,12 @@ def cashier_transactions_report_view(request):
 
     return Response([
         {
+            'id': transaction.id,
             'card_uid': transaction.card.uid,
             'passenger_name': transaction.card.passenger.full_name if transaction.card.passenger else '',
             'amount': transaction.amount,
             'balance_after': transaction.balance_after,
+            'is_reversed': transaction.is_reversed,
             'timestamp': transaction.timestamp,
         }
         for transaction in transactions

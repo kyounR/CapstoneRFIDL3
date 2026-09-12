@@ -146,14 +146,15 @@ function SummaryPage() {
                       {isExpanded ? <tr><td colSpan="3">
                         {isLoadingTransactions ? <p>Loading cashier transactions...</p> : (
                           <table className="table">
-                            <thead><tr><th>Passenger</th><th>Card UID</th><th>Amount</th><th>Timestamp</th></tr></thead>
+                            <thead><tr><th>Passenger</th><th>Card UID</th><th>Amount</th><th>Timestamp</th><th>Status</th></tr></thead>
                             <tbody>
-                              {cashierTransactions.length ? cashierTransactions.map((transaction) => <tr key={`${transaction.card_uid}-${transaction.timestamp}`}>
+                              {cashierTransactions.length ? cashierTransactions.map((transaction) => <tr key={transaction.id}>
                                 <td>{transaction.passenger_name || 'Unregistered card'}</td>
                                 <td className="numeric">{transaction.card_uid}</td>
                                 <td className="numeric">{transaction.amount}</td>
                                 <td>{new Date(transaction.timestamp).toLocaleString()}</td>
-                              </tr>) : <tr><td colSpan="4">No top-up transactions found.</td></tr>}
+                                <td><span className={`badge ${transaction.is_reversed ? 'badge--pending' : 'badge--success'}`}>{transaction.is_reversed ? 'Reversed' : 'Active'}</span></td>
+                              </tr>) : <tr><td colSpan="5">No top-up transactions found.</td></tr>}
                             </tbody>
                           </table>
                         )}

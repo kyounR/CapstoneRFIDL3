@@ -4,13 +4,16 @@ import api from '../api/client'
 function TapFeedPage() {
   const [taps, setTaps] = useState([])
   const [error, setError] = useState('')
+  const [selectedDate, setSelectedDate] = useState('')
 
   useEffect(() => {
     let isMounted = true
 
     async function fetchTaps() {
       try {
-        const response = await api.get('tap-log/recent/')
+        const response = await api.get('tap-log/recent/', {
+          params: selectedDate ? { date: selectedDate } : {},
+        })
         if (isMounted) {
           setTaps(response.data)
           setError('')
@@ -29,11 +32,30 @@ function TapFeedPage() {
       isMounted = false
       clearInterval(intervalId)
     }
-  }, [])
+  }, [selectedDate])
 
   return (
     <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'var(--font-body)', fontSize: '1.4rem' }}>
       <h1 style={{ fontSize: '2.5rem' }}>Tap Feed</h1>
+
+      <div style={{ display: 'flex', alignItems: 'end', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        <div>
+          <label htmlFor="tap-feed-date">View date</label>
+          <input
+            id="tap-feed-date"
+            type="date"
+            value={selectedDate}
+            onChange={(event) => setSelectedDate(event.target.value)}
+            className="input"
+            style={{ display: 'block', marginTop: '4px' }}
+          />
+        </div>
+        {selectedDate ? (
+          <button type="button" onClick={() => setSelectedDate('')} className="btn-secondary">
+            Back to live
+          </button>
+        ) : null}
+      </div>
 
       {error ? (
         <p style={{ fontSize: '1.4rem' }}>
@@ -76,6 +98,9 @@ function TapFeedPage() {
                   {tap.destination_name ? ` → ${tap.destination_name}` : ''}
                 </p>
                 <p style={{ fontSize: '1.4rem', margin: '8px 0 0' }}>{tap.message}</p>
+                <p style={{ fontSize: '1.2rem', margin: '8px 0 0', color: 'var(--text-secondary)' }}>
+                  {new Date(tap.timestamp).toLocaleString()}
+                </p>
                 {tap.success ? (
                   <p className="numeric" style={{ fontSize: '1.4rem', margin: '8px 0 0' }}>
                     Fare charged: {tap.fare_charged} · Remaining balance: {tap.remaining_balance}

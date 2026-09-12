@@ -9,10 +9,11 @@
 
 - Another UI pass for Travel pass page
 - A UI pass for the Remittance page (possibly similar to travel pass page)
-- Tap Feed data granularity of data, add date, and a filter to set the full list of taps on a certain date
-- Search function for entries in admin management
-- Possible consolidation of passenger and card tab in admin management
+- Tap Feed data granularity of data, add date, and a filter to set the full list of taps on a certain date (DONE)
+- Search function for entries in admin management (DONE)
 - More detail for audit log when a travel pass is canceled, with actual flavor text instead of "had_passengers = false"
 - Added granularity to CALTRANSCO management report, to be determined once UAT and feedback from client
 - General UI pass for every tab, current formatting has Travel Pass being larger than the rest of the tabs
 - (MAJOR) Native implementation within web-app of card scanning function, maybe add a new tab to check card UID instead of a python script handling it in a code terminal (DONE)
+- Add error message when top-up reversal button is clicked but no reason is given
+- Make the reason clear in summary or audit log clear 

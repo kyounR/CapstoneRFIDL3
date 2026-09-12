@@ -15,6 +15,7 @@ class Command(BaseCommand):
         admin_user, admin_created = User.objects.get_or_create(username='admin')
         admin_user.set_password('adminpass123')
         admin_user.role = User.Role.ADMIN
+        admin_user.full_name = 'Ana Reyes'
         admin_user.is_staff = True
         admin_user.is_superuser = True
         admin_user.is_active = True
@@ -29,6 +30,7 @@ class Command(BaseCommand):
         cashier_user, cashier_created = User.objects.get_or_create(username='cashier1')
         cashier_user.set_password('cashierpass123')
         cashier_user.role = User.Role.CASHIER
+        cashier_user.full_name = 'Ben Cruz'
         cashier_user.is_active = True
         cashier_user.save()
         self._record_result(

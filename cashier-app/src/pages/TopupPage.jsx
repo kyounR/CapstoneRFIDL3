@@ -360,7 +360,10 @@ function TopupPage() {
               <label htmlFor="topupReversalReason">Reason for reversal</label>
               <input id="topupReversalReason" type="text" value={reversalReason} onChange={(event) => setReversalReason(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required />
               {reversalError ? <p style={{ color: 'var(--danger)' }}>{reversalError}</p> : null}
-              <button type="button" onClick={handleReverseTopup} disabled={isReversing || !reversalReason.trim()} style={{ marginTop: '8px' }} className="btn-primary">{isReversing ? 'Reversing...' : 'Undo this top-up'}</button>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
+                <button type="button" onClick={handleReverseTopup} disabled={isReversing || !reversalReason.trim()} className="btn-primary">{isReversing ? 'Reversing...' : 'Undo this top-up'}</button>
+                {!reversalReason.trim() ? <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Enter a reason to enable this button</span> : null}
+              </div>
             </div>
           ) : null}
           {reversalError ? <p style={{ color: 'var(--danger)' }}>{reversalError}</p> : null}

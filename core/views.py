@@ -1200,7 +1200,7 @@ def cashier_transactions_report_view(request):
         cashier_id=cashier_id,
         timestamp__date=report_date,
         transaction_type=Transaction.TransactionType.TOPUP,
-    ).select_related('card__passenger').order_by('-timestamp')
+    ).select_related('card__passenger', 'reversed_by').order_by('-timestamp')
 
     return Response([
         {
@@ -1210,6 +1210,10 @@ def cashier_transactions_report_view(request):
             'amount': transaction.amount,
             'balance_after': transaction.balance_after,
             'is_reversed': transaction.is_reversed,
+            'reversal_reason': transaction.reversal_reason if transaction.is_reversed else None,
+            'reversed_by_username': transaction.reversed_by.username if transaction.is_reversed and transaction.reversed_by else None,
+            'reversed_by_full_name': transaction.reversed_by.full_name if transaction.is_reversed and transaction.reversed_by else None,
+            'reversed_at': transaction.reversed_at if transaction.is_reversed else None,
             'timestamp': transaction.timestamp,
         }
         for transaction in transactions

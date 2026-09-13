@@ -9,6 +9,7 @@ function SummaryPage() {
   const [cashierTransactions, setCashierTransactions] = useState([])
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false)
   const [reversingTransactionId, setReversingTransactionId] = useState(null)
+  const [reversalReasons, setReversalReasons] = useState({})
   const [expandedCashFareId, setExpandedCashFareId] = useState(null)
   const [cashierCashFares, setCashierCashFares] = useState([])
   const [isLoadingCashFares, setIsLoadingCashFares] = useState(false)
@@ -69,8 +70,7 @@ function SummaryPage() {
   }
 
   async function handleReverseTransaction(transaction) {
-    const reason = window.prompt('Reason for reversing this top-up:')
-    if (reason === null) return
+    const reason = reversalReasons[transaction.id] || ''
     if (!reason.trim()) {
       setError('A non-empty reason is required.')
       return
@@ -86,6 +86,7 @@ function SummaryPage() {
         setExpandedId(cashierId)
         await fetchCashierTransactions(cashierId)
       }
+      setReversalReasons((current) => ({ ...current, [transaction.id]: '' }))
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Top-up reversal failed.')
     } finally {
@@ -183,11 +184,28 @@ function SummaryPage() {
                                 <td className="numeric">{transaction.card_uid}</td>
                                 <td className="numeric">{transaction.amount}</td>
                                 <td>{new Date(transaction.timestamp).toLocaleString()}</td>
-                                <td><span className={`badge ${transaction.is_reversed ? 'badge--pending' : 'badge--success'}`}>{transaction.is_reversed ? 'Reversed' : 'Active'}</span></td>
                                 <td>
-                                  {transaction.is_reversed ? 'Reversed' : <button type="button" onClick={(event) => { event.stopPropagation(); handleReverseTransaction(transaction) }} disabled={reversingTransactionId === transaction.id} className="btn-secondary">
-                                    {reversingTransactionId === transaction.id ? 'Reversing...' : 'Reverse'}
-                                  </button>}
+                                  <span className={`badge ${transaction.is_reversed ? 'badge--pending' : 'badge--success'}`}>{transaction.is_reversed ? 'Reversed' : 'Active'}</span>
+                                  {transaction.is_reversed ? <div style={{ marginTop: '6px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                                    Reversed by {transaction.reversed_by_full_name || transaction.reversed_by_username || 'Unknown user'} on {transaction.reversed_at ? new Date(transaction.reversed_at).toLocaleString() : 'unknown date'}: {transaction.reversal_reason || 'No reason provided.'}
+                                  </div> : null}
+                                </td>
+                                <td>
+                                  {transaction.is_reversed ? 'Reversed' : <>
+                                    <input
+                                      type="text"
+                                      value={reversalReasons[transaction.id] || ''}
+                                      onChange={(event) => setReversalReasons((current) => ({ ...current, [transaction.id]: event.target.value }))}
+                                      onClick={(event) => event.stopPropagation()}
+                                      placeholder="Reason for reversal"
+                                      aria-label={`Reason for reversing top-up ${transaction.id}`}
+                                      className="input"
+                                      style={{ display: 'block', width: '100%', minWidth: '180px' }}
+                                    />
+                                    <button type="button" onClick={(event) => { event.stopPropagation(); handleReverseTransaction(transaction) }} disabled={reversingTransactionId === transaction.id || !(reversalReasons[transaction.id] || '').trim()} style={{ marginTop: '8px' }} className="btn-secondary">
+                                      {reversingTransactionId === transaction.id ? 'Reversing...' : 'Reverse'}
+                                    </button>
+                                  </>}
                                 </td>
                               </tr>) : <tr><td colSpan="6">No top-up transactions found.</td></tr>}
                             </tbody>

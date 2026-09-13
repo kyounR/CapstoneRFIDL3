@@ -23,7 +23,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import AdminAuditLog, Card, CurrentTapSelection, DailyRemittance, Destination, DispatchRound, Dispatcher, Driver, FareManifestEntry, FeeSettings, Line, ManifestCorrection, ManifestTrip, Passenger, RemittanceCorrection, TapLog, Terminal, Transaction, Trip, User, Vehicle
+from .models import AdminAuditLog, Card, CurrentTapSelection, DailyRemittance, Destination, DispatchRound, DispatchRoundLog, Dispatcher, Driver, FareManifestEntry, FeeSettings, Line, ManifestCorrection, ManifestTrip, Passenger, RemittanceCorrection, TapLog, Terminal, Transaction, Trip, User, Vehicle
 from .serializers import (
     AdminAuditLogSerializer,
     CardSerializer,
@@ -1486,12 +1486,21 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
 
         try:
-            serializer.save()
+            dispatch_round = serializer.save()
         except IntegrityError:
             return Response(
                 {'error': 'This round number already exists for the selected remittance.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        DispatchRoundLog.objects.create(
+            cashier=request.user,
+            remittance=remittance,
+            round_number=dispatch_round.round_number,
+            amount=dispatch_round.amount,
+            departure_time=dispatch_round.departure_time,
+            action=DispatchRoundLog.Action.ADDED,
+        )
 
         remittance.refresh_from_db()
         remittance_data = self.get_serializer(remittance).data
@@ -1531,6 +1540,14 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
             dispatch_round = DispatchRound.objects.get(pk=round_id, remittance=remittance)
         except DispatchRound.DoesNotExist:
             return Response({'error': 'Dispatch round not found.'}, status=status.HTTP_404_NOT_FOUND)
+        DispatchRoundLog.objects.create(
+            cashier=request.user,
+            remittance=remittance,
+            round_number=dispatch_round.round_number,
+            amount=dispatch_round.amount,
+            departure_time=dispatch_round.departure_time,
+            action=DispatchRoundLog.Action.REMOVED,
+        )
         dispatch_round.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -2167,6 +2184,18 @@ def manifest_entry_untally_view(request):
         if manifest is None:
             return Response({'error': 'ManifestTrip not found.'}, status=status.HTTP_404_NOT_FOUND)
         if manifest.is_finalized:
+            TapLog.objects.create(
+                source='manual',
+                cashier=request.user,
+                card=None,
+                card_uid='',
+                passenger_name='',
+                destination_id=destination_id,
+                manifest_trip=manifest,
+                fare_type='discount' if passenger_type == 'discount' else 'base',
+                success=False,
+                message='Tally correction: Cannot untally a finalized ManifestTrip.',
+            )
             return Response(
                 {'error': 'Cannot untally a finalized ManifestTrip.'},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -2174,6 +2203,18 @@ def manifest_entry_untally_view(request):
 
         destination = Destination.objects.filter(id=destination_id, is_active=True).first()
         if destination is None:
+            TapLog.objects.create(
+                source='manual',
+                cashier=request.user,
+                card=None,
+                card_uid='',
+                passenger_name='',
+                destination_id=destination_id,
+                manifest_trip=manifest,
+                fare_type='discount' if passenger_type == 'discount' else 'base',
+                success=False,
+                message='Tally correction: Destination not found or inactive.',
+            )
             return Response({'error': 'Destination not found or inactive.'}, status=status.HTTP_404_NOT_FOUND)
 
         entry = FareManifestEntry.objects.select_for_update().filter(
@@ -2181,16 +2222,56 @@ def manifest_entry_untally_view(request):
             destination=destination,
         ).first()
         if entry is None:
+            TapLog.objects.create(
+                source='manual',
+                cashier=request.user,
+                card=None,
+                card_uid='',
+                passenger_name='',
+                destination=destination,
+                manifest_trip=manifest,
+                fare_type='discount' if passenger_type == 'discount' else 'base',
+                success=False,
+                message='Tally correction: No manifest entry exists for this trip and destination.',
+            )
             return Response(
                 {'error': 'No manifest entry exists for this trip and destination.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if entry.passenger_count <= 0:
+            TapLog.objects.create(
+                source='manual',
+                cashier=request.user,
+                card=None,
+                card_uid='',
+                passenger_name='',
+                destination=destination,
+                manifest_trip=manifest,
+                fare_type='discount' if passenger_type == 'discount' else 'base',
+                success=False,
+                message='Tally correction: Cannot untally because passenger_count is already zero.',
+            )
             return Response(
                 {'error': 'Cannot untally because passenger_count is already zero.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if passenger_type == 'regular' and entry.passenger_count - entry.discount_count <= 0:
+            message = (
+                'Tally correction: Cannot remove a regular tally when all remaining passengers '
+                'on this destination are discount.'
+            )
+            TapLog.objects.create(
+                source='manual',
+                cashier=request.user,
+                card=None,
+                card_uid='',
+                passenger_name='',
+                destination=destination,
+                manifest_trip=manifest,
+                fare_type='base',
+                success=False,
+                message=message,
+            )
             return Response(
                 {
                     'error': (
@@ -2201,6 +2282,18 @@ def manifest_entry_untally_view(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if passenger_type == 'discount' and entry.discount_count <= 0:
+            TapLog.objects.create(
+                source='manual',
+                cashier=request.user,
+                card=None,
+                card_uid='',
+                passenger_name='',
+                destination=destination,
+                manifest_trip=manifest,
+                fare_type='discount',
+                success=False,
+                message='Tally correction: Cannot untally discount passenger because discount_count is already zero.',
+            )
             return Response(
                 {'error': 'Cannot untally discount passenger because discount_count is already zero.'},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -2211,6 +2304,18 @@ def manifest_entry_untally_view(request):
             entry.discount_count -= 1
         _recompute_manifest_entry_total(entry)
         entry.save()
+        TapLog.objects.create(
+            source='manual',
+            cashier=request.user,
+            card=None,
+            card_uid='',
+            passenger_name='',
+            destination=destination,
+            manifest_trip=manifest,
+            fare_type='discount' if passenger_type == 'discount' else 'base',
+            success=True,
+            message=f'Tally correction: Removed {passenger_type} passenger from tally.',
+        )
 
     return Response(FareManifestEntrySerializer(entry).data, status=status.HTTP_200_OK)
 

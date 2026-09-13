@@ -310,6 +310,35 @@ class DispatchRound(models.Model):
 		return f"{self.remittance.driver.full_name} - Round {self.round_number}"
 
 
+class DispatchRoundLog(models.Model):
+	class Action(models.TextChoices):
+		ADDED = 'added', 'Added'
+		REMOVED = 'removed', 'Removed'
+
+	cashier = models.ForeignKey(
+		settings.AUTH_USER_MODEL,
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name='dispatch_round_logs',
+	)
+	remittance = models.ForeignKey(
+		DailyRemittance,
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name='round_logs',
+	)
+	round_number = models.PositiveSmallIntegerField()
+	amount = models.DecimalField(max_digits=12, decimal_places=2)
+	departure_time = models.TimeField()
+	action = models.CharField(max_length=10, choices=Action.choices)
+	timestamp = models.DateTimeField(auto_now_add=True)
+
+	def __str__(self):
+		return f"Round {self.round_number} ({self.action}) - {self.remittance}"
+
+
 class ManifestTrip(models.Model):
 	vehicle = models.ForeignKey(Vehicle, on_delete=models.PROTECT, related_name='manifest_trips')
 	trip = models.ForeignKey(

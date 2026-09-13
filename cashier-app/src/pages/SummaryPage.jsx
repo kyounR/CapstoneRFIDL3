@@ -117,7 +117,7 @@ function SummaryPage() {
   }
 
   return (
-    <div style={{ maxWidth: '760px', margin: '40px auto', fontFamily: 'var(--font-body)' }}>
+    <div style={{ width: '100%', maxWidth: '1600px', margin: '40px auto', padding: '0 24px', fontFamily: 'var(--font-body)' }}>
       <h1>Daily Summary</h1>
 
       <form onSubmit={handleSubmit} className="card" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -151,7 +151,7 @@ function SummaryPage() {
           <p className="numeric">Number of Cash Fares: {summary.cash_fare_count}</p>
 
           <h2>Cashier Top-up Breakdown</h2>
-          <table className="table">
+          <table className="table" style={{ tableLayout: 'fixed', width: '100%' }}>
             <thead>
               <tr>
                 <th>Cashier</th>

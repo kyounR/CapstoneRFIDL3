@@ -40,6 +40,7 @@ function DailyRemittancePage() {
   const [rounds, setRounds] = useState([])
   const [roundAmount, setRoundAmount] = useState('')
   const [departureTime, setDepartureTime] = useState('')
+  const [roundRemovalReasons, setRoundRemovalReasons] = useState({})
   const [feeValues, setFeeValues] = useState({})
   const [isLoading, setIsLoading] = useState(true)
   const [busyAction, setBusyAction] = useState('')
@@ -154,13 +155,24 @@ function DailyRemittancePage() {
   }
 
   async function handleRemoveRound(round) {
-    if (!window.confirm(`Remove dispatch round ${round.round_number}?`)) return
+    const reason = roundRemovalReasons[round.id] || ''
+    if (!reason.trim()) {
+      setError('A non-empty reason is required.')
+      return
+    }
 
     setBusyAction(`remove-round-${round.id}`)
     setError('')
     try {
-      await api.delete(`remittances/${remittance.id}/rounds/${round.id}/`)
+      await api.delete(`remittances/${remittance.id}/rounds/${round.id}/`, {
+        data: { reason: reason.trim() },
+      })
       await loadRemittanceDetails(remittance.id)
+      setRoundRemovalReasons((currentReasons) => {
+        const nextReasons = { ...currentReasons }
+        delete nextReasons[round.id]
+        return nextReasons
+      })
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not remove dispatch round.')
     } finally {
@@ -332,9 +344,21 @@ function DailyRemittancePage() {
                   <td className="numeric">{round.amount}</td>
                   <td className="numeric">{round.departure_time}</td>
                   {!remittance.is_finalized ? <td>
-                    <button type="button" onClick={() => handleRemoveRound(round)} disabled={busyAction !== ''} className="btn-secondary">
-                      {busyAction === `remove-round-${round.id}` ? 'Removing...' : 'Remove'}
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '280px' }}>
+                      <input
+                        type="text"
+                        value={roundRemovalReasons[round.id] || ''}
+                        onChange={(event) => setRoundRemovalReasons((currentReasons) => ({ ...currentReasons, [round.id]: event.target.value }))}
+                        placeholder="Reason for removal"
+                        aria-label={`Reason for removing dispatch round ${round.round_number}`}
+                        className="input"
+                        style={{ minWidth: 0, flex: 1 }}
+                      />
+                      <button type="button" onClick={() => handleRemoveRound(round)} disabled={busyAction !== '' || !(roundRemovalReasons[round.id] || '').trim()} className="btn-secondary">
+                        {busyAction === `remove-round-${round.id}` ? 'Removing...' : 'Remove'}
+                      </button>
+                    </div>
+                    {!(roundRemovalReasons[round.id] || '').trim() ? <span style={{ display: 'block', marginTop: '4px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Enter a reason to enable removal</span> : null}
                   </td> : null}
                 </tr>)}</tbody>
               </table>

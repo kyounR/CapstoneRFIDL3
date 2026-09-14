@@ -1529,6 +1529,13 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['DELETE'], url_path=r'rounds/(?P<round_id>[^/.]+)')
     def remove_round(self, request, pk=None, round_id=None):
+        reason = request.data.get('reason')
+        if not isinstance(reason, str) or not reason.strip():
+            return Response(
+                {'error': 'A non-empty reason is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         remittance = self.get_object()
         if remittance.is_finalized:
             return Response(
@@ -1547,6 +1554,7 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
             amount=dispatch_round.amount,
             departure_time=dispatch_round.departure_time,
             action=DispatchRoundLog.Action.REMOVED,
+            reason=reason.strip(),
         )
         dispatch_round.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

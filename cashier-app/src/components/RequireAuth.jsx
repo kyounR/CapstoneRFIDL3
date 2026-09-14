@@ -1,4 +1,5 @@
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import CalPassWordmark from './CalPassWordmark'
 import RfidReaderStatus from './RfidReaderStatus'
 
 function RequireAuth() {
@@ -38,7 +39,10 @@ function RequireAuth() {
   return (
     <>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', padding: '12px 16px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)', fontFamily: 'var(--font-body)' }}>
-        <span>Logged in as {fullName || username} ({role})</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0 }}>
+          <CalPassWordmark compact />
+          <span>Logged in as {fullName || username} ({role})</span>
+        </div>
         <RfidReaderStatus />
         <nav aria-label="Primary navigation" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {navItems.map((item) => (

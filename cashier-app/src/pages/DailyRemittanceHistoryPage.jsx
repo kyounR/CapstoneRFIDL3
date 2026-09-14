@@ -210,8 +210,10 @@ function DailyRemittanceHistoryPage() {
   }
 
   return <div style={{ width: '100%', maxWidth: '1600px', margin: '40px auto', padding: '0 24px', fontFamily: 'var(--font-body)' }}>
-    <h1>Daily Remittance History</h1>
-    <SectionTabs activePath="/remittance" historyPath="/remittance/history" />
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '20px' }}>
+      <h1 style={{ margin: 0 }}>Daily Remittance History</h1>
+      <SectionTabs activePath="/remittance" historyPath="/remittance/history" compact />
+    </div>
     <div style={{ marginBottom: '16px' }}><label htmlFor="historyDate">Date</label><input id="historyDate" type="date" value={date} onChange={(event) => setDate(event.target.value)} className="input" style={{ marginLeft: '8px' }} /></div>
     {error ? (
       <p>
@@ -248,7 +250,6 @@ function DailyRemittanceHistoryPage() {
                   <td className="numeric">{item.subtotal}</td>
                   <td className="numeric">{item.net_pay}</td>
                   <td>
-                    <span className={`status-dot ${item.is_finalized ? 'status-dot--success' : 'status-dot--pending'}`} style={{ marginRight: '6px' }} />
                     <span className={`badge ${item.is_finalized ? 'badge--success' : 'badge--pending'}`}>{item.is_finalized ? 'Finalized' : 'In Progress'}</span>
                   </td>
                 </tr>

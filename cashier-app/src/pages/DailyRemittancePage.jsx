@@ -228,8 +228,10 @@ function DailyRemittancePage() {
 
   return (
     <div style={{ width: '100%', maxWidth: '1600px', margin: '40px auto', padding: '0 24px', fontFamily: 'var(--font-body)' }}>
-      <h1>Daily Remittance</h1>
-      <SectionTabs activePath="/remittance" historyPath="/remittance/history" />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '20px' }}>
+        <h1 style={{ margin: 0 }}>Daily Remittance</h1>
+        <SectionTabs activePath="/remittance" historyPath="/remittance/history" compact />
+      </div>
       {error ? (
         <p>
           <span className="status-dot status-dot--danger" style={{ marginRight: '8px' }} />
@@ -296,6 +298,7 @@ function DailyRemittancePage() {
             <p><strong>Driver:</strong> {detailDriver?.full_name || remittance.driver}</p>
             <p><strong>Dispatcher:</strong> {detailDispatcher?.full_name || remittance.dispatcher}</p>
             <p><strong>Date:</strong> {remittance.date}</p>
+            <span className={`badge ${remittance.is_finalized ? 'badge--success' : 'badge--pending'}`}>{remittance.is_finalized ? 'Finalized' : 'In Progress'}</span>
             {detailVehicle?.is_light_vehicle ? <span className="badge badge--pending">Light vehicle</span> : null}
             {remittance.substitute_fee != null ? (
               <p style={{ paddingLeft: '12px', borderLeft: '3px solid var(--accent)' }}>
@@ -320,10 +323,15 @@ function DailyRemittancePage() {
           ) : <p>All 5 dispatch rounds have been added.</p>) : null}
 
           <h3>Computed Figures</h3>
-          <p className="numeric">Gross: {remittance.gross}</p>
-          <p className="numeric">Terminal Fee ({remittance.terminal_fee_percentage}%): {remittance.terminal_fee}</p>
-          <p className="numeric">Subtotal: {remittance.subtotal}</p>
-          <p className="numeric">Net Pay: {remittance.net_pay}</p>
+          <div className="numeric" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '4px 12px', marginBottom: '20px' }}>
+            <span>Gross: {remittance.gross}</span>
+            <span aria-hidden="true">·</span>
+            <span>Terminal Fee ({remittance.terminal_fee_percentage}%): {remittance.terminal_fee}</span>
+            <span aria-hidden="true">·</span>
+            <span>Subtotal: {remittance.subtotal}</span>
+            <span aria-hidden="true">·</span>
+            <span>Net Pay: {remittance.net_pay}</span>
+          </div>
 
           <h3>Fees</h3>
           {!remittance.is_finalized ? <>

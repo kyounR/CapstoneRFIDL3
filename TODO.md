@@ -15,5 +15,5 @@
 - Added granularity to CALTRANSCO management report, to be determined once UAT and feedback from client
 - General UI pass for every tab, current formatting has Travel Pass being larger than the rest of the tabs
 - (MAJOR) Native implementation within web-app of card scanning function, maybe add a new tab to check card UID instead of a python script handling it in a code terminal (DONE)
-- Add error message when top-up reversal button is clicked but no reason is given
-- Make the reason clear in summary or audit log clear 
+- Add error message when top-up reversal button is clicked but no reason is given (DONE)
+- Make the reason clear in summary or audit log clear (DONE)

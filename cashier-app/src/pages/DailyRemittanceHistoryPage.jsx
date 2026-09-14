@@ -191,6 +191,7 @@ function DailyRemittanceHistoryPage() {
     return <div className="card" style={{ marginBottom: '16px' }} onClick={(event) => event.stopPropagation()}>
       <p><strong>Terminal:</strong> {terminal?.name || remittance.terminal}{editButton('remittance', remittance.id, 'terminal', remittance.terminal)}</p>
       {editControls('remittance', remittance.id, 'terminal', <select value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input">{terminals.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>)}
+      <p><strong>Cashier:</strong> {remittance.cashier_full_name || remittance.cashier_username}</p>
       <p><strong>Vehicle:</strong> {vehicle?.plate_number || remittance.vehicle}</p>
       <p><strong>Driver:</strong> {driver?.full_name || remittance.driver}{editButton('remittance', remittance.id, 'driver', remittance.driver)}</p>
       {editControls('remittance', remittance.id, 'driver', <select value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input">{drivers.map((item) => <option key={item.id} value={item.id}>{item.full_name}</option>)}</select>)}

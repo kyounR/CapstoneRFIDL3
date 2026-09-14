@@ -153,6 +153,21 @@ function DailyRemittancePage() {
     }
   }
 
+  async function handleRemoveRound(round) {
+    if (!window.confirm(`Remove dispatch round ${round.round_number}?`)) return
+
+    setBusyAction(`remove-round-${round.id}`)
+    setError('')
+    try {
+      await api.delete(`remittances/${remittance.id}/rounds/${round.id}/`)
+      await loadRemittanceDetails(remittance.id)
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || 'Could not remove dispatch round.')
+    } finally {
+      setBusyAction('')
+    }
+  }
+
   async function handleFeeUpdate(event) {
     event.preventDefault()
     setBusyAction('fees')
@@ -309,15 +324,32 @@ function DailyRemittancePage() {
 
           <h3>Dispatch Rounds</h3>
           {rounds.length > 0 ? (
-            <table className="table" style={{ marginBottom: '12px' }}>
-              <thead><tr><th>Round</th><th>Amount</th><th>Departure Time</th></tr></thead>
-              <tbody>{rounds.map((round) => <tr key={round.id}><td className="numeric">{round.round_number}</td><td className="numeric">{round.amount}</td><td className="numeric">{round.departure_time}</td></tr>)}</tbody>
-            </table>
+            <div className="card" style={{ padding: 0, marginBottom: '12px', overflow: 'hidden' }}>
+              <table className="table">
+                <thead><tr><th>Round</th><th>Amount</th><th>Departure Time</th>{!remittance.is_finalized ? <th>Action</th> : null}</tr></thead>
+                <tbody>{rounds.map((round) => <tr key={round.id}>
+                  <td className="numeric">{round.round_number}</td>
+                  <td className="numeric">{round.amount}</td>
+                  <td className="numeric">{round.departure_time}</td>
+                  {!remittance.is_finalized ? <td>
+                    <button type="button" onClick={() => handleRemoveRound(round)} disabled={busyAction !== ''} className="btn-secondary">
+                      {busyAction === `remove-round-${round.id}` ? 'Removing...' : 'Remove'}
+                    </button>
+                  </td> : null}
+                </tr>)}</tbody>
+              </table>
+            </div>
           ) : <p>No rounds added yet.</p>}
           {!remittance.is_finalized ? (rounds.length < 5 ? (
-            <form onSubmit={handleAddRound} style={{ marginBottom: '20px' }}>
-              <input type="number" min="0" step="0.01" placeholder="Amount" value={roundAmount} onChange={(event) => setRoundAmount(event.target.value)} required className="input numeric" style={{ marginRight: '8px' }} />
-              <input type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} required className="input" style={{ marginRight: '8px' }} />
+            <form onSubmit={handleAddRound} className="card" style={{ display: 'flex', alignItems: 'end', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
+              <div>
+                <label htmlFor="roundAmount">Amount</label>
+                <input id="roundAmount" type="number" min="0" step="0.01" placeholder="Amount" value={roundAmount} onChange={(event) => setRoundAmount(event.target.value)} required className="input numeric" style={{ display: 'block', marginTop: '4px' }} />
+              </div>
+              <div>
+                <label htmlFor="departureTime">Departure time</label>
+                <input id="departureTime" type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} required className="input" style={{ display: 'block', marginTop: '4px' }} />
+              </div>
               <button type="submit" disabled={busyAction === 'round'} className="btn-primary">{busyAction === 'round' ? 'Adding...' : `Add Round ${rounds.length + 1}`}</button>
             </form>
           ) : <p>All 5 dispatch rounds have been added.</p>) : null}

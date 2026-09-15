@@ -17,3 +17,5 @@
 - (MAJOR) Native implementation within web-app of card scanning function, maybe add a new tab to check card UID instead of a python script handling it in a code terminal (DONE)
 - Add error message when top-up reversal button is clicked but no reason is given (DONE)
 - Make the reason clear in summary or audit log clear (DONE)
+
+- (MAJOR, SECOND ROUND) Receipt function when passenger is paying for cash/card

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import EntityManager from '../components/EntityManager'
 import PassengerManager from '../components/PassengerManager'
 import api from '../api/client'
@@ -44,6 +45,8 @@ const MANAGEMENT_TABS = [
     { key: 'balance', label: 'Balance', type: 'number', listOnly: true },
   ] },
 ]
+
+const ADDITIONAL_MANAGEMENT_TAB_LABELS = ['Passengers', 'Users', 'Fee Settings', 'Audit Log']
 
 const FEE_FIELDS = [
   { key: 'terminal_fee_percentage', label: 'Terminal Fee Percentage' },
@@ -353,8 +356,17 @@ function AuditLogManager() {
 }
 
 function AdminManagementPage() {
+  const [searchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState(MANAGEMENT_TABS[0].label)
   const selectedTab = MANAGEMENT_TABS.find((tab) => tab.label === activeTab)
+
+  useEffect(() => {
+    const requestedTab = searchParams.get('tab')
+    const recognizedTabLabels = [...MANAGEMENT_TABS.map((tab) => tab.label), ...ADDITIONAL_MANAGEMENT_TAB_LABELS]
+    if (recognizedTabLabels.includes(requestedTab)) {
+      setActiveTab(requestedTab)
+    }
+  }, [searchParams])
 
   return (
     <div style={{ maxWidth: '1200px', margin: '40px auto', fontFamily: 'var(--font-body)' }}>

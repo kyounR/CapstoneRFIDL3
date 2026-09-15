@@ -11,7 +11,7 @@ const adminNavigationItems = [
   { label: 'Admin Dashboard', path: '/admin/dashboard', description: 'Review operational totals' },
   { label: 'Reports', path: '/admin/reports', description: 'Generate and export reports' },
   { label: 'Admin Management', path: '/admin/manage', description: 'Manage records and settings' },
-  { label: 'Audit Log', path: '/admin/manage', description: 'Review administrative activity' },
+  { label: 'Audit Log', path: '/admin/manage?tab=Audit%20Log', description: 'Review administrative activity' },
 ]
 
 function HomePage() {

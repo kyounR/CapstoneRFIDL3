@@ -19,3 +19,4 @@
 - Make the reason clear in summary or audit log clear (DONE)
 
 - (MAJOR, SECOND ROUND) Receipt function when passenger is paying for cash/card
+- Travel Pass departure time should be automatic, and is the current time instead of needing to be manually inputted

@@ -27,6 +27,7 @@ function RequireAuth() {
   }
 
   const navItems = [
+    { label: 'Home', path: '/home' },
     { label: 'Top-up', path: '/topup' },
     { label: 'Travel Pass', path: '/travel-pass' },
     { label: 'Remittance', path: '/remittance' },

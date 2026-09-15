@@ -7,6 +7,7 @@ import AdminReportPage from './pages/AdminReportPage'
 import BoardingStatusPage from './pages/BoardingStatusPage'
 import DailyRemittancePage from './pages/DailyRemittancePage'
 import DailyRemittanceHistoryPage from './pages/DailyRemittanceHistoryPage'
+import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import PublicTapDisplayPage from './pages/PublicTapDisplayPage'
 import SummaryPage from './pages/SummaryPage'
@@ -22,6 +23,7 @@ function App() {
       <Route path="/display" element={<PublicTapDisplayPage />} />
       <Route path="/board" element={<BoardingStatusPage />} />
       <Route element={<RequireAuth />}>
+        <Route path="/home" element={<HomePage />} />
         <Route path="/topup" element={<TopupPage />} />
         <Route path="/summary" element={<SummaryPage />} />
         <Route path="/travel-pass" element={<TravelPassPage />} />

@@ -101,9 +101,9 @@ function TapFeedPage() {
                 <p style={{ fontSize: '1.2rem', margin: '8px 0 0', color: 'var(--text-secondary)' }}>
                   {new Date(tap.timestamp).toLocaleString()}
                 </p>
-                {tap.success ? (
+                {tap.remaining_balance != null ? (
                   <p className="numeric" style={{ fontSize: '1.4rem', margin: '8px 0 0' }}>
-                    Fare charged: {tap.fare_charged} · Remaining balance: {tap.remaining_balance}
+                    {tap.success ? `Fare charged: ${tap.fare_charged} · ` : ''}Remaining balance: {tap.remaining_balance}
                   </p>
                 ) : null}
               </div>

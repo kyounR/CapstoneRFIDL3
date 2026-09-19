@@ -7,8 +7,6 @@
 - Add an admin auditing log to track every change an admin does (DONE)
 - Add unit tests
 
-- Another UI pass for Travel pass page
-- A UI pass for the Remittance page (possibly similar to travel pass page)
 - Tap Feed data granularity of data, add date, and a filter to set the full list of taps on a certain date (DONE)
 - Search function for entries in admin management (DONE)
 - More detail for audit log when a travel pass is canceled, with actual flavor text instead of "had_passengers = false"
@@ -22,3 +20,13 @@
 - Travel Pass departure time should be automatic, and is the current time instead of needing to be manually inputted
 - Audit log has no specific path in quick actions (DONE)
 - Adding a message in the login page if user forgot password to contact administrator.
+
+- Revise Remittance feature entirely and automate it, since it's directly linked to Travel Pass, so it can be done away
+- Add a "status" to driver if they would like to opt-in to savings and/or trust fund fees
+- Remove fee settings from remittance, that's set in admin management already
+- Revise travel pass to read from terminal/line instead of being hardcoded to operate from homebase only, so that destinations can change ("add new routes")
+- Add a color circle to receipt function (WIP) then link it with boarding status monitor on plate number for identification of vehicle for passenger
+- OR add a color circle to passenger-facing monitor too
+- Fix boarding status to be not scrollable, and resized accordingly.
+- Revise UI of travel pass page
+- (debated) Allow one card holder to pay for non-card holders if they are part of same group

@@ -1272,14 +1272,17 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         fee_settings = FeeSettings.get_current()
         vehicle = serializer.validated_data['vehicle']
+        driver = serializer.validated_data['driver']
+        savings = fee_settings.savings if driver.participates_in_savings_trust_fund else Decimal('0.00')
+        trust_fund = fee_settings.trust_fund if driver.participates_in_savings_trust_fund else Decimal('0.00')
         defaults = {
             'terminal_fee_percentage': fee_settings.terminal_fee_percentage,
             'ps_fee': fee_settings.ps_fee,
             'water_fee': fee_settings.water_fee,
             'dispatcher_collection_fee': fee_settings.dispatcher_collection_fee,
             'ftb': fee_settings.ftb,
-            'savings': fee_settings.savings,
-            'trust_fund': fee_settings.trust_fund,
+            'savings': savings,
+            'trust_fund': trust_fund,
             'original_assigned_driver': vehicle.assigned_driver,
             'cashier': self.request.user,
         }

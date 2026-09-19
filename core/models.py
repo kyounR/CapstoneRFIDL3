@@ -122,6 +122,7 @@ class Terminal(models.Model):
 class Driver(models.Model):
 	full_name = models.CharField(max_length=255)
 	contact_number = models.CharField(max_length=30, blank=True, null=True)
+	participates_in_savings_trust_fund = models.BooleanField(default=True)
 
 	def __str__(self):
 		return self.full_name

@@ -29,6 +29,7 @@ const MANAGEMENT_TABS = [
   { label: 'Drivers', endpoint: 'drivers/', fields: [
     { key: 'full_name', label: 'Full Name', type: 'text', required: true },
     { key: 'contact_number', label: 'Contact Number', type: 'text' },
+    { key: 'participates_in_savings_trust_fund', label: 'Participates in Savings/Trust Fund', type: 'checkbox', default: true },
   ] },
   { label: 'Dispatchers', endpoint: 'dispatchers/', fields: [
     { key: 'full_name', label: 'Full Name', type: 'text', required: true },

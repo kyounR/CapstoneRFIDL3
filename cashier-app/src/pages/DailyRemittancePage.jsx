@@ -41,7 +41,6 @@ function DailyRemittancePage() {
   const [roundAmount, setRoundAmount] = useState('')
   const [departureTime, setDepartureTime] = useState('')
   const [roundRemovalReasons, setRoundRemovalReasons] = useState({})
-  const [feeValues, setFeeValues] = useState({})
   const [isLoading, setIsLoading] = useState(true)
   const [busyAction, setBusyAction] = useState('')
   const [error, setError] = useState('')
@@ -92,7 +91,6 @@ function DailyRemittancePage() {
 
   function selectRemittance(selectedRemittance) {
     setRemittance(selectedRemittance)
-    setFeeValues(Object.fromEntries(feeFields.map(([field]) => [field, selectedRemittance[field] ?? '0.00'])))
     setPageState(2)
     loadRemittanceDetails(selectedRemittance.id)
   }
@@ -106,7 +104,6 @@ function DailyRemittancePage() {
       ])
       setRemittance(remittanceResponse.data)
       setRounds(getListData(roundsResponse.data))
-      setFeeValues(Object.fromEntries(feeFields.map(([field]) => [field, remittanceResponse.data[field] ?? '0.00'])))
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not load remittance details.')
     }
@@ -175,21 +172,6 @@ function DailyRemittancePage() {
       })
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not remove dispatch round.')
-    } finally {
-      setBusyAction('')
-    }
-  }
-
-  async function handleFeeUpdate(event) {
-    event.preventDefault()
-    setBusyAction('fees')
-    setError('')
-    try {
-      const response = await api.patch(`remittances/${remittance.id}/`, feeValues)
-      setRemittance(response.data)
-      setFeeValues(Object.fromEntries(feeFields.map(([field]) => [field, response.data[field] ?? '0.00'])))
-    } catch (requestError) {
-      setError(requestError.response?.data?.error || 'Could not save fee fields.')
     } finally {
       setBusyAction('')
     }
@@ -390,17 +372,11 @@ function DailyRemittancePage() {
           </div>
 
           <h3>Fees</h3>
+          <p className="numeric"><strong>Terminal Fee:</strong> {remittance.terminal_fee} (computed)</p>
+          {feeFields.map(([field, label]) => (
+            <p key={field} className="numeric"><strong>{label}:</strong> {remittance[field]}</p>
+          ))}
           {!remittance.is_finalized ? <>
-            <form onSubmit={handleFeeUpdate}>
-              <p className="numeric"><strong>Terminal Fee:</strong> {remittance.terminal_fee} (computed)</p>
-              {feeFields.map(([field, label]) => (
-                <div key={field} style={{ marginBottom: '8px' }}>
-                  <label htmlFor={field}>{label}</label>
-                  <input id={field} type="number" min="0" step="0.01" value={feeValues[field] ?? ''} onChange={(event) => setFeeValues((current) => ({ ...current, [field]: event.target.value }))} className="input numeric" style={{ display: 'block', marginTop: '3px' }} />
-                </div>
-              ))}
-              <button type="submit" disabled={busyAction === 'fees'} className="btn-primary">{busyAction === 'fees' ? 'Saving...' : 'Save Fees'}</button>
-            </form>
             <button type="button" onClick={handleFinalize} disabled={busyAction !== ''} className="btn-primary" style={{ marginTop: '20px' }}>Finalize Remittance</button>
             <button type="button" onClick={handleCancel} disabled={busyAction !== ''} className="btn-secondary" style={{ marginTop: '20px', marginLeft: '8px' }}>
               {busyAction === 'cancel' ? 'Canceling...' : 'Cancel Remittance'}

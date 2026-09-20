@@ -905,6 +905,8 @@ def tap_log_recent_view(request):
                 'success': log.success,
                 'message': log.message,
                 'fare_charged': log.fare_charged,
+                'fare_type': log.fare_type,
+                'source': log.source,
                 'remaining_balance': log.remaining_balance,
                 'timestamp': log.timestamp,
                 'boarding_code': resolve_boarding_code(log.manifest_trip.boarding_code_index if log.manifest_trip else None),

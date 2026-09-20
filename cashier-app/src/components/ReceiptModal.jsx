@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../api/client'
+import BoardingCodeBadge from './BoardingCodeBadge'
 import CalPassWordmark from './CalPassWordmark'
 
 function formatFareType(fareType) {
@@ -55,6 +56,10 @@ function ReceiptModal({ tapLogId, onClose }) {
         {isLoading ? <p>Loading receipt...</p> : null}
         {error ? <p style={{ color: 'var(--danger)' }}>{error}</p> : null}
         {tapLog ? <div className="receipt-details">
+          {tapLog.boarding_code?.color && tapLog.boarding_code?.shape && tapLog.boarding_code?.number != null ? <div className="receipt-boarding-code">
+            <p className="receipt-boarding-code-label">Board vehicle marked:</p>
+            <BoardingCodeBadge code={tapLog.boarding_code} size={112} />
+          </div> : null}
           <p><strong>Receipt No.:</strong> {tapLog.id}</p>
           <p><strong>Date/Time:</strong> {new Date(tapLog.timestamp).toLocaleString()}</p>
           <p><strong>Destination:</strong> {tapLog.destination_name || '-'}</p>

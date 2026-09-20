@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../api/client'
+import BoardingCodeBadge from '../components/BoardingCodeBadge'
 
 function BoardingStatusPage() {
   const [status, setStatus] = useState({ boarding: [], recently_departed: [] })
@@ -91,8 +92,9 @@ function BoardingStatusPage() {
                       >
                         {vehicle.is_primary ? 'Now Boarding' : `Next Vehicle #${index + 1}`}
                       </p>
-                      <p className="numeric" style={{ margin: '16px 0', color: vehicle.is_primary ? '#14171B' : 'var(--text-primary)', fontSize: vehicle.is_primary || index < 2 ? 'clamp(3.5rem, 6vw, 6rem)' : 'clamp(2.5rem, 4.5vw, 4.5rem)', fontWeight: 600 }}>
+                      <p className="numeric" style={{ display: 'flex', alignItems: 'center', gap: '18px', margin: '16px 0', color: vehicle.is_primary ? '#14171B' : 'var(--text-primary)', fontSize: vehicle.is_primary || index < 2 ? 'clamp(3.5rem, 6vw, 6rem)' : 'clamp(2.5rem, 4.5vw, 4.5rem)', fontWeight: 600 }}>
                         {vehicle.plate_number}
+                        <BoardingCodeBadge code={{ color: vehicle.color, shape: vehicle.shape, number: vehicle.number }} size={vehicle.is_primary || index < 2 ? 96 : 72} />
                       </p>
                       <p className="numeric" style={{ margin: 0, color: vehicle.is_primary ? '#14171B' : 'var(--text-secondary)', fontSize: vehicle.is_primary || index < 2 ? 'clamp(1.7rem, 3vw, 2.5rem)' : 'clamp(1.35rem, 2.2vw, 2rem)' }}>
                         {vehicle.total_passengers} passengers

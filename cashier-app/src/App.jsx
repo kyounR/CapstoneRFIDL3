@@ -13,6 +13,7 @@ import PublicTapDisplayPage from './pages/PublicTapDisplayPage'
 import SummaryPage from './pages/SummaryPage'
 import TapFeedPage from './pages/TapFeedPage'
 import TopupPage from './pages/TopupPage'
+import TransactionHistoryPage from './pages/TransactionHistoryPage'
 import TravelPassPage from './pages/TravelPassPage'
 import TravelPassHistoryPage from './pages/TravelPassHistoryPage'
 
@@ -31,6 +32,7 @@ function App() {
         <Route path="/remittance" element={<DailyRemittancePage />} />
         <Route path="/remittance/history" element={<DailyRemittanceHistoryPage />} />
         <Route path="/tap-feed" element={<TapFeedPage />} />
+        <Route path="/transaction-history" element={<TransactionHistoryPage />} />
         <Route element={<RequireAdmin />}>
           <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
           <Route path="/admin/manage" element={<AdminManagementPage />} />

@@ -33,6 +33,7 @@ function RequireAuth() {
     { label: 'Remittance', path: '/remittance' },
     { label: 'Summary', path: '/summary' },
     { label: 'Tap Feed', path: '/tap-feed' },
+    { label: 'Transaction History', path: '/transaction-history' },
   ]
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(`${path}/`)

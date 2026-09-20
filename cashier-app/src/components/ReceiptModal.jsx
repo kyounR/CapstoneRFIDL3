@@ -47,11 +47,11 @@ function ReceiptModal({ tapLogId, onClose }) {
   if (!tapLogId) return null
 
   return (
-    <div className="receipt-modal-overlay" role="dialog" aria-modal="true" aria-label="Official receipt">
+    <div className="receipt-modal-overlay" role="dialog" aria-modal="true" aria-label="Boarding confirmation">
       <section className="receipt-modal-content">
         <div className="receipt-modal-header">
           <CalPassWordmark />
-          <h2>Official Receipt</h2>
+          <h2>Boarding Confirmation</h2>
         </div>
         {isLoading ? <p>Loading receipt...</p> : null}
         {error ? <p style={{ color: 'var(--danger)' }}>{error}</p> : null}
@@ -60,7 +60,7 @@ function ReceiptModal({ tapLogId, onClose }) {
             <p className="receipt-boarding-code-label">Board vehicle marked:</p>
             <BoardingCodeBadge code={tapLog.boarding_code} size={112} />
           </div> : null}
-          <p><strong>Receipt No.:</strong> {tapLog.id}</p>
+          <p><strong>Confirmation No.:</strong> {tapLog.id}</p>
           <p><strong>Date/Time:</strong> {new Date(tapLog.timestamp).toLocaleString()}</p>
           <p><strong>Destination:</strong> {tapLog.destination_name || '-'}</p>
           <p><strong>Fare Type:</strong> {formatFareType(tapLog.fare_type)}</p>

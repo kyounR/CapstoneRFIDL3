@@ -436,7 +436,7 @@ function TravelPassPage() {
                       <button type="button" onClick={() => handleTally(destination, 'discount', 'remove')} disabled={entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={compactButtonStyle} aria-label={`Remove discount passenger from ${destination.destination_name}`}>{busyAction === discountRemoveKey ? '...' : '-'}</button>
                       <button type="button" onClick={() => handleTally(destination, 'discount', 'add')} disabled={busyAction !== ''} className="btn-primary" style={compactButtonStyle} aria-label={`Add discount passenger to ${destination.destination_name}`}>{busyAction === discountAddKey ? '...' : '+'}</button>
                     </div> : <div aria-hidden="true" style={{ minHeight: '44px' }} />}
-                    {destinationReceiptId ? <button type="button" onClick={() => setReceiptId(destinationReceiptId)} className="btn-secondary" style={{ alignSelf: 'flex-start', padding: '5px 9px', fontSize: '0.8rem' }}>Print Receipt</button> : null}
+                    {destinationReceiptId ? <button type="button" onClick={() => setReceiptId(destinationReceiptId)} className="btn-secondary" style={{ alignSelf: 'flex-start', padding: '5px 9px', fontSize: '0.8rem' }}>Print Boarding Confirmation</button> : null}
                   </> : <div aria-hidden="true" style={{ minHeight: '140px' }} />}
                 </div>
               )

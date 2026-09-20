@@ -116,7 +116,7 @@ function TransactionHistoryPage() {
                   <td>{transaction.destination_name || '-'}</td>
                   <td>{formatFareType(transaction.fare_type)}</td>
                   <td className="numeric">{transaction.fare_charged ?? '-'}</td>
-                  <td><button type="button" onClick={() => setReceiptId(transaction.id)} className="btn-primary">Print Receipt</button></td>
+                  <td><button type="button" onClick={() => setReceiptId(transaction.id)} className="btn-primary">Print Boarding Confirmation</button></td>
                 </tr>
               ))}
             </tbody>

@@ -318,7 +318,7 @@ function RfidReaderStatus() {
               {lastTap.fare_charged != null ? <p className="numeric" style={{ margin: 0 }}>Fare charged: {lastTap.fare_charged}</p> : null}
             </> : <p style={{ margin: 0, color: 'var(--danger)' }}>{lastTap.message}</p>}
             <button type="button" onClick={handleCopyUid} className="btn-secondary" style={{ marginTop: '12px' }}>{justCopied ? 'Copied!' : 'Copy UID'}</button>
-            {lastTap.tapLogId ? <button type="button" onClick={() => setReceiptId(lastTap.tapLogId)} className="btn-primary" style={{ marginTop: '8px' }}>Print Receipt</button> : null}
+            {lastTap.tapLogId ? <button type="button" onClick={() => setReceiptId(lastTap.tapLogId)} className="btn-primary" style={{ marginTop: '8px' }}>Print Boarding Confirmation</button> : null}
           </div> : null}
         </aside>
       ) : null}

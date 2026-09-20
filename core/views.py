@@ -863,6 +863,7 @@ def tap_view(request):
             'fare_type': fare_type,
             'reason': reason,
             'applied_fare': fare,
+            'id': tap_log.id,
             'remaining_balance': card.balance,
             'passenger_name': passenger.full_name if passenger else '',
             'destination_name': destination.destination_name,
@@ -907,6 +908,31 @@ def tap_log_recent_view(request):
             }
             for log in logs
         ],
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def tap_log_detail_view(request, pk):
+    if not _has_cashier_or_admin_role(request):
+        return _role_forbidden_response('view the tap log')
+
+    tap_log = TapLog.objects.select_related('destination').filter(pk=pk).first()
+    if tap_log is None:
+        return Response({'error': 'TapLog not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    return Response(
+        {
+            'id': tap_log.id,
+            'source': tap_log.source,
+            'card_uid': tap_log.card_uid,
+            'passenger_name': tap_log.passenger_name,
+            'destination_name': tap_log.destination.destination_name if tap_log.destination else None,
+            'fare_type': tap_log.fare_type,
+            'fare_charged': tap_log.fare_charged,
+            'timestamp': tap_log.timestamp,
+        },
         status=status.HTTP_200_OK,
     )
 
@@ -2161,7 +2187,7 @@ def manifest_entry_tally_view(request):
         entry.save()
 
         # Log successful manual tap
-        TapLog.objects.create(
+        tap_log = TapLog.objects.create(
             source='manual',
             cashier=request.user,
             card=None,
@@ -2175,7 +2201,9 @@ def manifest_entry_tally_view(request):
             fare_charged=single_passenger_fare,
         )
 
-    return Response(FareManifestEntrySerializer(entry).data, status=status.HTTP_200_OK)
+    response_data = FareManifestEntrySerializer(entry).data
+    response_data['tap_log_id'] = tap_log.id
+    return Response(response_data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

@@ -35,6 +35,7 @@ from .views import (
     tap_log_recent_view,
     tap_destination_view,
     tap_view,
+    tap_log_detail_view,
     transaction_reverse_view,
     topup_view,
 )
@@ -68,6 +69,7 @@ urlpatterns = [
     path('tap-destination/', tap_destination_view, name='tap-destination'),
     path('tap/', tap_view, name='tap'),
     path('tap-log/recent/', tap_log_recent_view, name='tap-log-recent'),
+    path('tap-log/<int:pk>/', tap_log_detail_view, name='tap-log-detail'),
     path('tap-log/latest-public/', tap_log_latest_public_view, name='tap-log-latest-public'),
     path('manifests/<int:pk>/recent-taps/', manifest_trip_recent_taps_view, name='manifest-trip-recent-taps'),
     path('tap-log/<int:pk>/cancel-boarding/', tap_log_cancel_boarding_view, name='tap-log-cancel-boarding'),

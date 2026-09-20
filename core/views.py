@@ -1273,8 +1273,8 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
         fee_settings = FeeSettings.get_current()
         vehicle = serializer.validated_data['vehicle']
         driver = serializer.validated_data['driver']
-        savings = fee_settings.savings if driver.participates_in_savings_trust_fund else Decimal('0.00')
-        trust_fund = fee_settings.trust_fund if driver.participates_in_savings_trust_fund else Decimal('0.00')
+        savings = fee_settings.savings if driver.participates_in_savings else Decimal('0.00')
+        trust_fund = fee_settings.trust_fund if driver.participates_in_trust_fund else Decimal('0.00')
         defaults = {
             'terminal_fee_percentage': fee_settings.terminal_fee_percentage,
             'ps_fee': fee_settings.ps_fee,

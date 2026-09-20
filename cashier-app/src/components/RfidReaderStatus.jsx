@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import api from '../api/client'
+import ReceiptModal from './ReceiptModal'
 
 function RfidReaderStatus() {
   const [isSupported, setIsSupported] = useState(null)
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
   const [lastTap, setLastTap] = useState(null)
+  const [receiptId, setReceiptId] = useState(null)
   const [isTapPanelExpanded, setIsTapPanelExpanded] = useState(false)
   const [justCopied, setJustCopied] = useState(false)
   const portRef = useRef(null)
@@ -71,6 +73,7 @@ function RfidReaderStatus() {
         .then((response) => {
           console.log('RFID tap response:', response.status, response.data)
           setLastTap({
+            tapLogId: response.data.id,
             uid,
             passenger_name: response.data.passenger_name || '',
             success: response.data.success === true,
@@ -85,6 +88,7 @@ function RfidReaderStatus() {
           console.error('RFID tap request failed:', response?.status, response?.data || requestError.message)
           if (response) {
             setLastTap({
+              tapLogId: response.data.id,
               uid,
               passenger_name: response.data.passenger_name || '',
               success: false,
@@ -314,9 +318,11 @@ function RfidReaderStatus() {
               {lastTap.fare_charged != null ? <p className="numeric" style={{ margin: 0 }}>Fare charged: {lastTap.fare_charged}</p> : null}
             </> : <p style={{ margin: 0, color: 'var(--danger)' }}>{lastTap.message}</p>}
             <button type="button" onClick={handleCopyUid} className="btn-secondary" style={{ marginTop: '12px' }}>{justCopied ? 'Copied!' : 'Copy UID'}</button>
+            {lastTap.tapLogId ? <button type="button" onClick={() => setReceiptId(lastTap.tapLogId)} className="btn-primary" style={{ marginTop: '8px' }}>Print Receipt</button> : null}
           </div> : null}
         </aside>
       ) : null}
+      <ReceiptModal tapLogId={receiptId} onClose={() => setReceiptId(null)} />
     </>
   )
 }

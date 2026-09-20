@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import SectionTabs from '../components/SectionTabs'
+import ReceiptModal from '../components/ReceiptModal'
 import api from '../api/client'
 
 function getToday() {
@@ -38,6 +39,8 @@ function TravelPassPage() {
   const [busyAction, setBusyAction] = useState('')
   const [showFinalizeForm, setShowFinalizeForm] = useState(false)
   const [departureTime, setDepartureTime] = useState('')
+  const [receiptIds, setReceiptIds] = useState({})
+  const [receiptId, setReceiptId] = useState(null)
   const [error, setError] = useState('')
 
   async function fetchActivePasses() {
@@ -132,6 +135,8 @@ function TravelPassPage() {
   async function selectManifest(selectedManifest) {
     setManifest(selectedManifest)
     setEntries(entriesByDestination(selectedManifest.entries))
+    setReceiptIds({})
+    setReceiptId(null)
     setTapSelection(null)
     setDepartureTime(selectedManifest.departure_time || '')
     setShowFinalizeForm(false)
@@ -175,6 +180,9 @@ function TravelPassPage() {
         passenger_type: passengerType,
       })
       setEntries((currentEntries) => ({ ...currentEntries, [response.data.destination]: response.data }))
+      if (direction === 'add' && response.data.tap_log_id) {
+        setReceiptIds((currentReceiptIds) => ({ ...currentReceiptIds, [destination.id]: response.data.tap_log_id }))
+      }
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not update tally.')
     } finally {
@@ -281,6 +289,8 @@ function TravelPassPage() {
       await api.post(`manifests/${manifest.id}/cancel/`)
       setManifest(null)
       setEntries({})
+      setReceiptIds({})
+      setReceiptId(null)
       setShowFinalizeForm(false)
       setPageState(0)
       await fetchActivePasses()
@@ -294,6 +304,8 @@ function TravelPassPage() {
   function switchVehicle() {
     setManifest(null)
     setEntries({})
+    setReceiptIds({})
+    setReceiptId(null)
     setTapSelection(null)
     setRecentTaps([])
     setShowFinalizeForm(false)
@@ -395,6 +407,7 @@ function TravelPassPage() {
               const discountAddKey = `${destination.id}-discount-add`
               const regularRemoveKey = `${destination.id}-regular-remove`
               const discountRemoveKey = `${destination.id}-discount-remove`
+              const destinationReceiptId = receiptIds[destination.id]
               const isSelectedForTap = tapSelection?.destination_id === destination.id
               const compactButtonStyle = { minWidth: '44px', height: '44px', padding: '0 12px' }
               return (
@@ -423,6 +436,7 @@ function TravelPassPage() {
                       <button type="button" onClick={() => handleTally(destination, 'discount', 'remove')} disabled={entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={compactButtonStyle} aria-label={`Remove discount passenger from ${destination.destination_name}`}>{busyAction === discountRemoveKey ? '...' : '-'}</button>
                       <button type="button" onClick={() => handleTally(destination, 'discount', 'add')} disabled={busyAction !== ''} className="btn-primary" style={compactButtonStyle} aria-label={`Add discount passenger to ${destination.destination_name}`}>{busyAction === discountAddKey ? '...' : '+'}</button>
                     </div> : <div aria-hidden="true" style={{ minHeight: '44px' }} />}
+                    {destinationReceiptId ? <button type="button" onClick={() => setReceiptId(destinationReceiptId)} className="btn-secondary" style={{ alignSelf: 'flex-start', padding: '5px 9px', fontSize: '0.8rem' }}>Print Receipt</button> : null}
                   </> : <div aria-hidden="true" style={{ minHeight: '140px' }} />}
                 </div>
               )
@@ -467,6 +481,7 @@ function TravelPassPage() {
           </div>
         </section>
       ) : null}
+      <ReceiptModal tapLogId={receiptId} onClose={() => setReceiptId(null)} />
     </div>
   )
 }

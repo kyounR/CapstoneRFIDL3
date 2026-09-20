@@ -880,8 +880,9 @@ def tap_log_recent_view(request):
         return _role_forbidden_response('view the tap log')
 
     date_param = request.query_params.get('date')
+    source_filter = {} if request.query_params.get('source') == 'all' else {'source': 'rfid'}
     if date_param is None:
-        logs = TapLog.objects.filter(source='rfid').select_related('destination', 'manifest_trip').order_by('-timestamp')[:20]
+        logs = TapLog.objects.filter(**source_filter).select_related('destination', 'manifest_trip').order_by('-timestamp')[:20]
     else:
         tap_date = parse_date(date_param)
         if tap_date is None:
@@ -890,7 +891,7 @@ def tap_log_recent_view(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         logs = TapLog.objects.filter(
-            source='rfid',
+            **source_filter,
             timestamp__date=tap_date,
         ).select_related('destination', 'manifest_trip').order_by('-timestamp')[:200]
 

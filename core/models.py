@@ -344,6 +344,7 @@ class DispatchRoundLog(models.Model):
 
 class ManifestTrip(models.Model):
 	vehicle = models.ForeignKey(Vehicle, on_delete=models.PROTECT, related_name='manifest_trips')
+	boarding_code_index = models.PositiveSmallIntegerField(null=True, blank=True)
 	trip = models.ForeignKey(
 		Trip,
 		on_delete=models.SET_NULL,

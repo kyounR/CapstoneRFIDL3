@@ -24,6 +24,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import AdminAuditLog, Card, CurrentTapSelection, DailyRemittance, Destination, DispatchRound, DispatchRoundLog, Dispatcher, Driver, FareManifestEntry, FeeSettings, Line, ManifestCorrection, ManifestTrip, Passenger, RemittanceCorrection, TapLog, Terminal, Transaction, Trip, User, Vehicle
+from .boarding_codes import BOARDING_CODE_PALETTE, resolve_boarding_code
 from .serializers import (
     AdminAuditLogSerializer,
     CardSerializer,
@@ -880,7 +881,7 @@ def tap_log_recent_view(request):
 
     date_param = request.query_params.get('date')
     if date_param is None:
-        logs = TapLog.objects.filter(source='rfid').select_related('destination').order_by('-timestamp')[:20]
+        logs = TapLog.objects.filter(source='rfid').select_related('destination', 'manifest_trip').order_by('-timestamp')[:20]
     else:
         tap_date = parse_date(date_param)
         if tap_date is None:
@@ -891,7 +892,7 @@ def tap_log_recent_view(request):
         logs = TapLog.objects.filter(
             source='rfid',
             timestamp__date=tap_date,
-        ).select_related('destination').order_by('-timestamp')[:200]
+        ).select_related('destination', 'manifest_trip').order_by('-timestamp')[:200]
 
     return Response(
         [
@@ -905,6 +906,7 @@ def tap_log_recent_view(request):
                 'fare_charged': log.fare_charged,
                 'remaining_balance': log.remaining_balance,
                 'timestamp': log.timestamp,
+                'boarding_code': resolve_boarding_code(log.manifest_trip.boarding_code_index if log.manifest_trip else None),
             }
             for log in logs
         ],
@@ -918,7 +920,7 @@ def tap_log_detail_view(request, pk):
     if not _has_cashier_or_admin_role(request):
         return _role_forbidden_response('view the tap log')
 
-    tap_log = TapLog.objects.select_related('destination').filter(pk=pk).first()
+    tap_log = TapLog.objects.select_related('destination', 'manifest_trip').filter(pk=pk).first()
     if tap_log is None:
         return Response({'error': 'TapLog not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -932,6 +934,7 @@ def tap_log_detail_view(request, pk):
             'fare_type': tap_log.fare_type,
             'fare_charged': tap_log.fare_charged,
             'timestamp': tap_log.timestamp,
+            'boarding_code': resolve_boarding_code(tap_log.manifest_trip.boarding_code_index if tap_log.manifest_trip else None),
         },
         status=status.HTTP_200_OK,
     )
@@ -1084,6 +1087,7 @@ def boarding_status_view(request):
             'plate_number': manifest.vehicle.plate_number,
             'total_passengers': manifest.passenger_total,
             'is_primary': False,
+            **resolve_boarding_code(manifest.boarding_code_index),
         })
 
     boarding = []
@@ -1662,7 +1666,18 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
             raise PermissionDenied('Only cashier or admin users can access this endpoint.')
 
     def perform_create(self, serializer):
-        serializer.save(cashier=self.request.user)
+        vehicle = serializer.validated_data['vehicle']
+        active_indexes = set(
+            ManifestTrip.objects.filter(
+                is_finalized=False,
+                vehicle__line=vehicle.line,
+            ).values_list('boarding_code_index', flat=True)
+        )
+        boarding_code_index = next(
+            (index for index in range(len(BOARDING_CODE_PALETTE)) if index not in active_indexes),
+            0,
+        )
+        serializer.save(cashier=self.request.user, boarding_code_index=boarding_code_index)
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.queryset)

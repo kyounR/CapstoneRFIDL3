@@ -1,10 +1,10 @@
 BOARDING_CODE_PALETTE = [
-    {'color': '#E5484D', 'shape': 'circle', 'number': 1},
-    {'color': '#F2A93B', 'shape': 'square', 'number': 2},
-    {'color': '#5B8DEF', 'shape': 'triangle', 'number': 3},
-    {'color': '#2FBF9E', 'shape': 'diamond', 'number': 4},
-    {'color': '#A66CFF', 'shape': 'star', 'number': 5},
-    {'color': '#E879B8', 'shape': 'hexagon', 'number': 6},
+    {'color': '#A855F7', 'shape': 'circle', 'number': 1},
+    {'color': '#EC4899', 'shape': 'square', 'number': 2},
+    {'color': '#06B6D4', 'shape': 'triangle', 'number': 3},
+    {'color': '#6366F1', 'shape': 'diamond', 'number': 4},
+    {'color': '#E11D48', 'shape': 'star', 'number': 5},
+    {'color': '#16A34A', 'shape': 'hexagon', 'number': 6},
 ]
 
 

@@ -1670,6 +1670,12 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         vehicle = serializer.validated_data['vehicle']
+        code_count = len(BOARDING_CODE_PALETTE)
+        latest_trip = ManifestTrip.objects.filter(
+            vehicle__line=vehicle.line,
+            boarding_code_index__isnull=False,
+        ).order_by('-id').first()
+        start_index = 0 if latest_trip is None else (latest_trip.boarding_code_index + 1) % code_count
         active_indexes = set(
             ManifestTrip.objects.filter(
                 is_finalized=False,
@@ -1677,7 +1683,11 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
             ).values_list('boarding_code_index', flat=True)
         )
         boarding_code_index = next(
-            (index for index in range(len(BOARDING_CODE_PALETTE)) if index not in active_indexes),
+            (
+                (start_index + offset) % code_count
+                for offset in range(code_count)
+                if (start_index + offset) % code_count not in active_indexes
+            ),
             0,
         )
         serializer.save(cashier=self.request.user, boarding_code_index=boarding_code_index)

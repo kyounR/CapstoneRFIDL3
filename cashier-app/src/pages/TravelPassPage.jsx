@@ -475,7 +475,13 @@ function TravelPassPage() {
               <input id="departureTime" type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} className="input" required />
               <button type="submit" disabled={busyAction === 'finalize'} className="btn-primary">{busyAction === 'finalize' ? 'Finalizing...' : 'Confirm Finalize'}</button>
             </form> : <div style={{ display: 'flex', gap: '8px', whiteSpace: 'nowrap' }}>
-              <button type="button" onClick={() => setShowFinalizeForm(true)} className="btn-primary">Finalize Travel Pass</button>
+              <button type="button" onClick={() => {
+                const currentTime = new Date()
+                const hours = String(currentTime.getHours()).padStart(2, '0')
+                const minutes = String(currentTime.getMinutes()).padStart(2, '0')
+                setDepartureTime(`${hours}:${minutes}`)
+                setShowFinalizeForm(true)
+              }} className="btn-primary">Finalize Travel Pass</button>
               <button type="button" onClick={handleCancel} disabled={busyAction !== ''} className="btn-secondary">{busyAction === 'cancel' ? 'Canceling...' : 'Cancel Travel Pass'}</button>
             </div>) : null}
           </div>

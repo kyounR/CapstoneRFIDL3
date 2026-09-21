@@ -16,7 +16,7 @@ function createFormValues(fields, record = {}) {
   }, {})
 }
 
-function EntityManager({ endpoint, title, fields }) {
+function EntityManager({ endpoint, title, fields, getSubmitWarning }) {
   const [records, setRecords] = useState([])
   const [relatedOptions, setRelatedOptions] = useState({})
   const [editingRecord, setEditingRecord] = useState(null)
@@ -100,7 +100,6 @@ function EntityManager({ endpoint, title, fields }) {
 
   async function handleSubmit(event) {
     event.preventDefault()
-    setIsSaving(true)
     setError('')
 
     const payload = fields.reduce((values, field) => {
@@ -114,6 +113,13 @@ function EntityManager({ endpoint, title, fields }) {
       }
       return values
     }, {})
+
+    const warningMessage = getSubmitWarning?.(payload, records, editingRecord)
+    if (warningMessage && !window.confirm(`${warningMessage} Continue anyway?`)) {
+      return
+    }
+
+    setIsSaving(true)
 
     try {
       if (editingRecord.id) {

@@ -5,14 +5,27 @@ import PassengerManager from '../components/PassengerManager'
 import api from '../api/client'
 
 const MANAGEMENT_TABS = [
-  { label: 'Vehicles', endpoint: 'vehicles/', fields: [
-    { key: 'plate_number', label: 'Plate Number', type: 'text', required: true },
-    { key: 'line', label: 'Line', type: 'select', relatedEndpoint: 'lines/', required: true },
-    { key: 'is_light_vehicle', label: 'Light Vehicle', type: 'checkbox' },
-    { key: 'passenger_capacity', label: 'Passenger Capacity', type: 'number' },
-    { key: 'assigned_driver', label: 'Assigned Driver', type: 'select', relatedEndpoint: 'drivers/', optionLabel: 'full_name' },
-    { key: 'is_active', label: 'Active', type: 'checkbox', default: true },
-  ] },
+  {
+    label: 'Vehicles',
+    endpoint: 'vehicles/',
+    getSubmitWarning: (payload, records, editingRecord) => {
+      if (payload.assigned_driver === '' || payload.assigned_driver == null) return null
+
+      const otherVehicle = records.find((vehicle) => (
+        vehicle.id !== editingRecord?.id
+        && String(vehicle.assigned_driver) === String(payload.assigned_driver)
+      ))
+      return otherVehicle ? `This driver is already assigned to vehicle ${otherVehicle.plate_number}.` : null
+    },
+    fields: [
+      { key: 'plate_number', label: 'Plate Number', type: 'text', required: true },
+      { key: 'line', label: 'Line', type: 'select', relatedEndpoint: 'lines/', required: true },
+      { key: 'is_light_vehicle', label: 'Light Vehicle', type: 'checkbox' },
+      { key: 'passenger_capacity', label: 'Passenger Capacity', type: 'number' },
+      { key: 'assigned_driver', label: 'Assigned Driver', type: 'select', relatedEndpoint: 'drivers/', optionLabel: 'full_name' },
+      { key: 'is_active', label: 'Active', type: 'checkbox', default: true },
+    ],
+  },
   { label: 'Destinations', endpoint: 'destinations/', fields: [
     { key: 'destination_name', label: 'Destination', type: 'text', required: true },
     { key: 'base_fare', label: 'Base Fare', type: 'number', required: true },
@@ -380,7 +393,7 @@ function AdminManagementPage() {
         <button type="button" onClick={() => setActiveTab('Fee Settings')} className={activeTab === 'Fee Settings' ? 'btn-primary' : 'btn-secondary'}>Fee Settings</button>
         <button type="button" onClick={() => setActiveTab('Audit Log')} className={activeTab === 'Audit Log' ? 'btn-primary' : 'btn-secondary'}>Audit Log</button>
       </nav>
-      {activeTab === 'Fee Settings' ? <FeeSettingsForm /> : activeTab === 'Users' ? <UserManager /> : activeTab === 'Audit Log' ? <AuditLogManager /> : activeTab === 'Passengers' ? <PassengerManager /> : <EntityManager key={selectedTab.label} endpoint={selectedTab.endpoint} title={selectedTab.label} fields={selectedTab.fields} />}
+      {activeTab === 'Fee Settings' ? <FeeSettingsForm /> : activeTab === 'Users' ? <UserManager /> : activeTab === 'Audit Log' ? <AuditLogManager /> : activeTab === 'Passengers' ? <PassengerManager /> : <EntityManager key={selectedTab.label} endpoint={selectedTab.endpoint} title={selectedTab.label} fields={selectedTab.fields} getSubmitWarning={selectedTab.getSubmitWarning} />}
     </div>
   )
 }

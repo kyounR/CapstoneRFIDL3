@@ -78,6 +78,7 @@ function LoginPage() {
       </form>
       </div>
       <p style={{ margin: '16px 0 0', color: 'var(--text-muted)', fontSize: '0.75rem', textAlign: 'center' }}>CALTRANSCO staff access only</p>
+      <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '0.75rem', textAlign: 'center' }}>Forgot your password? Contact your administrator.</p>
     </div>
   )
 }

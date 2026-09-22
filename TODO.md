@@ -1,32 +1,55 @@
-- Make the Daily Summary page clearer with the topups, "Total Top-ups: 50" doesn't really make sense to show that they topped up 50. And to make it clear to who they topped up. (DONE)
-- Allow the cashier/admin to be easily look up existing cards by typing a name or something so top-up process is easy. (DONE)
-- (MAJOR) Add boarding status page to be viewed by the public (DONE)
-- (MAJOR) Actual user-facing admin management page, instead of django backend management by superadmins (DONE)
-- Add extra info to public-facing tap feed (don't add current balance, just add deductions) (DONE)
-- Clarify UI in travel pass to indicate that a passenger is (discount) or not, instead of just showing 1 passenger & and 1 discounted passenger but they're the same person (DONE)
-- Add an admin auditing log to track every change an admin does (DONE)
-- Add unit tests
+# 🚌 RFID Fare Collection System - TODO
 
-- Tap Feed data granularity of data, add date, and a filter to set the full list of taps on a certain date (DONE)
-- Search function for entries in admin management (DONE)
-- More detail for audit log when a travel pass is canceled, with actual flavor text instead of "had_passengers = false"
-- Added granularity to CALTRANSCO management report, to be determined once UAT and feedback from client
-- General UI pass for every tab, current formatting has Travel Pass being larger than the rest of the tabs
-- (MAJOR) Native implementation within web-app of card scanning function, maybe add a new tab to check card UID instead of a python script handling it in a code terminal (DONE)
-- Add error message when top-up reversal button is clicked but no reason is given (DONE)
-- Make the reason clear in summary or audit log clear (DONE)
+## 🚀 Active & Pending Tasks
+- [ ] Add unit tests
+- [ ] More detail for audit log when a travel pass is canceled (use actual flavor text instead of `had_passengers = false`)
+- [ ] Granularity to CALTRANSCO management report *(Pending UAT & client feedback)*
+- [ ] General UI pass for every tab (fix Travel Pass tab styling being larger than others)
+- [ ] **(MAJOR)** Official government-compliant receipt implementation
+- [ ] **(MAJOR)** Revise Remittance feature entirely and automate it (linked to Travel Pass)
+- [ ] Fix boarding status page to be non-scrollable and resized accordingly
+- [ ] Revise UI of the travel pass page
+- [ ] **(MAJOR) (HARDWARE)** Add an LED to the RFID reader and a buzzer/beeper for auditory feedback
 
-- (MAJOR, SECOND ROUND) Receipt function when passenger is paying for cash/card
-- Travel Pass departure time should be automatic, and is the current time instead of needing to be manually inputted
-- Audit log has no specific path in quick actions (DONE)
-- Adding a message in the login page if user forgot password to contact administrator.
+---
 
-- Revise Remittance feature entirely and automate it, since it's directly linked to Travel Pass, so it can be done away
-- Add a "status" to driver if they would like to opt-in to savings and/or trust fund fees
-- Remove fee settings from remittance, that's set in admin management already
-- Revise travel pass to read from terminal/line instead of being hardcoded to operate from homebase only, so that destinations can change ("add new routes")
-- Add a color circle to receipt function (WIP) then link it with boarding status monitor on plate number for identification of vehicle for passenger
-- OR add a color circle to passenger-facing monitor too
-- Fix boarding status to be not scrollable, and resized accordingly.
-- Revise UI of travel pass page
-- (debated) Allow one card holder to pay for non-card holders if they are part of same group
+## 💬 To Be Discussed / Blocked
+- [ ] Allow one cardholder to pay for non-cardholders if they are part of the same group
+- [ ] Change "passenger" field in transaction history to be more representative (currently shows "cash" instead of name; just needs a rename)
+
+---
+
+## ✅ Completed
+
+### Admin & Management
+- [x] **(MAJOR)** Actual user-facing admin management page (replaced Django backend management)
+- [x] Add an admin auditing log to track every change an admin does
+- [x] Search function for entries in admin management
+- [x] Audit log path added to quick actions
+- [x] Make the reason clear in summary or audit log when top-up reversals happen
+- [x] Add error message when top-up reversal button is clicked without a reason
+
+### Cashier & Top-ups
+- [x] Make the Daily Summary page clearer (fixed confusing "Total Top-ups: 50" text)
+- [x] Allow cashier/admin to easily look up existing cards by typing a name
+- [x] Remove fee settings from remittance (now handled in admin management)
+- [x] Add a "status" to driver to opt-in to savings and/or trust fund fees
+- [x] Cashier login rename on the login page
+
+### Travel Pass & Boarding
+- [x] **(MAJOR)** Add boarding status page to be viewed by the public
+- [x] Clarify UI in travel pass to indicate passenger discount status clearly
+- [x] Make Travel Pass departure time automatic (uses current time)
+- [x] Revise travel pass to read from terminal/line instead of homebase only (allow route changes)
+- [x] **(MAJOR)** Native web-app implementation of card scanning (replaced Python terminal script)
+- [x] Add color circle to receipt function and link with boarding status monitor for vehicle identification
+- [x] Add color circle to passenger-facing monitor
+- [x] Warning message if multiple vehicles share the same driver
+- [x] Recolor one of the boarding codes (removed yellow)
+- [x] Rephrase current receipt implementation to "boarding slip"
+- [x] Revise current index logic of boarding code color shape
+
+### Public Feeds & Security
+- [x] Add extra info to public-facing tap feed (show deductions, exclude current balance)
+- [x] Tap Feed data granularity (added date and filter for full tap lists on specific dates)
+- [x] Add a message on the login page telling users to contact the administrator if they forget their password

@@ -37,7 +37,7 @@ function LoginPage() {
         <p style={{ margin: '8px 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Fare collection and operations</p>
       </div>
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
-        <h1 style={{ marginTop: 0 }}>Cashier Login</h1>
+        <h1 style={{ marginTop: 0 }}>Staff Login</h1>
       <form onSubmit={handleSubmit} className="card">
         <div style={{ marginBottom: '12px' }}>
           <label htmlFor="username">Username</label>

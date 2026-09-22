@@ -28,6 +28,7 @@ const MANAGEMENT_TABS = [
   },
   { label: 'Destinations', endpoint: 'destinations/', fields: [
     { key: 'destination_name', label: 'Destination', type: 'text', required: true },
+    { key: 'line', label: 'Line', type: 'select', relatedEndpoint: 'lines/', required: true },
     { key: 'base_fare', label: 'Base Fare', type: 'number', required: true },
     { key: 'discount_exempt', label: 'Discount Exempt', type: 'checkbox' },
     { key: 'capacity_limit', label: 'Capacity Limit', type: 'number' },

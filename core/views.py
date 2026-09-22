@@ -747,6 +747,20 @@ def tap_view(request):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        if destination.line_id != manifest_trip.vehicle.line_id:
+            mismatch_message = 'Destination does not belong to the selected Travel Pass vehicle line.'
+            TapLog.objects.create(
+                card_uid=card_uid,
+                card=card,
+                destination=destination,
+                manifest_trip=manifest_trip,
+                passenger_name=card.passenger.full_name if card.passenger else '',
+                success=False,
+                message=mismatch_message,
+                remaining_balance=card.balance,
+                source='rfid',
+            )
+            return Response({'error': mismatch_message}, status=status.HTTP_400_BAD_REQUEST)
 
         passenger = card.passenger
         passenger_discount_type: Optional[str] = None if passenger is None else passenger.discount_type
@@ -2171,6 +2185,21 @@ def manifest_entry_tally_view(request):
                 message='Destination not found or inactive.',
             )
             return Response({'error': 'Destination not found or inactive.'}, status=status.HTTP_404_NOT_FOUND)
+        if destination.line_id != manifest.vehicle.line_id:
+            mismatch_message = 'Destination does not belong to the selected Travel Pass vehicle line.'
+            TapLog.objects.create(
+                source='manual',
+                cashier=request.user,
+                card=None,
+                card_uid='',
+                passenger_name='',
+                destination=destination,
+                manifest_trip=manifest,
+                fare_type='discount' if passenger_type == 'discount' else 'base',
+                success=False,
+                message=mismatch_message,
+            )
+            return Response({'error': mismatch_message}, status=status.HTTP_400_BAD_REQUEST)
         if passenger_type == 'discount' and destination.discount_exempt:
             TapLog.objects.create(
                 source='manual',
@@ -2283,6 +2312,21 @@ def manifest_entry_untally_view(request):
                 message='Tally correction: Destination not found or inactive.',
             )
             return Response({'error': 'Destination not found or inactive.'}, status=status.HTTP_404_NOT_FOUND)
+        if destination.line_id != manifest.vehicle.line_id:
+            mismatch_message = 'Destination does not belong to the selected Travel Pass vehicle line.'
+            TapLog.objects.create(
+                source='manual',
+                cashier=request.user,
+                card=None,
+                card_uid='',
+                passenger_name='',
+                destination=destination,
+                manifest_trip=manifest,
+                fare_type='discount' if passenger_type == 'discount' else 'base',
+                success=False,
+                message=mismatch_message,
+            )
+            return Response({'error': mismatch_message}, status=status.HTTP_400_BAD_REQUEST)
 
         entry = FareManifestEntry.objects.select_for_update().filter(
             manifest_trip=manifest,
@@ -2397,6 +2441,9 @@ class DestinationViewSet(AdminAuditMixin, viewsets.ModelViewSet):
         active_only = self.request.query_params.get('active_only', '').lower() == 'true'
         if active_only:
             queryset = queryset.filter(is_active=True)
+        line_id = self.request.query_params.get('line')
+        if line_id:
+            queryset = queryset.filter(line_id=line_id)
         return queryset
 
     def initial(self, request, *args, **kwargs):

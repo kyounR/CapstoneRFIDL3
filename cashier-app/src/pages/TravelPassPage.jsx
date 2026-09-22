@@ -80,7 +80,12 @@ function TravelPassPage() {
     async function fetchDestinations() {
       setIsLoadingDestinations(true)
       try {
-        const response = await api.get('destinations/?active_only=true')
+        const selectedVehicleForDestinations = vehicles.find((vehicle) => vehicle.id === Number(manifest?.vehicle || vehicleId))
+        const params = { active_only: true }
+        if (selectedVehicleForDestinations?.line) {
+          params.line = selectedVehicleForDestinations.line
+        }
+        const response = await api.get('destinations/', { params })
         setDestinations(getListData(response.data))
       } catch (requestError) {
         setError(requestError.response?.data?.detail || 'Could not load destinations.')
@@ -90,7 +95,7 @@ function TravelPassPage() {
     }
 
     fetchDestinations()
-  }, [pageState])
+  }, [pageState, manifest?.vehicle, vehicleId, vehicles])
 
   useEffect(() => {
     if (pageState !== 2 || !manifest) {

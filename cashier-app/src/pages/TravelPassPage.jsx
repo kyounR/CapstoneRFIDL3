@@ -73,29 +73,46 @@ function TravelPassPage() {
   }, [])
 
   useEffect(() => {
-    if (pageState !== 2) {
+    if (pageState !== 2 || !manifest) {
+      setDestinations([])
       return
     }
+
+    const selectedVehicle = vehicles.find((vehicle) => vehicle.id === Number(manifest.vehicle))
+    const lineId = selectedVehicle?.line
+    if (!lineId) {
+      setDestinations([])
+      return
+    }
+
+    let isMounted = true
 
     async function fetchDestinations() {
       setIsLoadingDestinations(true)
       try {
-        const selectedVehicleForDestinations = vehicles.find((vehicle) => vehicle.id === Number(manifest?.vehicle || vehicleId))
-        const params = { active_only: true }
-        if (selectedVehicleForDestinations?.line) {
-          params.line = selectedVehicleForDestinations.line
+        const response = await api.get('destinations/', {
+          params: { active_only: true, line: lineId },
+        })
+        if (isMounted) {
+          setDestinations(getListData(response.data))
         }
-        const response = await api.get('destinations/', { params })
-        setDestinations(getListData(response.data))
       } catch (requestError) {
-        setError(requestError.response?.data?.detail || 'Could not load destinations.')
+        if (isMounted) {
+          setError(requestError.response?.data?.detail || 'Could not load destinations.')
+        }
       } finally {
-        setIsLoadingDestinations(false)
+        if (isMounted) {
+          setIsLoadingDestinations(false)
+        }
       }
     }
 
     fetchDestinations()
-  }, [pageState, manifest?.vehicle, vehicleId, vehicles])
+
+    return () => {
+      isMounted = false
+    }
+  }, [pageState, manifest?.id, manifest?.vehicle, vehicles])
 
   useEffect(() => {
     if (pageState !== 2 || !manifest) {

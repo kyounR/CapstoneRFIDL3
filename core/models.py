@@ -309,7 +309,7 @@ class DispatchRound(models.Model):
 		blank=True,
 	)
 	round_number = models.PositiveSmallIntegerField(
-		validators=[MinValueValidator(1), MaxValueValidator(5)]
+		validators=[MinValueValidator(1), MaxValueValidator(20)]
 	)
 	amount = models.DecimalField(max_digits=12, decimal_places=2)
 	departure_time = models.TimeField()

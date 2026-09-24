@@ -13,6 +13,7 @@ from django.db.models import Count, Max, Q, Sum
 from django.db.models.functions import Coalesce
 from django.forms.models import model_to_dict
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from django.utils.dateparse import parse_date, parse_time
 from django.utils.timezone import localdate, now
 from rest_framework import serializers, status, viewsets
@@ -1518,7 +1519,10 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['POST'], url_path='sync-rounds')
     def sync_rounds(self, request, pk=None):
         with transaction.atomic():
-            remittance = DailyRemittance.objects.select_for_update().get(pk=pk)
+            remittance = get_object_or_404(
+                DailyRemittance.objects.select_for_update(), pk=pk
+            )
+            self.check_object_permissions(request, remittance)
             if remittance.is_finalized:
                 return Response(
                     {'error': 'Cannot sync rounds on a finalized remittance.'},

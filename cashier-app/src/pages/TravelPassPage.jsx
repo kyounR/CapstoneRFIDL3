@@ -38,9 +38,11 @@ function TravelPassPage() {
   const [activePasses, setActivePasses] = useState([])
   const [vehicles, setVehicles] = useState([])
   const [terminals, setTerminals] = useState([])
+  const [dispatchers, setDispatchers] = useState([])
   const [destinations, setDestinations] = useState([])
   const [vehicleId, setVehicleId] = useState('')
   const [terminalId, setTerminalId] = useState('')
+  const [dispatcherId, setDispatcherId] = useState('')
   const [date, setDate] = useState(getToday())
   const [manifest, setManifest] = useState(null)
   const [entries, setEntries] = useState({})
@@ -49,6 +51,7 @@ function TravelPassPage() {
   const [isLoadingPicker, setIsLoadingPicker] = useState(true)
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true)
   const [isLoadingTerminals, setIsLoadingTerminals] = useState(true)
+  const [isLoadingDispatchers, setIsLoadingDispatchers] = useState(true)
   const [isLoadingDestinations, setIsLoadingDestinations] = useState(false)
   const [busyAction, setBusyAction] = useState('')
   const [showFinalizeForm, setShowFinalizeForm] = useState(false)
@@ -93,8 +96,20 @@ function TravelPassPage() {
       }
     }
 
+    async function fetchDispatchers() {
+      try {
+        const response = await api.get('dispatchers/')
+        setDispatchers(getListData(response.data))
+      } catch (requestError) {
+        setError(requestError.response?.data?.detail || 'Could not load dispatchers.')
+      } finally {
+        setIsLoadingDispatchers(false)
+      }
+    }
+
     fetchVehicles()
     fetchTerminals()
+    fetchDispatchers()
     fetchActivePasses()
   }, [])
 
@@ -209,6 +224,7 @@ function TravelPassPage() {
       const response = await api.post('manifests/', {
         vehicle: Number(vehicleId),
         departure_terminal: Number(terminalId),
+        dispatcher: Number(dispatcherId),
         date,
       })
       await fetchActivePasses()
@@ -433,6 +449,13 @@ function TravelPassPage() {
             <select id="terminal" value={terminalId} onChange={(event) => setTerminalId(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required disabled={isLoadingTerminals || busyAction === 'create'}>
               <option value="">{isLoadingTerminals ? 'Loading terminals...' : 'Select a departure terminal'}</option>
               {terminals.map((terminal) => <option key={terminal.id} value={terminal.id}>{terminal.name}</option>)}
+            </select>
+          </div>
+          <div style={{ marginBottom: '12px' }}>
+            <label htmlFor="dispatcher">Dispatcher</label>
+            <select id="dispatcher" value={dispatcherId} onChange={(event) => setDispatcherId(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required disabled={isLoadingDispatchers || busyAction === 'create'}>
+              <option value="">{isLoadingDispatchers ? 'Loading dispatchers...' : 'Select a dispatcher'}</option>
+              {dispatchers.map((dispatcher) => <option key={dispatcher.id} value={dispatcher.id}>{dispatcher.full_name}</option>)}
             </select>
           </div>
           <div style={{ marginBottom: '12px' }}>

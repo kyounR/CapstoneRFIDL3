@@ -25,15 +25,14 @@ const feeFields = [
 
 function DailyRemittancePage() {
   const [pageState, setPageState] = useState(0)
-  const [remittances, setRemittances] = useState([])
+  const [availableEntries, setAvailableEntries] = useState([])
   const [terminals, setTerminals] = useState([])
   const [vehicles, setVehicles] = useState([])
   const [drivers, setDrivers] = useState([])
-  const [terminalId, setTerminalId] = useState('')
-  const [vehicleId, setVehicleId] = useState('')
   const [driverId, setDriverId] = useState('')
-  const [date, setDate] = useState(getToday())
   const [substituteFee, setSubstituteFee] = useState('')
+  const [selectedAvailable, setSelectedAvailable] = useState(null)
+  const [differentDriver, setDifferentDriver] = useState(false)
   const [remittance, setRemittance] = useState(null)
   const [rounds, setRounds] = useState([])
   const [roundRemovalReasons, setRoundRemovalReasons] = useState({})
@@ -45,13 +44,13 @@ function DailyRemittancePage() {
     setIsLoading(true)
     setError('')
     try {
-      const [remittanceResponse, terminalResponse, vehicleResponse, driverResponse] = await Promise.all([
-        api.get('remittances/', { params: { is_finalized: false } }),
+      const [availableResponse, terminalResponse, vehicleResponse, driverResponse] = await Promise.all([
+        api.get('remittances/available/'),
         api.get('terminals/'),
         api.get('vehicles/?active_only=true'),
         api.get('drivers/'),
       ])
-      setRemittances(getListData(remittanceResponse.data))
+      setAvailableEntries(getListData(availableResponse.data))
       setTerminals(getListData(terminalResponse.data))
       setVehicles(getListData(vehicleResponse.data))
       setDrivers(getListData(driverResponse.data))
@@ -66,25 +65,30 @@ function DailyRemittancePage() {
     fetchPickerData()
   }, [])
 
-  function resetForm() {
-    setTerminalId('')
-    setVehicleId('')
+  function resetCreateForm() {
     setDriverId('')
     setSubstituteFee('')
-    setDate(getToday())
+    setSelectedAvailable(null)
+    setDifferentDriver(false)
   }
 
-  function handleVehicleChange(event) {
-    const selectedId = event.target.value
-    setVehicleId(selectedId)
-    const selectedVehicle = vehicles.find((vehicle) => vehicle.id === Number(selectedId))
-    setDriverId(selectedVehicle?.assigned_driver || '')
+  async function selectAvailable(entry) {
+    setError('')
+    if (entry.remittance_id) {
+      try {
+        await loadRemittanceDetails(entry.remittance_id)
+        setPageState(2)
+      } catch (requestError) {
+        setError(requestError.response?.data?.detail || 'Could not load remittance details.')
+      }
+      return
+    }
+
+    setSelectedAvailable(entry)
+    setDriverId(entry.assigned_driver_id ? String(entry.assigned_driver_id) : '')
+    setDifferentDriver(false)
     setSubstituteFee('')
-  }
-
-  function selectRemittance(selectedRemittance) {
-    setRemittance(selectedRemittance)
-    setPageState(2)
+    setPageState(1)
   }
 
   async function loadRemittanceDetails(remittanceId) {
@@ -105,12 +109,23 @@ function DailyRemittancePage() {
     event.preventDefault()
     setBusyAction('create')
     setError('')
-    const payload = { terminal: Number(terminalId), vehicle: Number(vehicleId), driver: Number(driverId), date }
-    if (substituteFee !== '') payload.substitute_fee = substituteFee
+    if (!selectedAvailable || !driverId) {
+      setError('Select a driver before creating the remittance.')
+      setBusyAction('')
+      return
+    }
+    const payload = {
+      terminal: selectedAvailable.departure_terminal_id,
+      vehicle: selectedAvailable.vehicle_id,
+      driver: Number(driverId),
+      date: selectedAvailable.date,
+    }
+    if (differentDriver && substituteFee !== '') payload.substitute_fee = substituteFee
     try {
       const response = await api.post('remittances/', payload)
       await fetchPickerData()
-      selectRemittance(response.data)
+      setRemittance(response.data)
+      setPageState(2)
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not create remittance.')
     } finally {
@@ -190,7 +205,7 @@ function DailyRemittancePage() {
       setPageState(0)
       setRemittance(null)
       setRounds([])
-      resetForm()
+      resetCreateForm()
       await fetchPickerData()
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not finalize remittance.')
@@ -214,7 +229,7 @@ function DailyRemittancePage() {
       setPageState(0)
       setRemittance(null)
       setRounds([])
-      resetForm()
+      resetCreateForm()
       await fetchPickerData()
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not cancel remittance.')
@@ -227,12 +242,11 @@ function DailyRemittancePage() {
     setPageState(0)
     setRemittance(null)
     setRounds([])
+    resetCreateForm()
     setError('')
     fetchPickerData()
   }
 
-  const selectedVehicle = vehicles.find((vehicle) => vehicle.id === Number(vehicleId))
-  const isSubstitution = selectedVehicle?.assigned_driver && selectedVehicle.assigned_driver !== Number(driverId)
   const detailVehicle = vehicles.find((vehicle) => vehicle.id === remittance?.vehicle)
   const detailDriver = drivers.find((driver) => driver.id === remittance?.driver)
   const originalAssignedDriver = drivers.find((driver) => driver.id === remittance?.original_assigned_driver)
@@ -253,47 +267,43 @@ function DailyRemittancePage() {
 
       {pageState === 0 ? (
         <section>
-          <h2>Active Remittances</h2>
-          {isLoading ? <p>Loading remittances...</p> : null}
-          {!isLoading && remittances.length === 0 ? <p>No active remittances. Start a new one below.</p> : null}
-          {remittances.map((item) => {
-            const vehicle = vehicles.find((entry) => entry.id === item.vehicle)
-            const driver = drivers.find((entry) => entry.id === item.driver)
-            return <button key={item.id} type="button" onClick={() => selectRemittance(item)} className="card" style={{ display: 'block', width: '100%', marginBottom: '10px', textAlign: 'left', cursor: 'pointer', color: 'var(--text-primary)' }}><strong>{driver?.full_name || item.driver}</strong> - {vehicle?.plate_number || item.vehicle} - {item.date}</button>
-          })}
-          <button type="button" onClick={() => setPageState(1)} className="btn-primary">Start New Remittance</button>
+          <h2>Available Remittances</h2>
+          {isLoading ? <p>Loading available remittances...</p> : null}
+          {!isLoading && availableEntries.length === 0 ? <p>No available finalized Travel Passes.</p> : null}
+          {availableEntries.map((entry) => (
+            <button key={`${entry.vehicle_id}-${entry.date}-${entry.departure_terminal_id}`} type="button" onClick={() => selectAvailable(entry)} className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', width: '100%', marginBottom: '10px', textAlign: 'left', cursor: 'pointer', color: 'var(--text-primary)' }}>
+              <span><strong>{entry.plate_number}</strong> - {entry.date} - {entry.departure_terminal_name} - <span className="numeric">{entry.gross}</span></span>
+              <span className={`badge ${entry.status === 'in_progress' ? 'badge--pending' : 'badge--success'}`}>{entry.status === 'in_progress' ? 'In Progress' : 'Not Started'}</span>
+            </button>
+          ))}
         </section>
       ) : null}
 
-      {pageState === 1 ? (
+      {pageState === 1 && selectedAvailable ? (
         <form onSubmit={handleCreate} className="card">
           <h2 style={{ marginTop: 0 }}>Start New Remittance</h2>
-          <label htmlFor="terminal">Terminal</label>
-          <select id="terminal" value={terminalId} onChange={(event) => setTerminalId(event.target.value)} required className="input" style={{ display: 'block', width: '100%', margin: '4px 0 12px' }}>
-            <option value="">Select a terminal</option>
-            {terminals.map((terminal) => <option key={terminal.id} value={terminal.id}>{terminal.name}</option>)}
-          </select>
-          <label htmlFor="vehicle">Vehicle</label>
-          <select id="vehicle" value={vehicleId} onChange={handleVehicleChange} required className="input" style={{ display: 'block', width: '100%', margin: '4px 0 12px' }}>
-            <option value="">Select a vehicle</option>
-            {vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.plate_number} - {vehicle.line_name}</option>)}
-          </select>
+          <p><strong>Vehicle:</strong> {selectedAvailable.plate_number}</p>
+          <p><strong>Terminal:</strong> {selectedAvailable.departure_terminal_name}</p>
+          <p><strong>Date:</strong> {selectedAvailable.date}</p>
           <label htmlFor="driver">Driver</label>
-          <select id="driver" value={driverId} onChange={(event) => setDriverId(event.target.value)} required className="input" style={{ display: 'block', width: '100%', margin: '4px 0 12px' }}>
-            <option value="">Select a driver</option>
-            {drivers.map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name}</option>)}
-          </select>
-          {isSubstitution ? (
+          {selectedAvailable.assigned_driver_id && !differentDriver ? <p>{selectedAvailable.assigned_driver_full_name}</p> : null}
+          {!selectedAvailable.assigned_driver_id ? <p>No assigned driver. Select a driver below.</p> : null}
+          <label style={{ display: 'block', margin: '12px 0' }}>
+            <input type="checkbox" checked={differentDriver} onChange={(event) => setDifferentDriver(event.target.checked)} /> Different driver today
+          </label>
+          {differentDriver || !selectedAvailable.assigned_driver_id ? (
             <div style={{ marginBottom: '12px', paddingLeft: '12px', borderLeft: '3px solid var(--accent)' }}>
+              <select id="driver" value={driverId} onChange={(event) => setDriverId(event.target.value)} required className="input" style={{ display: 'block', width: '100%', margin: '4px 0 12px' }}>
+                <option value="">Select a driver</option>
+                {drivers.map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name}</option>)}
+              </select>
               <label htmlFor="substituteFee">Substitute fee</label>
               <input id="substituteFee" type="number" min="0" step="0.01" value={substituteFee} onChange={(event) => setSubstituteFee(event.target.value)} className="input numeric" style={{ display: 'block', marginTop: '4px' }} />
               <p>Fee owed by the substitute driver to the assigned driver.</p>
             </div>
           ) : null}
-          <label htmlFor="remittanceDate">Date</label>
-          <input id="remittanceDate" type="date" value={date} onChange={(event) => setDate(event.target.value)} required className="input" style={{ display: 'block', margin: '4px 0 12px' }} />
           <button type="submit" disabled={busyAction === 'create'} className="btn-primary">{busyAction === 'create' ? 'Creating...' : 'Start Remittance'}</button>
-          <button type="button" onClick={() => setPageState(0)} className="btn-secondary" style={{ marginLeft: '8px' }}>Cancel</button>
+          <button type="button" onClick={switchRemittance} className="btn-secondary" style={{ marginLeft: '8px' }}>Cancel</button>
         </form>
       ) : null}
 

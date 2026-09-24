@@ -141,7 +141,7 @@ function DailyRemittancePage() {
 
     let cancelled = false
     async function syncOnEntry() {
-      if (remittance.is.finalized) return
+      if (remittance?.is_finalized) return
       setBusyAction('sync-rounds')
       setError('')
       try {

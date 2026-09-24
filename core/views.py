@@ -1376,8 +1376,9 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
             for field_name, value in defaults.items()
             if field_name not in serializer.validated_data
         }
-        remittance = serializer.save(**defaults)
-        _sync_dispatch_rounds(remittance, self.request.user)
+        with transaction.atomic():
+            remittance = serializer.save(**defaults)
+            _sync_dispatch_rounds(remittance, self.request.user)
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.queryset)

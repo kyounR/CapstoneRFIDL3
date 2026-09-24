@@ -6,10 +6,10 @@
 - [ ] Granularity to CALTRANSCO management report *(Pending UAT & client feedback)*
 - [ ] General UI pass for every tab (fix Travel Pass tab styling being larger than others)
 - [ ] **(MAJOR)** Official government-compliant receipt implementation
-- [ ] **(MAJOR)** Revise Remittance feature entirely and automate it (linked to Travel Pass)
-- [ ] Fix boarding status page to be non-scrollable and resized accordingly
 - [ ] Revise UI of the travel pass page
 - [ ] **(MAJOR) (HARDWARE)** Add an LED to the RFID reader and a buzzer/beeper for auditory feedback
+- [ ] Add clarification when vehicle is at capacity or over capacity
+- [ ] Another pass to Remittance Automation
 
 ---
 
@@ -48,6 +48,8 @@
 - [x] Recolor one of the boarding codes (removed yellow)
 - [x] Rephrase current receipt implementation to "boarding slip"
 - [x] Revise current index logic of boarding code color shape
+- [x] Fix boarding status page to be non-scrollable and resized accordingly
+- [x] **(MAJOR)** Revise Remittance feature entirely and automate it (linked to Travel Pass)
 
 ### Public Feeds & Security
 - [x] Add extra info to public-facing tap feed (show deductions, exclude current balance)

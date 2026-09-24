@@ -2,14 +2,6 @@ import { useEffect, useState } from 'react'
 import SectionTabs from '../components/SectionTabs'
 import api from '../api/client'
 
-function getToday() {
-  const currentDate = new Date()
-  const year = currentDate.getFullYear()
-  const month = String(currentDate.getMonth() + 1).padStart(2, '0')
-  const day = String(currentDate.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
 function getListData(data) {
   return Array.isArray(data) ? data : data.results || []
 }
@@ -26,8 +18,6 @@ const feeFields = [
 function DailyRemittancePage() {
   const [pageState, setPageState] = useState(0)
   const [availableEntries, setAvailableEntries] = useState([])
-  const [terminals, setTerminals] = useState([])
-  const [vehicles, setVehicles] = useState([])
   const [drivers, setDrivers] = useState([])
   const [driverId, setDriverId] = useState('')
   const [substituteFee, setSubstituteFee] = useState('')
@@ -44,15 +34,11 @@ function DailyRemittancePage() {
     setIsLoading(true)
     setError('')
     try {
-      const [availableResponse, terminalResponse, vehicleResponse, driverResponse] = await Promise.all([
+      const [availableResponse, driverResponse] = await Promise.all([
         api.get('remittances/available/'),
-        api.get('terminals/'),
-        api.get('vehicles/?active_only=true'),
         api.get('drivers/'),
       ])
       setAvailableEntries(getListData(availableResponse.data))
-      setTerminals(getListData(terminalResponse.data))
-      setVehicles(getListData(vehicleResponse.data))
       setDrivers(getListData(driverResponse.data))
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not load remittance data.')
@@ -74,6 +60,7 @@ function DailyRemittancePage() {
 
   async function selectAvailable(entry) {
     setError('')
+    setSelectedAvailable(entry)
     if (entry.remittance_id) {
       try {
         await loadRemittanceDetails(entry.remittance_id)
@@ -84,7 +71,6 @@ function DailyRemittancePage() {
       return
     }
 
-    setSelectedAvailable(entry)
     setDriverId(entry.assigned_driver_id ? String(entry.assigned_driver_id) : '')
     setDifferentDriver(false)
     setSubstituteFee('')
@@ -102,6 +88,7 @@ function DailyRemittancePage() {
       setRounds(getListData(roundsResponse.data))
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not load remittance details.')
+      throw requestError
     }
   }
 
@@ -247,10 +234,8 @@ function DailyRemittancePage() {
     fetchPickerData()
   }
 
-  const detailVehicle = vehicles.find((vehicle) => vehicle.id === remittance?.vehicle)
   const detailDriver = drivers.find((driver) => driver.id === remittance?.driver)
   const originalAssignedDriver = drivers.find((driver) => driver.id === remittance?.original_assigned_driver)
-  const detailTerminal = terminals.find((terminal) => terminal.id === remittance?.terminal)
 
   return (
     <div style={{ width: '100%', maxWidth: '1600px', margin: '40px auto', padding: '0 24px', fontFamily: 'var(--font-body)' }}>
@@ -311,11 +296,10 @@ function DailyRemittancePage() {
         <section>
           <button type="button" onClick={switchRemittance} className="btn-secondary" style={{ marginBottom: '12px' }}>Back to Remittances</button>
           <div className="card" style={{ marginBottom: '20px' }}>
-            <h2 style={{ marginTop: 0 }}>{detailTerminal?.name || remittance.terminal} - {detailVehicle?.plate_number || remittance.vehicle}</h2>
+            <h2 style={{ marginTop: 0 }}>{selectedAvailable?.departure_terminal_name || remittance.terminal} - {selectedAvailable?.plate_number || remittance.vehicle}</h2>
             <p><strong>Driver:</strong> {detailDriver?.full_name || remittance.driver}</p>
             <p><strong>Date:</strong> {remittance.date}</p>
             <span className={`badge ${remittance.is_finalized ? 'badge--success' : 'badge--pending'}`}>{remittance.is_finalized ? 'Finalized' : 'In Progress'}</span>
-            {detailVehicle?.is_light_vehicle ? <span className="badge badge--pending">Light vehicle</span> : null}
             {remittance.substitute_fee != null ? (
               <p style={{ paddingLeft: '12px', borderLeft: '3px solid var(--accent)' }}>
                 Substitute driver — original assigned driver: {originalAssignedDriver?.full_name || remittance.original_assigned_driver}, fee: <span className="numeric">{remittance.substitute_fee}</span>

@@ -90,7 +90,6 @@ function DailyRemittancePage() {
   function selectRemittance(selectedRemittance) {
     setRemittance(selectedRemittance)
     setPageState(2)
-    loadRemittanceDetails(selectedRemittance.id)
   }
 
   async function loadRemittanceDetails(remittanceId) {
@@ -136,6 +135,29 @@ function DailyRemittancePage() {
       setBusyAction('')
     }
   }
+
+  useEffect(() => {
+    if (pageState !== 2 || !remittance?.id) return undefined
+
+    let cancelled = false
+    async function syncOnEntry() {
+      setBusyAction('sync-rounds')
+      setError('')
+      try {
+        await api.post(`remittances/${remittance.id}/sync-rounds/`)
+        if (!cancelled) await loadRemittanceDetails(remittance.id)
+      } catch (requestError) {
+        if (!cancelled) setError(requestError.response?.data?.error || 'Could not sync dispatch rounds.')
+      } finally {
+        if (!cancelled) setBusyAction('')
+      }
+    }
+
+    syncOnEntry()
+    return () => {
+      cancelled = true
+    }
+  }, [pageState, remittance?.id])
 
   async function handleRemoveRound(round) {
     const reason = roundRemovalReasons[round.id] || ''
@@ -307,12 +329,13 @@ function DailyRemittancePage() {
             <div className="card" style={{ padding: 0, marginBottom: '12px', overflow: 'hidden' }}>
               <table className="table">
                 <thead><tr><th>Round</th><th>Amount</th><th>Departure Time</th><th>Source</th>{!remittance.is_finalized ? <th>Action</th> : null}</tr></thead>
-                <tbody>{rounds.map((round) => <tr key={round.id}>
+                <tbody>{rounds.map((round) => <tr key={round.id} style={round.is_excluded ? { color: 'var(--text-secondary)', textDecoration: 'line-through' } : undefined}>
                   <td className="numeric">{round.round_number}</td>
                   <td className="numeric">{round.amount}</td>
                   <td className="numeric">{round.departure_time}</td>
-                  <td>{round.source_trip ? `Auto-generated from Travel Pass #${round.source_trip}` : 'Legacy manual round'}{round.departure_terminal_name ? ` - ${round.departure_terminal_name}` : ''}</td>
+                  <td>{round.is_excluded ? <span className="badge badge--pending" style={{ textDecoration: 'none' }}>Excluded</span> : <>{round.source_trip ? `Auto-generated from Travel Pass #${round.source_trip}` : 'Legacy manual round'}{round.departure_terminal_name ? ` - ${round.departure_terminal_name}` : ''}</>}</td>
                   {!remittance.is_finalized ? <td>
+                    {round.is_excluded ? null : <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '280px' }}>
                       <input
                         type="text"
@@ -328,6 +351,7 @@ function DailyRemittancePage() {
                       </button>
                     </div>
                     {!(roundRemovalReasons[round.id] || '').trim() ? <span style={{ display: 'block', marginTop: '4px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Enter a reason to enable removal</span> : null}
+                    </>}
                   </td> : null}
                 </tr>)}</tbody>
               </table>

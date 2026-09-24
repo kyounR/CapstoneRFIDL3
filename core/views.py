@@ -1869,6 +1869,33 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
                 if vehicle.pk != manifest.vehicle.pk:
                     changes.append(('vehicle', str(manifest.vehicle), str(vehicle), vehicle))
 
+            if 'departure_terminal' in request.data:
+                raw_terminal = request.data['departure_terminal']
+                if raw_terminal in (None, ''):
+                    corrected_terminal = None
+                else:
+                    try:
+                        corrected_terminal = Terminal.objects.get(pk=raw_terminal)
+                    except (Terminal.DoesNotExist, TypeError, ValueError):
+                        return Response(
+                            {'error': 'A valid departure terminal is required.'},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                if (
+                    corrected_terminal is None and manifest.departure_terminal is not None
+                ) or (
+                    corrected_terminal is not None
+                    and corrected_terminal.pk != manifest.departure_terminal_id
+                ):
+                    changes.append(
+                        (
+                            'departure_terminal',
+                            str(manifest.departure_terminal) if manifest.departure_terminal else 'None',
+                            str(corrected_terminal) if corrected_terminal else 'None',
+                            corrected_terminal,
+                        )
+                    )
+
             if 'date' in request.data:
                 corrected_date = parse_date(str(request.data['date']))
                 if corrected_date is None:

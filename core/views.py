@@ -96,6 +96,43 @@ def log_admin_action(user, action, instance, changes=None, model_name=None, obje
     )
 
 
+def _sync_dispatch_rounds(remittance, cashier):
+    with transaction.atomic():
+        trips = list(
+            ManifestTrip.objects.select_for_update(of=('self',)).filter(
+                vehicle=remittance.vehicle,
+                date=remittance.date,
+                departure_terminal=remittance.terminal,
+                is_finalized=True,
+                dispatch_round__isnull=True,
+            ).order_by('departure_time')
+        )
+        current_max = remittance.rounds.aggregate(max_round=Max('round_number'))['max_round'] or 0
+        created_rounds = []
+        for offset, trip in enumerate(trips, start=1):
+            round_number = current_max + offset
+            dispatch_round = DispatchRound.objects.create(
+                remittance=remittance,
+                round_number=round_number,
+                amount=trip.total_fare,
+                departure_time=trip.departure_time,
+                source_trip=trip,
+                departure_terminal=trip.departure_terminal,
+            )
+            DispatchRoundLog.objects.create(
+                cashier=cashier,
+                remittance=remittance,
+                round_number=dispatch_round.round_number,
+                amount=dispatch_round.amount,
+                departure_time=dispatch_round.departure_time,
+                action=DispatchRoundLog.Action.AUTO_GENERATED,
+                reason=f'Auto-derived from Travel Pass #{trip.id}',
+            )
+            created_rounds.append(dispatch_round)
+
+        return len(created_rounds)
+
+
 class AdminAuditMixin:
     def perform_create(self, serializer):
         submitted_data = dict(serializer.validated_data)
@@ -1339,7 +1376,8 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
             for field_name, value in defaults.items()
             if field_name not in serializer.validated_data
         }
-        serializer.save(**defaults)
+        remittance = serializer.save(**defaults)
+        _sync_dispatch_rounds(remittance, self.request.user)
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.queryset)
@@ -1529,42 +1567,12 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            trips = list(
-                ManifestTrip.objects.select_for_update(of=('self',)).filter(
-                    vehicle=remittance.vehicle,
-                    date=remittance.date,
-                    departure_terminal=remittance.terminal,
-                    is_finalized=True,
-                    dispatch_round__isnull=True,
-                ).order_by('departure_time')
-            )
-            current_max = remittance.rounds.aggregate(max_round=Max('round_number'))['max_round'] or 0
-            created_rounds = []
-            for offset, trip in enumerate(trips, start=1):
-                round_number = current_max + offset
-                dispatch_round = DispatchRound.objects.create(
-                    remittance=remittance,
-                    round_number=round_number,
-                    amount=trip.total_fare,
-                    departure_time=trip.departure_time,
-                    source_trip=trip,
-                    departure_terminal=trip.departure_terminal,
-                )
-                DispatchRoundLog.objects.create(
-                    cashier=request.user,
-                    remittance=remittance,
-                    round_number=dispatch_round.round_number,
-                    amount=dispatch_round.amount,
-                    departure_time=dispatch_round.departure_time,
-                    action=DispatchRoundLog.Action.AUTO_GENERATED,
-                    reason=f'Auto-derived from Travel Pass #{trip.id}',
-                )
-                created_rounds.append(dispatch_round)
+            created_count = _sync_dispatch_rounds(remittance, request.user)
 
             remittance.refresh_from_db()
             return Response(
                 {
-                    'created_count': len(created_rounds),
+                    'created_count': created_count,
                     'remittance': self.get_serializer(remittance).data,
                 },
                 status=status.HTTP_200_OK,

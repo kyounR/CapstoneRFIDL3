@@ -29,11 +29,9 @@ function DailyRemittancePage() {
   const [terminals, setTerminals] = useState([])
   const [vehicles, setVehicles] = useState([])
   const [drivers, setDrivers] = useState([])
-  const [dispatchers, setDispatchers] = useState([])
   const [terminalId, setTerminalId] = useState('')
   const [vehicleId, setVehicleId] = useState('')
   const [driverId, setDriverId] = useState('')
-  const [dispatcherName, setDispatcherName] = useState('')
   const [date, setDate] = useState(getToday())
   const [substituteFee, setSubstituteFee] = useState('')
   const [remittance, setRemittance] = useState(null)
@@ -47,18 +45,16 @@ function DailyRemittancePage() {
     setIsLoading(true)
     setError('')
     try {
-      const [remittanceResponse, terminalResponse, vehicleResponse, driverResponse, dispatcherResponse] = await Promise.all([
+      const [remittanceResponse, terminalResponse, vehicleResponse, driverResponse] = await Promise.all([
         api.get('remittances/', { params: { is_finalized: false } }),
         api.get('terminals/'),
         api.get('vehicles/?active_only=true'),
         api.get('drivers/'),
-        api.get('dispatchers/'),
       ])
       setRemittances(getListData(remittanceResponse.data))
       setTerminals(getListData(terminalResponse.data))
       setVehicles(getListData(vehicleResponse.data))
       setDrivers(getListData(driverResponse.data))
-      setDispatchers(getListData(dispatcherResponse.data))
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not load remittance data.')
     } finally {
@@ -74,7 +70,6 @@ function DailyRemittancePage() {
     setTerminalId('')
     setVehicleId('')
     setDriverId('')
-    setDispatcherName('')
     setSubstituteFee('')
     setDate(getToday())
   }
@@ -110,7 +105,7 @@ function DailyRemittancePage() {
     event.preventDefault()
     setBusyAction('create')
     setError('')
-    const payload = { terminal: Number(terminalId), vehicle: Number(vehicleId), driver: Number(driverId), dispatcher: Number(dispatcherName), date }
+    const payload = { terminal: Number(terminalId), vehicle: Number(vehicleId), driver: Number(driverId), date }
     if (substituteFee !== '') payload.substitute_fee = substituteFee
     try {
       const response = await api.post('remittances/', payload)
@@ -242,7 +237,6 @@ function DailyRemittancePage() {
   const detailDriver = drivers.find((driver) => driver.id === remittance?.driver)
   const originalAssignedDriver = drivers.find((driver) => driver.id === remittance?.original_assigned_driver)
   const detailTerminal = terminals.find((terminal) => terminal.id === remittance?.terminal)
-  const detailDispatcher = dispatchers.find((dispatcher) => dispatcher.id === remittance?.dispatcher)
 
   return (
     <div style={{ width: '100%', maxWidth: '1600px', margin: '40px auto', padding: '0 24px', fontFamily: 'var(--font-body)' }}>
@@ -296,11 +290,6 @@ function DailyRemittancePage() {
               <p>Fee owed by the substitute driver to the assigned driver.</p>
             </div>
           ) : null}
-          <label htmlFor="dispatcher">Dispatcher</label>
-          <select id="dispatcher" value={dispatcherName} onChange={(event) => setDispatcherName(event.target.value)} required className="input" style={{ display: 'block', width: '100%', margin: '4px 0 12px' }}>
-            <option value="">Select a dispatcher</option>
-            {dispatchers.map((dispatcher) => <option key={dispatcher.id} value={dispatcher.id}>{dispatcher.full_name}</option>)}
-          </select>
           <label htmlFor="remittanceDate">Date</label>
           <input id="remittanceDate" type="date" value={date} onChange={(event) => setDate(event.target.value)} required className="input" style={{ display: 'block', margin: '4px 0 12px' }} />
           <button type="submit" disabled={busyAction === 'create'} className="btn-primary">{busyAction === 'create' ? 'Creating...' : 'Start Remittance'}</button>
@@ -314,7 +303,6 @@ function DailyRemittancePage() {
           <div className="card" style={{ marginBottom: '20px' }}>
             <h2 style={{ marginTop: 0 }}>{detailTerminal?.name || remittance.terminal} - {detailVehicle?.plate_number || remittance.vehicle}</h2>
             <p><strong>Driver:</strong> {detailDriver?.full_name || remittance.driver}</p>
-            <p><strong>Dispatcher:</strong> {detailDispatcher?.full_name || remittance.dispatcher}</p>
             <p><strong>Date:</strong> {remittance.date}</p>
             <span className={`badge ${remittance.is_finalized ? 'badge--success' : 'badge--pending'}`}>{remittance.is_finalized ? 'Finalized' : 'In Progress'}</span>
             {detailVehicle?.is_light_vehicle ? <span className="badge badge--pending">Light vehicle</span> : null}

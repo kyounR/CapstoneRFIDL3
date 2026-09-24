@@ -241,7 +241,6 @@ class DailyRemittance(models.Model):
 		on_delete=models.PROTECT,
 		related_name='daily_remittances',
 	)
-	dispatcher = models.ForeignKey(Dispatcher, on_delete=models.PROTECT, related_name='daily_remittances')
 	date = models.DateField()
 	driver = models.ForeignKey(Driver, on_delete=models.PROTECT, related_name='daily_remittances')
 	original_assigned_driver = models.ForeignKey(

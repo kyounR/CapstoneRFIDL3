@@ -29,7 +29,6 @@ function DailyRemittanceHistoryPage() {
   const [terminals, setTerminals] = useState([])
   const [vehicles, setVehicles] = useState([])
   const [drivers, setDrivers] = useState([])
-  const [dispatchers, setDispatchers] = useState([])
   const [expandedId, setExpandedId] = useState(null)
   const [detail, setDetail] = useState(null)
   const [rounds, setRounds] = useState([])
@@ -47,16 +46,14 @@ function DailyRemittanceHistoryPage() {
   useEffect(() => {
     async function loadLookups() {
       try {
-        const [terminalResponse, vehicleResponse, driverResponse, dispatcherResponse] = await Promise.all([
+        const [terminalResponse, vehicleResponse, driverResponse] = await Promise.all([
           api.get('terminals/'),
           api.get('vehicles/?active_only=true'),
           api.get('drivers/'),
-          api.get('dispatchers/'),
         ])
         setTerminals(getListData(terminalResponse.data))
         setVehicles(getListData(vehicleResponse.data))
         setDrivers(getListData(driverResponse.data))
-        setDispatchers(getListData(dispatcherResponse.data))
       } catch (requestError) {
         setError(requestError.response?.data?.detail || 'Could not load remittance lookup data.')
       }
@@ -146,7 +143,7 @@ function DailyRemittanceHistoryPage() {
     setIsSaving(true)
     setEditError('')
     const payload = { reason: reason.trim(), [editing.field]: editValue }
-    if (editing.field === 'terminal' || editing.field === 'driver' || editing.field === 'dispatcher') payload[editing.field] = Number(editValue)
+    if (editing.field === 'terminal' || editing.field === 'driver') payload[editing.field] = Number(editValue)
 
     try {
       const endpoint = editing.type === 'remittance'
@@ -187,7 +184,6 @@ function DailyRemittanceHistoryPage() {
     const terminal = terminals.find((item) => item.id === remittance.terminal)
     const vehicle = vehicles.find((item) => item.id === remittance.vehicle)
     const driver = drivers.find((item) => item.id === remittance.driver)
-    const dispatcher = dispatchers.find((item) => item.id === remittance.dispatcher)
     return <div className="card" style={{ marginBottom: '16px' }} onClick={(event) => event.stopPropagation()}>
       <p><strong>Terminal:</strong> {terminal?.name || remittance.terminal}{editButton('remittance', remittance.id, 'terminal', remittance.terminal)}</p>
       {editControls('remittance', remittance.id, 'terminal', <select value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input">{terminals.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>)}
@@ -195,9 +191,6 @@ function DailyRemittanceHistoryPage() {
       <p><strong>Vehicle:</strong> {vehicle?.plate_number || remittance.vehicle}</p>
       <p><strong>Driver:</strong> {driver?.full_name || remittance.driver}{editButton('remittance', remittance.id, 'driver', remittance.driver)}</p>
       {editControls('remittance', remittance.id, 'driver', <select value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input">{drivers.map((item) => <option key={item.id} value={item.id}>{item.full_name}</option>)}</select>)}
-      <p><strong>Dispatcher:</strong> {dispatcher?.full_name || remittance.dispatcher}</p>
-      {editButton('remittance', remittance.id, 'dispatcher', remittance.dispatcher)}
-      {editControls('remittance', remittance.id, 'dispatcher', <select value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input">{dispatchers.map((item) => <option key={item.id} value={item.id}>{item.full_name}</option>)}</select>)}
       <p><strong>Date:</strong> {remittance.date}{editButton('remittance', remittance.id, 'date', remittance.date)}</p>
       {editControls('remittance', remittance.id, 'date', <input type="date" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input" />)}
       {remittance.substitute_fee != null ? (

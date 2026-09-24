@@ -1407,6 +1407,61 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response(serializer.data)
         return Response(self.get_serializer(queryset, many=True).data, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=['GET'], url_path='available')
+    def available(self, request):
+        finalized_trips = ManifestTrip.objects.filter(
+            is_finalized=True,
+            departure_terminal__isnull=False,
+        ).select_related('vehicle', 'vehicle__assigned_driver', 'departure_terminal')
+
+        groups = {}
+        for trip in finalized_trips:
+            key = (trip.vehicle_id, trip.date, trip.departure_terminal_id)
+            if key not in groups:
+                groups[key] = {
+                    'vehicle': trip.vehicle,
+                    'date': trip.date,
+                    'departure_terminal': trip.departure_terminal,
+                    'gross': Decimal('0.00'),
+                }
+            groups[key]['gross'] += trip.total_fare
+
+        if not groups:
+            return Response([], status=status.HTTP_200_OK)
+
+        remittances = DailyRemittance.objects.filter(
+            vehicle_id__in={key[0] for key in groups},
+            date__in={key[1] for key in groups},
+            terminal_id__in={key[2] for key in groups},
+        )
+        remittances_by_key = {
+            (remittance.vehicle_id, remittance.date, remittance.terminal_id): remittance
+            for remittance in remittances
+        }
+
+        available_groups = []
+        for key, group in groups.items():
+            remittance = remittances_by_key.get(key)
+            if remittance is not None and remittance.is_finalized:
+                continue
+
+            driver = group['vehicle'].assigned_driver
+            available_groups.append({
+                'vehicle_id': group['vehicle'].id,
+                'plate_number': group['vehicle'].plate_number,
+                'assigned_driver_id': driver.id if driver else None,
+                'assigned_driver_full_name': driver.full_name if driver else None,
+                'date': group['date'],
+                'departure_terminal_id': group['departure_terminal'].id,
+                'departure_terminal_name': group['departure_terminal'].name,
+                'gross': str(group['gross']),
+                'remittance_id': remittance.id if remittance else None,
+                'status': 'in_progress' if remittance else 'not_started',
+            })
+
+        available_groups.sort(key=lambda item: (item['date'], item['plate_number']), reverse=True)
+        return Response(available_groups, status=status.HTTP_200_OK)
+
     def perform_update(self, serializer):
         if serializer.instance.is_finalized:
             raise serializers.ValidationError(
@@ -1763,7 +1818,6 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
-        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['POST'], url_path='finalize')

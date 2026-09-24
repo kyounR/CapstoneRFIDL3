@@ -15,6 +15,17 @@ function getListData(data) {
   return Array.isArray(data) ? data : data.results || []
 }
 
+function extractErrorMessage(error, fallback) {
+  const data = error.response?.data
+  if (!data) return fallback
+  if (typeof data.detail === 'string') return data.detail
+  const firstFieldErrors = Object.values(data)[0]
+  if (Array.isArray(firstFieldErrors) && typeof firstFieldErrors[0] === 'string') {
+    return firstFieldErrors[0]
+  }
+  return fallback
+}
+
 function entriesByDestination(entries = []) {
   return entries.reduce((result, entry) => {
     result[entry.destination] = entry
@@ -203,7 +214,7 @@ function TravelPassPage() {
       await fetchActivePasses()
       selectManifest(response.data)
     } catch (requestError) {
-      setError(requestError.response?.data?.detail || 'Could not create Travel Pass.')
+      setError(extractErrorMessage(requestError, 'Could not create Travel Pass.'))
     } finally {
       setBusyAction('')
     }

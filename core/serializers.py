@@ -174,6 +174,11 @@ class ManifestTripSerializer(serializers.ModelSerializer):
     cashier = serializers.PrimaryKeyRelatedField(read_only=True)
     cashier_username = serializers.CharField(source='cashier.username', read_only=True)
     cashier_full_name = serializers.CharField(source='cashier.full_name', read_only=True)
+    dispatcher_name = serializers.CharField(
+        source='dispatcher.full_name',
+        read_only=True,
+        allow_null=True,
+    )
     is_finalized = serializers.BooleanField(read_only=True)
     finalized_at = serializers.DateTimeField(read_only=True)
     total_passengers = serializers.IntegerField(read_only=True)
@@ -183,6 +188,8 @@ class ManifestTripSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         if self.instance is None and attrs.get('departure_terminal') is None:
             raise serializers.ValidationError({'departure_terminal': 'This field is required when creating a Travel Pass.'})
+        if self.instance is None and attrs.get('dispatcher') is None:
+            raise serializers.ValidationError({'dispatcher': 'This field is required when creating a Travel Pass.'})
         return attrs
 
     class Meta:

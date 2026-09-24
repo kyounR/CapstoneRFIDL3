@@ -366,6 +366,12 @@ class ManifestTrip(models.Model):
 		null=True,
 		blank=True,
 	)
+	dispatcher = models.ForeignKey(
+		Dispatcher,
+		on_delete=models.PROTECT,
+		null=True,
+		blank=True,
+	)
 	boarding_code_index = models.PositiveSmallIntegerField(null=True, blank=True)
 	trip = models.ForeignKey(
 		Trip,

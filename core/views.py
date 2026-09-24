@@ -1911,6 +1911,33 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
                         )
                     )
 
+            if 'dispatcher' in request.data:
+                raw_dispatcher = request.data['dispatcher']
+                if raw_dispatcher in (None, ''):
+                    corrected_dispatcher = None
+                else:
+                    try:
+                        corrected_dispatcher = Dispatcher.objects.get(pk=raw_dispatcher)
+                    except (Dispatcher.DoesNotExist, TypeError, ValueError):
+                        return Response(
+                            {'error': 'A valid dispatcher is required.'},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                if (
+                    corrected_dispatcher is None and manifest.dispatcher is not None
+                ) or (
+                    corrected_dispatcher is not None
+                    and corrected_dispatcher.pk != manifest.dispatcher_id
+                ):
+                    changes.append(
+                        (
+                            'dispatcher',
+                            str(manifest.dispatcher) if manifest.dispatcher else 'None',
+                            str(corrected_dispatcher) if corrected_dispatcher else 'None',
+                            corrected_dispatcher,
+                        )
+                    )
+
             if 'date' in request.data:
                 corrected_date = parse_date(str(request.data['date']))
                 if corrected_date is None:

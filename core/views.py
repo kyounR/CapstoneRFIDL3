@@ -1618,6 +1618,11 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
             dispatch_round = DispatchRound.objects.get(pk=round_id, remittance=remittance)
         except DispatchRound.DoesNotExist:
             return Response({'error': 'Dispatch round not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if dispatch_round.is_excluded:
+            return Response(
+                {'error': 'This round is already excluded.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         DispatchRoundLog.objects.create(
             cashier=request.user,
             remittance=remittance,
@@ -1627,7 +1632,8 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
             action=DispatchRoundLog.Action.REMOVED,
             reason=reason.strip(),
         )
-        dispatch_round.delete()
+        dispatch_round.is_excluded = True
+        dispatch_round.save(update_fields=['is_excluded'])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

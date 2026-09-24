@@ -264,7 +264,7 @@ class DailyRemittance(models.Model):
 
 	@property
 	def gross(self):
-		return DispatchRound.objects.filter(remittance=self).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+		return DispatchRound.objects.filter(remittance=self, is_excluded=False).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
 	@property
 	def terminal_fee(self):
@@ -313,6 +313,7 @@ class DispatchRound(models.Model):
 	)
 	amount = models.DecimalField(max_digits=12, decimal_places=2)
 	departure_time = models.TimeField()
+	is_excluded = models.BooleanField(default=False)
 
 	class Meta:
 		constraints = [

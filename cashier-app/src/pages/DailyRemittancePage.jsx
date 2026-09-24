@@ -38,8 +38,6 @@ function DailyRemittancePage() {
   const [substituteFee, setSubstituteFee] = useState('')
   const [remittance, setRemittance] = useState(null)
   const [rounds, setRounds] = useState([])
-  const [roundAmount, setRoundAmount] = useState('')
-  const [departureTime, setDepartureTime] = useState('')
   const [roundRemovalReasons, setRoundRemovalReasons] = useState({})
   const [isLoading, setIsLoading] = useState(true)
   const [busyAction, setBusyAction] = useState('')
@@ -126,26 +124,14 @@ function DailyRemittancePage() {
     }
   }
 
-  async function handleAddRound(event) {
-    event.preventDefault()
-    if (rounds.length >= 5) {
-      setError('A remittance can have no more than 5 dispatch rounds.')
-      return
-    }
-    setBusyAction('round')
+  async function handleSyncRounds() {
+    setBusyAction('sync-rounds')
     setError('')
     try {
-      const response = await api.post(`remittances/${remittance.id}/rounds/`, {
-        round_number: rounds.length + 1,
-        amount: roundAmount,
-        departure_time: departureTime,
-      })
-      setRounds((currentRounds) => [...currentRounds, response.data.round])
-      setRemittance(response.data.remittance)
-      setRoundAmount('')
-      setDepartureTime('')
+      await api.post(`remittances/${remittance.id}/sync-rounds/`)
+      await loadRemittanceDetails(remittance.id)
     } catch (requestError) {
-      setError(requestError.response?.data?.error || 'Could not add dispatch round.')
+      setError(requestError.response?.data?.error || 'Could not sync dispatch rounds.')
     } finally {
       setBusyAction('')
     }
@@ -320,11 +306,12 @@ function DailyRemittancePage() {
           {rounds.length > 0 ? (
             <div className="card" style={{ padding: 0, marginBottom: '12px', overflow: 'hidden' }}>
               <table className="table">
-                <thead><tr><th>Round</th><th>Amount</th><th>Departure Time</th>{!remittance.is_finalized ? <th>Action</th> : null}</tr></thead>
+                <thead><tr><th>Round</th><th>Amount</th><th>Departure Time</th><th>Source</th>{!remittance.is_finalized ? <th>Action</th> : null}</tr></thead>
                 <tbody>{rounds.map((round) => <tr key={round.id}>
                   <td className="numeric">{round.round_number}</td>
                   <td className="numeric">{round.amount}</td>
                   <td className="numeric">{round.departure_time}</td>
+                  <td>{round.source_trip ? `Auto-generated from Travel Pass #${round.source_trip}` : 'Legacy manual round'}{round.departure_terminal_name ? ` - ${round.departure_terminal_name}` : ''}</td>
                   {!remittance.is_finalized ? <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '280px' }}>
                       <input
@@ -346,19 +333,12 @@ function DailyRemittancePage() {
               </table>
             </div>
           ) : <p>No rounds added yet.</p>}
-          {!remittance.is_finalized ? (rounds.length < 5 ? (
-            <form onSubmit={handleAddRound} className="card" style={{ display: 'flex', alignItems: 'end', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
-              <div>
-                <label htmlFor="roundAmount">Amount</label>
-                <input id="roundAmount" type="number" min="0" step="0.01" placeholder="Amount" value={roundAmount} onChange={(event) => setRoundAmount(event.target.value)} required className="input numeric" style={{ display: 'block', marginTop: '4px' }} />
-              </div>
-              <div>
-                <label htmlFor="departureTime">Departure time</label>
-                <input id="departureTime" type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} required className="input" style={{ display: 'block', marginTop: '4px' }} />
-              </div>
-              <button type="submit" disabled={busyAction === 'round'} className="btn-primary">{busyAction === 'round' ? 'Adding...' : `Add Round ${rounds.length + 1}`}</button>
-            </form>
-          ) : <p>All 5 dispatch rounds have been added.</p>) : null}
+          {!remittance.is_finalized ? (
+            <div className="card" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
+              <span>Sync finalized Travel Passes for this vehicle, date, and terminal.</span>
+              <button type="button" onClick={handleSyncRounds} disabled={busyAction !== ''} className="btn-primary">{busyAction === 'sync-rounds' ? 'Syncing...' : 'Sync Dispatch Rounds'}</button>
+            </div>
+          ) : null}
 
           <h3>Computed Figures</h3>
           <div className="numeric" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '4px 12px', marginBottom: '20px' }}>

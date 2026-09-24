@@ -26,8 +26,10 @@ function TravelPassPage() {
   const [pageState, setPageState] = useState(0)
   const [activePasses, setActivePasses] = useState([])
   const [vehicles, setVehicles] = useState([])
+  const [terminals, setTerminals] = useState([])
   const [destinations, setDestinations] = useState([])
   const [vehicleId, setVehicleId] = useState('')
+  const [terminalId, setTerminalId] = useState('')
   const [date, setDate] = useState(getToday())
   const [manifest, setManifest] = useState(null)
   const [entries, setEntries] = useState({})
@@ -35,6 +37,7 @@ function TravelPassPage() {
   const [recentTaps, setRecentTaps] = useState([])
   const [isLoadingPicker, setIsLoadingPicker] = useState(true)
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true)
+  const [isLoadingTerminals, setIsLoadingTerminals] = useState(true)
   const [isLoadingDestinations, setIsLoadingDestinations] = useState(false)
   const [busyAction, setBusyAction] = useState('')
   const [showFinalizeForm, setShowFinalizeForm] = useState(false)
@@ -68,7 +71,19 @@ function TravelPassPage() {
       }
     }
 
+    async function fetchTerminals() {
+      try {
+        const response = await api.get('terminals/')
+        setTerminals(getListData(response.data))
+      } catch (requestError) {
+        setError(requestError.response?.data?.detail || 'Could not load terminals.')
+      } finally {
+        setIsLoadingTerminals(false)
+      }
+    }
+
     fetchVehicles()
+    fetchTerminals()
     fetchActivePasses()
   }, [])
 
@@ -180,7 +195,11 @@ function TravelPassPage() {
     setError('')
     setBusyAction('create')
     try {
-      const response = await api.post('manifests/', { vehicle: Number(vehicleId), date })
+      const response = await api.post('manifests/', {
+        vehicle: Number(vehicleId),
+        departure_terminal: Number(terminalId),
+        date,
+      })
       await fetchActivePasses()
       selectManifest(response.data)
     } catch (requestError) {
@@ -396,6 +415,13 @@ function TravelPassPage() {
             <select id="vehicle" value={vehicleId} onChange={(event) => setVehicleId(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required disabled={isLoadingVehicles || busyAction === 'create'}>
               <option value="">{isLoadingVehicles ? 'Loading vehicles...' : 'Select a vehicle'}</option>
               {vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.plate_number} - {vehicle.line_name}</option>)}
+            </select>
+          </div>
+          <div style={{ marginBottom: '12px' }}>
+            <label htmlFor="terminal">Departure Terminal</label>
+            <select id="terminal" value={terminalId} onChange={(event) => setTerminalId(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required disabled={isLoadingTerminals || busyAction === 'create'}>
+              <option value="">{isLoadingTerminals ? 'Loading terminals...' : 'Select a departure terminal'}</option>
+              {terminals.map((terminal) => <option key={terminal.id} value={terminal.id}>{terminal.name}</option>)}
             </select>
           </div>
           <div style={{ marginBottom: '12px' }}>

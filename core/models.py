@@ -295,6 +295,19 @@ class DispatchRound(models.Model):
 		on_delete=models.PROTECT,
 		related_name='rounds',
 	)
+	source_trip = models.OneToOneField(
+		'ManifestTrip',
+		on_delete=models.PROTECT,
+		null=True,
+		blank=True,
+		related_name='dispatch_round',
+	)
+	departure_terminal = models.ForeignKey(
+		Terminal,
+		on_delete=models.PROTECT,
+		null=True,
+		blank=True,
+	)
 	round_number = models.PositiveSmallIntegerField(
 		validators=[MinValueValidator(1), MaxValueValidator(5)]
 	)
@@ -317,6 +330,7 @@ class DispatchRoundLog(models.Model):
 	class Action(models.TextChoices):
 		ADDED = 'added', 'Added'
 		REMOVED = 'removed', 'Removed'
+		AUTO_GENERATED = 'auto_generated', 'Auto-generated'
 
 	cashier = models.ForeignKey(
 		settings.AUTH_USER_MODEL,
@@ -335,7 +349,7 @@ class DispatchRoundLog(models.Model):
 	round_number = models.PositiveSmallIntegerField()
 	amount = models.DecimalField(max_digits=12, decimal_places=2)
 	departure_time = models.TimeField()
-	action = models.CharField(max_length=10, choices=Action.choices)
+	action = models.CharField(max_length=20, choices=Action.choices)
 	reason = models.TextField(blank=True, default='')
 	timestamp = models.DateTimeField(auto_now_add=True)
 
@@ -345,6 +359,12 @@ class DispatchRoundLog(models.Model):
 
 class ManifestTrip(models.Model):
 	vehicle = models.ForeignKey(Vehicle, on_delete=models.PROTECT, related_name='manifest_trips')
+	departure_terminal = models.ForeignKey(
+		Terminal,
+		on_delete=models.PROTECT,
+		null=True,
+		blank=True,
+	)
 	boarding_code_index = models.PositiveSmallIntegerField(null=True, blank=True)
 	trip = models.ForeignKey(
 		Trip,

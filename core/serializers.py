@@ -132,6 +132,13 @@ class FeeSettingsSerializer(serializers.ModelSerializer):
 
 
 class DispatchRoundSerializer(serializers.ModelSerializer):
+    source_trip = serializers.PrimaryKeyRelatedField(read_only=True)
+    departure_terminal_name = serializers.CharField(
+        source='departure_terminal.name',
+        read_only=True,
+        allow_null=True,
+    )
+
     class Meta:
         model = DispatchRound
         fields = '__all__'
@@ -172,6 +179,11 @@ class ManifestTripSerializer(serializers.ModelSerializer):
     total_passengers = serializers.IntegerField(read_only=True)
     total_fare = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     entries = ManifestEntrySummarySerializer(many=True, read_only=True)
+
+    def validate(self, attrs):
+        if self.instance is None and attrs.get('departure_terminal') is None:
+            raise serializers.ValidationError({'departure_terminal': 'This field is required when creating a Travel Pass.'})
+        return attrs
 
     class Meta:
         model = ManifestTrip

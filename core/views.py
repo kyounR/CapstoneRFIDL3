@@ -9,7 +9,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models.deletion import ProtectedError
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Max, Q, Sum
 from django.db.models.functions import Coalesce
 from django.forms.models import model_to_dict
 from django.http import HttpResponse
@@ -1515,6 +1515,57 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+    @action(detail=True, methods=['POST'], url_path='sync-rounds')
+    def sync_rounds(self, request, pk=None):
+        with transaction.atomic():
+            remittance = DailyRemittance.objects.select_for_update().get(pk=pk)
+            if remittance.is_finalized:
+                return Response(
+                    {'error': 'Cannot sync rounds on a finalized remittance.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            trips = list(
+                ManifestTrip.objects.select_for_update().filter(
+                    vehicle=remittance.vehicle,
+                    date=remittance.date,
+                    departure_terminal=remittance.terminal,
+                    is_finalized=True,
+                    dispatch_round__isnull=True,
+                ).order_by('departure_time')
+            )
+            current_max = remittance.rounds.aggregate(max_round=Max('round_number'))['max_round'] or 0
+            created_rounds = []
+            for offset, trip in enumerate(trips, start=1):
+                round_number = current_max + offset
+                dispatch_round = DispatchRound.objects.create(
+                    remittance=remittance,
+                    round_number=round_number,
+                    amount=trip.total_fare,
+                    departure_time=trip.departure_time,
+                    source_trip=trip,
+                    departure_terminal=trip.departure_terminal,
+                )
+                DispatchRoundLog.objects.create(
+                    cashier=request.user,
+                    remittance=remittance,
+                    round_number=dispatch_round.round_number,
+                    amount=dispatch_round.amount,
+                    departure_time=dispatch_round.departure_time,
+                    action=DispatchRoundLog.Action.AUTO_GENERATED,
+                    reason=f'Auto-derived from Travel Pass #{trip.id}',
+                )
+                created_rounds.append(dispatch_round)
+
+            remittance.refresh_from_db()
+            return Response(
+                {
+                    'created_count': len(created_rounds),
+                    'remittance': self.get_serializer(remittance).data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
     @action(detail=True, methods=['GET', 'POST'], url_path='rounds')
     def rounds(self, request, pk=None):
         remittance = self.get_object()
@@ -1524,43 +1575,9 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
             serializer = DispatchRoundSerializer(rounds_qs, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        if remittance.is_finalized:
-            return Response(
-                {'error': 'This Daily Remittance has been finalized and can no longer be edited.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        payload = request.data.copy()
-        payload['remittance'] = remittance.id
-        serializer = DispatchRoundSerializer(data=payload)
-        serializer.is_valid(raise_exception=True)
-
-        try:
-            dispatch_round = serializer.save()
-        except IntegrityError:
-            return Response(
-                {'error': 'This round number already exists for the selected remittance.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        DispatchRoundLog.objects.create(
-            cashier=request.user,
-            remittance=remittance,
-            round_number=dispatch_round.round_number,
-            amount=dispatch_round.amount,
-            departure_time=dispatch_round.departure_time,
-            action=DispatchRoundLog.Action.ADDED,
-        )
-
-        remittance.refresh_from_db()
-        remittance_data = self.get_serializer(remittance).data
         return Response(
-            {
-                'message': 'Dispatch round added successfully.',
-                'round': serializer.data,
-                'remittance': remittance_data,
-            },
-            status=status.HTTP_201_CREATED,
+            {'error': 'Manual round creation is no longer supported. Use sync-rounds instead.'},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     @action(detail=True, methods=['POST'], url_path='finalize')

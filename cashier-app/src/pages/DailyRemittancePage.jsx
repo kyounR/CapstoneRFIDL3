@@ -357,7 +357,7 @@ function DailyRemittancePage() {
                 </tr>)}</tbody>
               </table>
             </div>
-          ) : <p>No rounds added yet.</p>}
+          ) : busyAction === 'sync-rounds' ? <p>Syncing dispatch rounds...</p> : <p>No rounds added yet.</p>}
           {!remittance.is_finalized ? (
             <div className="card" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
               <span>Sync finalized Travel Passes for this vehicle, date, and terminal.</span>

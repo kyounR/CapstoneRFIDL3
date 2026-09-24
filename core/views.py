@@ -1530,7 +1530,7 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
                 )
 
             trips = list(
-                ManifestTrip.objects.select_for_update().filter(
+                ManifestTrip.objects.select_for_update(of=('self',)).filter(
                     vehicle=remittance.vehicle,
                     date=remittance.date,
                     departure_terminal=remittance.terminal,

@@ -1405,7 +1405,8 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-        return Response(self.get_serializer(queryset, many=True).data, status=status.HTTP_200_OK)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['GET'], url_path='available')
     def available(self, request):
@@ -1429,11 +1430,14 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
         if not groups:
             return Response([], status=status.HTTP_200_OK)
 
-        remittances = DailyRemittance.objects.filter(
-            vehicle_id__in={key[0] for key in groups},
-            date__in={key[1] for key in groups},
-            terminal_id__in={key[2] for key in groups},
-        )
+        combo_filter = Q()
+        for vehicle_id, date, terminal_id in groups:
+            combo_filter |= Q(
+                vehicle_id=vehicle_id,
+                date=date,
+                terminal_id=terminal_id,
+            )
+        remittances = DailyRemittance.objects.filter(combo_filter)
         remittances_by_key = {
             (remittance.vehicle_id, remittance.date, remittance.terminal_id): remittance
             for remittance in remittances

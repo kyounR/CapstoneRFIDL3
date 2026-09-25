@@ -102,6 +102,7 @@ function TransactionHistoryPage() {
               <tr>
                 <th>Timestamp</th>
                 <th>Vehicle</th>
+                <th>Payment Method</th>
                 <th>Passenger</th>
                 <th>Destination</th>
                 <th>Fare Type</th>
@@ -114,7 +115,8 @@ function TransactionHistoryPage() {
                 <tr key={transaction.id}>
                   <td>{new Date(transaction.timestamp).toLocaleString()}</td>
                   <td>{transaction.vehicle_plate_number ?? '--'}</td>
-                  <td>{transaction.passenger_name || (transaction.source === 'manual' ? 'Cash' : transaction.card_uid || '-')}</td>
+                  <td>{transaction.source === 'rfid' ? 'RFID Card' : transaction.source === 'manual' ? 'Cash' : '-'}</td>
+                  <td>{transaction.source === 'rfid' ? transaction.passenger_name || '-' : '-'}</td>
                   <td>{transaction.destination_name || '-'}</td>
                   <td>{formatFareType(transaction.fare_type)}</td>
                   <td className="numeric">{transaction.fare_charged ?? '-'}</td>

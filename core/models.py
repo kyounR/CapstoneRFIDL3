@@ -383,6 +383,15 @@ class ManifestTrip(models.Model):
 	departure_time = models.TimeField(null=True, blank=True)
 	is_finalized = models.BooleanField(default=False)
 	finalized_at = models.DateTimeField(null=True, blank=True)
+	is_cancelled = models.BooleanField(default=False)
+	cancelled_at = models.DateTimeField(null=True, blank=True)
+	cancelled_by = models.ForeignKey(
+		settings.AUTH_USER_MODEL,
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name='cancelled_manifest_trips',
+	)
 	cashier = models.ForeignKey(
 		settings.AUTH_USER_MODEL,
 		on_delete=models.PROTECT,

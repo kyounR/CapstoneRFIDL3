@@ -15,6 +15,7 @@ from django.forms.models import model_to_dict
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils.dateparse import parse_date, parse_time
+from django.utils import timezone
 from django.utils.timezone import localdate, now
 from rest_framework import serializers, status, viewsets
 from rest_framework.authtoken.models import Token
@@ -1784,6 +1785,7 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
         active_indexes = set(
             ManifestTrip.objects.filter(
                 is_finalized=False,
+                is_cancelled=False,
                 vehicle__line=vehicle.line,
             ).values_list('boarding_code_index', flat=True)
         )
@@ -1818,6 +1820,15 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
                 )
             queryset = queryset.filter(is_finalized=finalized_param.lower() == 'true')
 
+        cancelled_param = request.query_params.get('is_cancelled')
+        if cancelled_param is not None:
+            if cancelled_param.lower() not in {'true', 'false'}:
+                return Response(
+                    {'error': 'is_cancelled must be true or false.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            queryset = queryset.filter(is_cancelled=cancelled_param.lower() == 'true')
+
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
@@ -1833,6 +1844,12 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
         if manifest.is_finalized:
             return Response(
                 {'error': 'ManifestTrip is already finalized.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if manifest.is_cancelled:
+            return Response(
+                {'error': 'Cannot finalize a cancelled Travel Pass.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -1877,6 +1894,12 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            if manifest.is_cancelled:
+                return Response(
+                    {'error': 'This Travel Pass is already cancelled.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             passenger_count = FareManifestEntry.objects.filter(
                 manifest_trip=manifest,
                 passenger_count__gt=0,
@@ -1884,9 +1907,18 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
             had_passengers = passenger_count > 0
             object_repr = f'{manifest.vehicle.plate_number} - {manifest.date} (had_passengers={had_passengers}, passenger_count={passenger_count})'
 
-            FareManifestEntry.objects.filter(manifest_trip=manifest).delete()
-            manifest.delete()
-            log_admin_action(request.user, 'deleted', manifest, model_name='ManifestTrip', object_repr=object_repr)
+            manifest.is_cancelled = True
+            manifest.cancelled_at = timezone.now()
+            manifest.cancelled_by = request.user
+            manifest.save(update_fields=['is_cancelled', 'cancelled_at', 'cancelled_by'])
+            log_admin_action(
+                request.user,
+                'updated',
+                manifest,
+                changes={'is_cancelled': [False, True]},
+                model_name='ManifestTrip',
+                object_repr=object_repr,
+            )
 
         return Response(
             {

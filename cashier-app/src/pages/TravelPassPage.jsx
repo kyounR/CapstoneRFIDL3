@@ -64,7 +64,7 @@ function TravelPassPage() {
     setIsLoadingPicker(true)
     setError('')
     try {
-      const response = await api.get('manifests/', { params: { is_finalized: false } })
+      const response = await api.get('manifests/', { params: { is_finalized: false, is_cancelled: false } })
       setActivePasses(getListData(response.data))
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not load active Travel Passes.')

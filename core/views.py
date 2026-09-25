@@ -934,7 +934,7 @@ def tap_log_recent_view(request):
     date_param = request.query_params.get('date')
     source_filter = {} if request.query_params.get('source') == 'all' else {'source': 'rfid'}
     if date_param is None:
-        logs = TapLog.objects.filter(**source_filter).select_related('destination', 'manifest_trip').order_by('-timestamp')[:20]
+        logs = TapLog.objects.filter(**source_filter).select_related('destination', 'manifest_trip', 'manifest_trip__vehicle').order_by('-timestamp')[:20]
     else:
         tap_date = parse_date(date_param)
         if tap_date is None:
@@ -945,7 +945,7 @@ def tap_log_recent_view(request):
         logs = TapLog.objects.filter(
             **source_filter,
             timestamp__date=tap_date,
-        ).select_related('destination', 'manifest_trip').order_by('-timestamp')[:200]
+        ).select_related('destination', 'manifest_trip', 'manifest_trip__vehicle').order_by('-timestamp')[:200]
 
     return Response(
         [
@@ -962,6 +962,7 @@ def tap_log_recent_view(request):
                 'remaining_balance': log.remaining_balance,
                 'timestamp': log.timestamp,
                 'boarding_code': resolve_boarding_code(log.manifest_trip.boarding_code_index if log.manifest_trip else None),
+                'vehicle_plate_number': log.manifest_trip.vehicle.plate_number if log.manifest_trip and log.manifest_trip.vehicle else None,
             }
             for log in logs
         ],

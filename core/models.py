@@ -93,7 +93,7 @@ class Card(models.Model):
 	uid = models.CharField(max_length=100, unique=True)
 	passenger = models.ForeignKey(
 		Passenger,
-		on_delete=models.SET_NULL,
+		on_delete=models.PROTECT,
 		null=True,
 		blank=True,
 		related_name='cards',

@@ -72,7 +72,8 @@ function DailyRemittanceHistoryPage() {
       setCorrections([])
       try {
         const response = await api.get('remittances/', { params: { date } })
-        setRemittances(getListData(response.data))
+        const historyRemittances = getListData(response.data).filter((remittance) => remittance.is_finalized === true || remittance.is_cancelled === true)
+        setRemittances(historyRemittances)
       } catch (requestError) {
         setRemittances([])
         setError(requestError.response?.data?.detail || 'Could not load remittance history.')

@@ -60,7 +60,8 @@ function TravelPassHistoryPage() {
 
       try {
         const response = await api.get('manifests/', { params: { date } })
-        setTravelPasses(getListData(response.data))
+        const historyPasses = getListData(response.data).filter((pass) => pass.is_finalized === true || pass.is_cancelled === true)
+        setTravelPasses(historyPasses)
       } catch (requestError) {
         setTravelPasses([])
         setError(requestError.response?.data?.detail || 'Could not load Travel Pass history.')

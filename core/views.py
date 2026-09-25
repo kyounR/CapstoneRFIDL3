@@ -1439,7 +1439,7 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
                 date=date,
                 terminal_id=terminal_id,
             )
-        remittances = DailyRemittance.objects.filter(combo_filter)
+        remittances = DailyRemittance.objects.filter(combo_filter, is_cancelled=False).order_by('id')
         remittances_by_key = {
             (remittance.vehicle_id, remittance.date, remittance.terminal_id): remittance
             for remittance in remittances
@@ -1498,6 +1498,12 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            if remittance.is_cancelled:
+                return Response(
+                    {'error': 'This remittance is already cancelled.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             round_count = DispatchRound.objects.filter(
                 remittance=remittance,
             ).count()
@@ -1506,9 +1512,18 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
             driver_name = remittance.driver.full_name if remittance.driver else 'No driver'
             object_repr = f'{vehicle_plate} - {driver_name} - {remittance.date} (had_rounds={had_rounds}, round_count={round_count})'
 
-            DispatchRound.objects.filter(remittance=remittance).delete()
-            remittance.delete()
-            log_admin_action(request.user, 'deleted', remittance, model_name='DailyRemittance', object_repr=object_repr)
+            remittance.is_cancelled = True
+            remittance.cancelled_at = timezone.now()
+            remittance.cancelled_by = request.user
+            remittance.save(update_fields=['is_cancelled', 'cancelled_at', 'cancelled_by'])
+            log_admin_action(
+                request.user,
+                'updated',
+                remittance,
+                changes={'is_cancelled': [False, True]},
+                model_name='DailyRemittance',
+                object_repr=object_repr,
+            )
 
         return Response(
             {
@@ -1655,6 +1670,12 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
         if remittance.is_finalized:
             return Response(
                 {'error': 'Daily Remittance is already finalized.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if remittance.is_cancelled:
+            return Response(
+                {'error': 'Cannot finalize a cancelled Daily Remittance.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

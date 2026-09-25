@@ -260,6 +260,15 @@ class DailyRemittance(models.Model):
 	trust_fund = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
 	is_finalized = models.BooleanField(default=False)
 	finalized_at = models.DateTimeField(null=True, blank=True)
+	is_cancelled = models.BooleanField(default=False)
+	cancelled_at = models.DateTimeField(null=True, blank=True)
+	cancelled_by = models.ForeignKey(
+		settings.AUTH_USER_MODEL,
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name='cancelled_daily_remittances',
+	)
 
 	@property
 	def gross(self):

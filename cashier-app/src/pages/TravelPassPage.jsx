@@ -344,7 +344,7 @@ function TravelPassPage() {
       0,
     )
     const confirmationMessage = passengerCount > 0
-      ? `This Travel Pass has ${passengerCount} passengers already tallied. Canceling will permanently delete this record. Are you sure?`
+      ? `This Travel Pass has ${passengerCount} passengers already tallied. Cancelling will mark it as cancelled and remove it from active Travel Passes; the record itself is preserved. Are you sure?`
       : 'Cancel this Travel Pass?'
 
     if (!window.confirm(confirmationMessage)) {

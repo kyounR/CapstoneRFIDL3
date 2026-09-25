@@ -204,7 +204,7 @@ function DailyRemittancePage() {
   async function handleCancel() {
     const roundCount = rounds.length
     const confirmationMessage = roundCount > 0
-      ? `This remittance has ${roundCount} dispatch rounds already added. Canceling will permanently delete this record. Are you sure?`
+      ? `This remittance has ${roundCount} dispatch rounds already added. Cancelling will mark it as cancelled and remove it from active remittances; the record itself is preserved. Are you sure?`
       : 'Cancel this remittance?'
 
     if (!window.confirm(confirmationMessage)) return

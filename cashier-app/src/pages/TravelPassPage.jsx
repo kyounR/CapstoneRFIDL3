@@ -398,6 +398,9 @@ function TravelPassPage() {
   const selectedPassLabel = selectedPassIndex === 0 ? 'Primary' : `Next Vehicle (#${selectedPassIndex + 1})`
 
   const selectedVehicle = vehicles.find((vehicle) => vehicle.id === Number(manifest?.vehicle || vehicleId))
+  const vehicleCapacity = selectedVehicle?.passenger_capacity
+  const vehicleAtCapacity = vehicleCapacity != null && vehicleCapacity > 0 && totals.passengerCount === vehicleCapacity
+  const vehicleOverCapacity = vehicleCapacity != null && vehicleCapacity > 0 && totals.passengerCount > vehicleCapacity
   const isFinalized = manifest?.is_finalized === true
 
   return (
@@ -551,7 +554,7 @@ function TravelPassPage() {
             </details>
           ) : null}
           <div className="card" style={{ position: 'sticky', bottom: 0, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginTop: '12px', padding: '12px 16px' }}>
-            <div className="numeric"><strong>Running tally:</strong> {totals.passengerCount} passengers, {totals.totalFare.toFixed(2)} total fare{selectedVehicle?.passenger_capacity != null && selectedVehicle.passenger_capacity > 0 && totals.passengerCount >= selectedVehicle.passenger_capacity ? <span style={{ color: 'var(--danger)' }}> (vehicle at capacity)</span> : null}</div>
+            <div className="numeric"><strong>Running tally:</strong> {totals.passengerCount} passengers, {totals.totalFare.toFixed(2)} total fare{vehicleAtCapacity ? <span className="badge badge--danger" style={{ marginLeft: '8px' }}>At capacity ({totals.passengerCount}/{vehicleCapacity})</span> : null}{vehicleOverCapacity ? <span className="badge badge--danger" style={{ marginLeft: '8px' }}>Over capacity ({totals.passengerCount}/{vehicleCapacity})</span> : null}</div>
             {!isFinalized ? (showFinalizeForm ? <form onSubmit={handleFinalize} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <label htmlFor="departureTime">Departure time</label>
               <input id="departureTime" type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} className="input" required />

@@ -35,7 +35,7 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "${DB_USER}", "-d", "${DB_NAME}"]
       interval: 10s

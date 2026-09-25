@@ -273,15 +273,19 @@ function DailyRemittancePage() {
           <label htmlFor="driver">Driver</label>
           {selectedAvailable.assigned_driver_id && !differentDriver ? <p>{selectedAvailable.assigned_driver_full_name}</p> : null}
           {!selectedAvailable.assigned_driver_id ? <p>No assigned driver. Select a driver below.</p> : null}
-          <label style={{ display: 'block', margin: '12px 0' }}>
-            <input type="checkbox" checked={differentDriver} onChange={(event) => setDifferentDriver(event.target.checked)} /> Different driver today
-          </label>
+          {selectedAvailable.assigned_driver_id ? (
+            <label style={{ display: 'block', margin: '12px 0' }}>
+              <input type="checkbox" checked={differentDriver} onChange={(event) => setDifferentDriver(event.target.checked)} /> Different driver today
+            </label>
+          ) : null}
           {differentDriver || !selectedAvailable.assigned_driver_id ? (
+            <select id="driver" value={driverId} onChange={(event) => setDriverId(event.target.value)} required className="input" style={{ display: 'block', width: '100%', margin: '4px 0 12px' }}>
+              <option value="">Select a driver</option>
+              {drivers.map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name}</option>)}
+            </select>
+          ) : null}
+          {selectedAvailable.assigned_driver_id && differentDriver ? (
             <div style={{ marginBottom: '12px', paddingLeft: '12px', borderLeft: '3px solid var(--accent)' }}>
-              <select id="driver" value={driverId} onChange={(event) => setDriverId(event.target.value)} required className="input" style={{ display: 'block', width: '100%', margin: '4px 0 12px' }}>
-                <option value="">Select a driver</option>
-                {drivers.map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name}</option>)}
-              </select>
               <label htmlFor="substituteFee">Substitute fee</label>
               <input id="substituteFee" type="number" min="0" step="0.01" value={substituteFee} onChange={(event) => setSubstituteFee(event.target.value)} className="input numeric" style={{ display: 'block', marginTop: '4px' }} />
               <p>Fee owed by the substitute driver to the assigned driver.</p>

@@ -240,7 +240,8 @@ function DailyRemittanceHistoryPage() {
                   <td>{vehicle?.plate_number || item.vehicle}</td>
                   <td className="numeric">{item.net_pay}</td>
                   <td>
-                    <span className={`badge ${item.is_finalized ? 'badge--success' : 'badge--pending'}`}>{item.is_finalized ? 'Finalized' : 'In Progress'}</span>
+                    <span className={`status-dot ${item.is_cancelled ? 'status-dot--danger' : item.is_finalized ? 'status-dot--success' : 'status-dot--pending'}`} style={{ marginRight: '6px' }} />
+                    <span className={`badge ${item.is_cancelled ? 'badge--danger' : item.is_finalized ? 'badge--success' : 'badge--pending'}`}>{item.is_cancelled ? 'Cancelled' : item.is_finalized ? 'Finalized' : 'In Progress'}</span>
                   </td>
                 </tr>
                 {expandedId === item.id ? <tr><td colSpan="4">{isLoadingDetail || !detail ? <p>Loading details...</p> : <>

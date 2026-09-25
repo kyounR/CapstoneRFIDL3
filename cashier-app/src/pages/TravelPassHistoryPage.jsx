@@ -280,8 +280,8 @@ function TravelPassHistoryPage() {
                     <td className="numeric">{travelPass.total_passengers}</td>
                     <td className="numeric">{travelPass.total_fare}</td>
                     <td>
-                      <span className={`status-dot ${travelPass.is_finalized ? 'status-dot--success' : 'status-dot--pending'}`} style={{ marginRight: '6px' }} />
-                      <span className={`badge ${travelPass.is_finalized ? 'badge--success' : 'badge--pending'}`}>{travelPass.is_finalized ? 'Finalized' : 'In Progress'}</span>
+                      <span className={`status-dot ${travelPass.is_cancelled ? 'status-dot--danger' : travelPass.is_finalized ? 'status-dot--success' : 'status-dot--pending'}`} style={{ marginRight: '6px' }} />
+                      <span className={`badge ${travelPass.is_cancelled ? 'badge--danger' : travelPass.is_finalized ? 'badge--success' : 'badge--pending'}`}>{travelPass.is_cancelled ? 'Cancelled' : travelPass.is_finalized ? 'Finalized' : 'In Progress'}</span>
                     </td>
                   </tr>
                   {isExpanded ? (

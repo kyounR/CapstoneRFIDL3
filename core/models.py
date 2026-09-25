@@ -57,6 +57,7 @@ class Passenger(models.Model):
 		default=DiscountType.REGULAR,
 	)
 	date_registered = models.DateTimeField(auto_now_add=True)
+	is_active = models.BooleanField(default=True)
 
 	def __str__(self):
 		return self.full_name
@@ -108,6 +109,7 @@ class Card(models.Model):
 
 class Line(models.Model):
 	name = models.CharField(max_length=255, unique=True)
+	is_active = models.BooleanField(default=True)
 
 	def __str__(self):
 		return self.name
@@ -115,6 +117,7 @@ class Line(models.Model):
 
 class Terminal(models.Model):
 	name = models.CharField(max_length=255, unique=True)
+	is_active = models.BooleanField(default=True)
 
 	def __str__(self):
 		return self.name
@@ -133,6 +136,7 @@ class Driver(models.Model):
 class Dispatcher(models.Model):
 	full_name = models.CharField(max_length=255)
 	contact_number = models.CharField(max_length=30, blank=True, null=True)
+	is_active = models.BooleanField(default=True)
 
 	def __str__(self):
 		return self.full_name

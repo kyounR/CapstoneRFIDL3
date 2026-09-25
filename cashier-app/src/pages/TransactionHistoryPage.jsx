@@ -101,6 +101,7 @@ function TransactionHistoryPage() {
             <thead>
               <tr>
                 <th>Timestamp</th>
+                <th>Vehicle</th>
                 <th>Passenger</th>
                 <th>Destination</th>
                 <th>Fare Type</th>
@@ -112,6 +113,7 @@ function TransactionHistoryPage() {
               {visibleTransactions.map((transaction) => (
                 <tr key={transaction.id}>
                   <td>{new Date(transaction.timestamp).toLocaleString()}</td>
+                  <td>{transaction.vehicle_plate_number ?? '--'}</td>
                   <td>{transaction.passenger_name || (transaction.source === 'manual' ? 'Cash' : transaction.card_uid || '-')}</td>
                   <td>{transaction.destination_name || '-'}</td>
                   <td>{formatFareType(transaction.fare_type)}</td>

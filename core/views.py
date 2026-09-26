@@ -8,7 +8,6 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models.deletion import ProtectedError
 from django.db.models import Count, Max, Q, Sum
 from django.db.models.functions import Coalesce
 from django.forms.models import model_to_dict
@@ -150,20 +149,6 @@ class AdminAuditMixin:
         }
         if changes:
             log_admin_action(self.request.user, 'updated', instance, changes)
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        object_repr = str(instance)
-        try:
-            self.perform_destroy(instance)
-        except ProtectedError:
-            return Response(
-                {'error': f"This {instance._meta.verbose_name} is still in use and can't be deleted."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        log_admin_action(request.user, 'deleted', instance, object_repr=object_repr)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
 
 def _get_report_date_range(request):
     start_date_param = request.query_params.get('start_date')
@@ -2632,6 +2617,7 @@ def manifest_entry_untally_view(request):
 class DestinationViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     serializer_class = DestinationSerializer
     permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post', 'patch', 'head', 'options']
 
     def get_queryset(self):
         queryset = Destination.objects.all().order_by('base_fare', 'destination_name')
@@ -2648,7 +2634,7 @@ class DestinationViewSet(AdminAuditMixin, viewsets.ModelViewSet):
         super().initial(request, *args, **kwargs)
         if not _has_cashier_or_admin_role(request):
             raise PermissionDenied('Only cashier or admin users can access this endpoint.')
-        # For write operations (create, update, delete), admin only
+        # For write operations (create, update), admin only
         if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
             if not _has_admin_role(request):
                 raise PermissionDenied('Only admin users can modify destinations.')
@@ -2657,6 +2643,7 @@ class DestinationViewSet(AdminAuditMixin, viewsets.ModelViewSet):
 class VehicleViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     serializer_class = VehicleSerializer
     permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post', 'patch', 'head', 'options']
 
     def get_queryset(self):
         queryset = Vehicle.objects.all().order_by('plate_number')
@@ -2670,7 +2657,7 @@ class VehicleViewSet(AdminAuditMixin, viewsets.ModelViewSet):
         super().initial(request, *args, **kwargs)
         if not _has_cashier_or_admin_role(request):
             raise PermissionDenied('Only cashier or admin users can access this endpoint.')
-        # For write operations (create, update, delete), admin only
+        # For write operations (create, update), admin only
         if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
             if not _has_admin_role(request):
                 raise PermissionDenied('Only admin users can modify vehicles.')
@@ -2680,12 +2667,13 @@ class LineViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     queryset = Line.objects.all().order_by('name')
     serializer_class = LineSerializer
     permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post', 'patch', 'head', 'options']
 
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)
         if not _has_cashier_or_admin_role(request):
             raise PermissionDenied('Only cashier or admin users can access this endpoint.')
-        # For write operations (create, update, delete), admin only
+        # For write operations (create, update), admin only
         if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
             if not _has_admin_role(request):
                 raise PermissionDenied('Only admin users can modify lines.')
@@ -2695,12 +2683,13 @@ class TerminalViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     queryset = Terminal.objects.all().order_by('name')
     serializer_class = TerminalSerializer
     permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post', 'patch', 'head', 'options']
 
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)
         if not _has_cashier_or_admin_role(request):
             raise PermissionDenied('Only cashier or admin users can access this endpoint.')
-        # For write operations (create, update, delete), admin only
+        # For write operations (create, update), admin only
         if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
             if not _has_admin_role(request):
                 raise PermissionDenied('Only admin users can modify terminals.')
@@ -2710,12 +2699,13 @@ class DriverViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     queryset = Driver.objects.all().order_by('full_name')
     serializer_class = DriverSerializer
     permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post', 'patch', 'head', 'options']
 
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)
         if not _has_cashier_or_admin_role(request):
             raise PermissionDenied('Only cashier or admin users can access this endpoint.')
-        # For write operations (create, update, delete), admin only
+        # For write operations (create, update), admin only
         if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
             if not _has_admin_role(request):
                 raise PermissionDenied('Only admin users can modify drivers.')
@@ -2725,12 +2715,13 @@ class DispatcherViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     queryset = Dispatcher.objects.all().order_by('full_name')
     serializer_class = DispatcherSerializer
     permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post', 'patch', 'head', 'options']
 
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)
         if not _has_cashier_or_admin_role(request):
             raise PermissionDenied('Only cashier or admin users can access this endpoint.')
-        # For write operations (create, update, delete), admin only
+        # For write operations (create, update), admin only
         if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
             if not _has_admin_role(request):
                 raise PermissionDenied('Only admin users can modify dispatchers.')
@@ -2740,12 +2731,13 @@ class PassengerViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     queryset = Passenger.objects.all().order_by('full_name')
     serializer_class = PassengerSerializer
     permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post', 'patch', 'head', 'options']
 
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)
         if not _has_cashier_or_admin_role(request):
             raise PermissionDenied('Only cashier or admin users can access this endpoint.')
-        # For write operations (create, update, delete), admin only
+        # For write operations (create, update), admin only
         if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
             if not _has_admin_role(request):
                 raise PermissionDenied('Only admin users can modify passengers.')
@@ -2755,12 +2747,13 @@ class CardViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     queryset = Card.objects.all().order_by('-date_issued')
     serializer_class = CardSerializer
     permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post', 'patch', 'head', 'options']
 
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)
         if not _has_cashier_or_admin_role(request):
             raise PermissionDenied('Only cashier or admin users can access this endpoint.')
-        # For write operations (create, update, delete), admin only
+        # For write operations (create, update), admin only
         if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
             if not _has_admin_role(request):
                 raise PermissionDenied('Only admin users can modify cards.')

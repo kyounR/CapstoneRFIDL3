@@ -146,15 +146,13 @@ function PassengerManager() {
     }
   }
 
-  async function handleDelete(passenger) {
-    if (!window.confirm('Delete this passenger?')) return
-
+  async function handleToggleActive(passenger) {
     resetFeedback()
     try {
-      await api.delete(`passengers/${passenger.id}/`)
+      await api.patch(`passengers/${passenger.id}/`, { is_active: !passenger.is_active })
       fetchPassengers()
     } catch (requestError) {
-      setError(getErrorMessage(requestError, 'Could not delete passenger.'))
+      setError(getErrorMessage(requestError, 'Could not update passenger.'))
     }
   }
 
@@ -207,17 +205,18 @@ function PassengerManager() {
           <input type="search" value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="Search passengers..." aria-label="Search Passengers" className="input" style={{ display: 'block', width: '100%', marginBottom: '12px' }} />
           <div style={{ overflowX: 'auto' }}>
             <table className="table">
-              <thead><tr>{PASSENGER_FIELDS.map((field) => <th key={field.key}>{field.label}</th>)}<th>Actions</th></tr></thead>
+              <thead><tr>{PASSENGER_FIELDS.map((field) => <th key={field.key}>{field.label}</th>)}<th>Status</th><th>Actions</th></tr></thead>
               <tbody>
                 {visiblePassengers.length ? visiblePassengers.map((passenger) => (
                   <tr key={passenger.id}>
                     {PASSENGER_FIELDS.map((field) => <td key={field.key}>{getDisplayValue(passenger, field)}</td>)}
+                    <td><span className={`badge ${passenger.is_active ? 'badge--success' : 'badge--danger'}`}><span className={`status-dot ${passenger.is_active ? 'status-dot--success' : 'status-dot--danger'}`} style={{ marginRight: '6px' }} />{passenger.is_active ? 'Active' : 'Inactive'}</span></td>
                     <td>
                       <button type="button" onClick={() => openEditForm(passenger)} className="btn-secondary">Edit</button>
-                      <button type="button" onClick={() => handleDelete(passenger)} className="btn-secondary" style={{ marginLeft: '8px' }}>Delete</button>
+                      <button type="button" onClick={() => handleToggleActive(passenger)} className="btn-secondary" style={{ marginLeft: '8px' }}>{passenger.is_active ? 'Deactivate' : 'Activate'}</button>
                     </td>
                   </tr>
-                )) : <tr><td colSpan={PASSENGER_FIELDS.length + 1}>{normalizedSearchText ? 'No matching records found.' : 'No records found.'}</td></tr>}
+                )) : <tr><td colSpan={PASSENGER_FIELDS.length + 2}>{normalizedSearchText ? 'No matching records found.' : 'No records found.'}</td></tr>}
               </tbody>
             </table>
           </div>

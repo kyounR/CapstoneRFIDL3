@@ -72,6 +72,13 @@ function EntityManager({ endpoint, title, fields, getSubmitWarning }) {
     return record[field.key] ?? '-'
   }
 
+  function renderTableValue(record, field) {
+    const color = field.badgeColors?.[record[field.key]]
+    if (!color) return getDisplayValue(record, field)
+
+    return <span className={`badge badge--${color}`}><span className={`status-dot status-dot--${color}`} style={{ marginRight: '6px' }} />{getDisplayValue(record, field)}</span>
+  }
+
   const normalizedSearchText = searchText.trim().toLowerCase()
   const hasActiveField = fields.some((field) => field.key === 'is_active')
   const tableFields = fields.filter((field) => field.key !== 'is_active')
@@ -202,7 +209,7 @@ function EntityManager({ endpoint, title, fields, getSubmitWarning }) {
             <tbody>
               {visibleRecords.length ? visibleRecords.map((record) => (
                 <tr key={record.id}>
-                  {tableFields.map((field) => <td key={field.key} className={field.type === 'number' ? 'numeric' : undefined}>{getDisplayValue(record, field)}</td>)}
+                  {tableFields.map((field) => <td key={field.key} className={field.type === 'number' ? 'numeric' : undefined}>{renderTableValue(record, field)}</td>)}
                   {hasActiveField ? <td><span className={`badge ${record.is_active ? 'badge--success' : 'badge--danger'}`}><span className={`status-dot ${record.is_active ? 'status-dot--success' : 'status-dot--danger'}`} style={{ marginRight: '6px' }} />{record.is_active ? 'Active' : 'Inactive'}</span></td> : null}
                   <td>
                     <button type="button" onClick={() => openEditForm(record)} className="btn-secondary">Edit</button>

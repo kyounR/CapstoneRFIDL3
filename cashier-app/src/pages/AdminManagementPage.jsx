@@ -57,7 +57,7 @@ const MANAGEMENT_TABS = [
   { label: 'Cards', endpoint: 'cards/', fields: [
     { key: 'uid', label: 'Card UID', type: 'text', required: true },
     { key: 'passenger', label: 'Passenger', type: 'select', relatedEndpoint: 'passengers/', optionLabel: 'full_name' },
-    { key: 'status', label: 'Status', type: 'select', required: true, default: 'active', options: [
+    { key: 'status', label: 'Status', type: 'select', required: true, default: 'active', badgeColors: { active: 'success', lost: 'danger', deactivated: 'danger' }, options: [
       { value: 'active', label: 'Active' },
       { value: 'lost', label: 'Lost' },
       { value: 'deactivated', label: 'Deactivated' },

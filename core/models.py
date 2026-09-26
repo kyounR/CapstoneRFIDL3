@@ -128,6 +128,7 @@ class Driver(models.Model):
 	contact_number = models.CharField(max_length=30, blank=True, null=True)
 	participates_in_savings = models.BooleanField(default=True)
 	participates_in_trust_fund = models.BooleanField(default=True)
+	is_active = models.BooleanField(default=True)
 
 	def __str__(self):
 		return self.full_name

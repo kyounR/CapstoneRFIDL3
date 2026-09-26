@@ -2713,6 +2713,12 @@ class DriverViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     http_method_names = ['get', 'post', 'patch', 'head', 'options']
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.request.query_params.get('active_only', '').lower() == 'true':
+            queryset = queryset.filter(is_active=True)
+        return queryset
+
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)
         if not _has_cashier_or_admin_role(request):

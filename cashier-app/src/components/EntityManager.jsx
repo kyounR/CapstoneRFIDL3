@@ -47,7 +47,7 @@ function EntityManager({ endpoint, title, fields, getSubmitWarning }) {
 
       try {
         const results = await Promise.all(relatedFields.map(async (field) => {
-          const response = await api.get(field.relatedEndpoint)
+          const response = await api.get(field.relatedEndpoint, { params: { active_only: true } })
           return [field.key, getListData(response.data)]
         }))
         setRelatedOptions(Object.fromEntries(results))

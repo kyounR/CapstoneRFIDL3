@@ -87,7 +87,7 @@ function TravelPassPage() {
 
     async function fetchTerminals() {
       try {
-        const response = await api.get('terminals/')
+        const response = await api.get('terminals/?active_only=true')
         setTerminals(getListData(response.data))
       } catch (requestError) {
         setError(requestError.response?.data?.detail || 'Could not load terminals.')
@@ -98,7 +98,7 @@ function TravelPassPage() {
 
     async function fetchDispatchers() {
       try {
-        const response = await api.get('dispatchers/')
+        const response = await api.get('dispatchers/?active_only=true')
         setDispatchers(getListData(response.data))
       } catch (requestError) {
         setError(requestError.response?.data?.detail || 'Could not load dispatchers.')

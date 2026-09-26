@@ -36,19 +36,23 @@ const MANAGEMENT_TABS = [
   ] },
   { label: 'Lines', endpoint: 'lines/', fields: [
     { key: 'name', label: 'Name', type: 'text', required: true },
+    { key: 'is_active', label: 'Active', type: 'checkbox', default: true },
   ] },
   { label: 'Terminals', endpoint: 'terminals/', fields: [
     { key: 'name', label: 'Name', type: 'text', required: true },
+    { key: 'is_active', label: 'Active', type: 'checkbox', default: true },
   ] },
   { label: 'Drivers', endpoint: 'drivers/', fields: [
     { key: 'full_name', label: 'Full Name', type: 'text', required: true },
     { key: 'contact_number', label: 'Contact Number', type: 'text' },
     { key: 'participates_in_savings', label: 'Participates in Savings', type: 'checkbox', default: true },
     { key: 'participates_in_trust_fund', label: 'Participates in Trust Fund', type: 'checkbox', default: true },
+    { key: 'is_active', label: 'Active', type: 'checkbox', default: true },
   ] },
   { label: 'Dispatchers', endpoint: 'dispatchers/', fields: [
     { key: 'full_name', label: 'Full Name', type: 'text', required: true },
     { key: 'contact_number', label: 'Contact Number', type: 'text' },
+    { key: 'is_active', label: 'Active', type: 'checkbox', default: true },
   ] },
   { label: 'Cards', endpoint: 'cards/', fields: [
     { key: 'uid', label: 'Card UID', type: 'text', required: true },

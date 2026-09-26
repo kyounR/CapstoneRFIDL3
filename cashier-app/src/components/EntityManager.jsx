@@ -73,6 +73,8 @@ function EntityManager({ endpoint, title, fields, getSubmitWarning }) {
   }
 
   const normalizedSearchText = searchText.trim().toLowerCase()
+  const hasActiveField = fields.some((field) => field.key === 'is_active')
+  const tableFields = fields.filter((field) => field.key !== 'is_active')
   const visibleRecords = normalizedSearchText
     ? records.filter((record) => fields.some((field) => String(getDisplayValue(record, field)).toLowerCase().includes(normalizedSearchText)))
     : records
@@ -137,15 +139,13 @@ function EntityManager({ endpoint, title, fields, getSubmitWarning }) {
     }
   }
 
-  async function handleDelete(record) {
-    if (!window.confirm(`Delete this ${title.slice(0, -1).toLowerCase()}?`)) return
-
+  async function handleToggleActive(record) {
     setError('')
     try {
-      await api.delete(`${endpoint}${record.id}/`)
+      await api.patch(`${endpoint}${record.id}/`, { is_active: !record.is_active })
       fetchRecords()
     } catch (requestError) {
-      setError(requestError.response?.data?.error || requestError.response?.data?.detail || 'Could not delete this record.')
+      setError(requestError.response?.data?.error || requestError.response?.data?.detail || 'Could not update this record.')
     }
   }
 
@@ -198,17 +198,18 @@ function EntityManager({ endpoint, title, fields, getSubmitWarning }) {
           />
           <div style={{ overflowX: 'auto' }}>
           <table className="table">
-            <thead><tr>{fields.map((field) => <th key={field.key}>{field.label}</th>)}<th>Actions</th></tr></thead>
+            <thead><tr>{tableFields.map((field) => <th key={field.key}>{field.label}</th>)}{hasActiveField ? <th>Status</th> : null}<th>Actions</th></tr></thead>
             <tbody>
               {visibleRecords.length ? visibleRecords.map((record) => (
                 <tr key={record.id}>
-                  {fields.map((field) => <td key={field.key} className={field.type === 'number' ? 'numeric' : undefined}>{getDisplayValue(record, field)}</td>)}
+                  {tableFields.map((field) => <td key={field.key} className={field.type === 'number' ? 'numeric' : undefined}>{getDisplayValue(record, field)}</td>)}
+                  {hasActiveField ? <td><span className={`badge ${record.is_active ? 'badge--success' : 'badge--danger'}`}><span className={`status-dot ${record.is_active ? 'status-dot--success' : 'status-dot--danger'}`} style={{ marginRight: '6px' }} />{record.is_active ? 'Active' : 'Inactive'}</span></td> : null}
                   <td>
                     <button type="button" onClick={() => openEditForm(record)} className="btn-secondary">Edit</button>
-                    <button type="button" onClick={() => handleDelete(record)} className="btn-secondary" style={{ marginLeft: '8px' }}>Delete</button>
+                    {hasActiveField ? <button type="button" onClick={() => handleToggleActive(record)} className="btn-secondary" style={{ marginLeft: '8px' }}>{record.is_active ? 'Deactivate' : 'Activate'}</button> : null}
                   </td>
                 </tr>
-              )) : <tr><td colSpan={fields.length + 1}>{normalizedSearchText ? 'No matching records found.' : 'No records found.'}</td></tr>}
+              )) : <tr><td colSpan={fields.length + (hasActiveField ? 1 : 0) + 1}>{normalizedSearchText ? 'No matching records found.' : 'No records found.'}</td></tr>}
             </tbody>
           </table>
           </div>

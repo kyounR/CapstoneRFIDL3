@@ -36,7 +36,7 @@ function DailyRemittancePage() {
     try {
       const [availableResponse, driverResponse] = await Promise.all([
         api.get('remittances/available/'),
-        api.get('drivers/'),
+        api.get('drivers/?active_only=true'),
       ])
       setAvailableEntries(getListData(availableResponse.data))
       setDrivers(getListData(driverResponse.data))

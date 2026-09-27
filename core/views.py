@@ -2474,6 +2474,7 @@ def manifest_entry_untally_view(request):
                 manifest_trip=manifest,
                 fare_type='discount' if passenger_type == 'discount' else 'base',
                 success=False,
+                is_correction=True,
                 message='Tally correction: Cannot untally a finalized ManifestTrip.',
             )
             return Response(
@@ -2493,6 +2494,7 @@ def manifest_entry_untally_view(request):
                 manifest_trip=manifest,
                 fare_type='discount' if passenger_type == 'discount' else 'base',
                 success=False,
+                is_correction=True,
                 message='Tally correction: Destination not found or inactive.',
             )
             return Response({'error': 'Destination not found or inactive.'}, status=status.HTTP_404_NOT_FOUND)
@@ -2508,6 +2510,7 @@ def manifest_entry_untally_view(request):
                 manifest_trip=manifest,
                 fare_type='discount' if passenger_type == 'discount' else 'base',
                 success=False,
+                is_correction=True,
                 message=mismatch_message,
             )
             return Response({'error': mismatch_message}, status=status.HTTP_400_BAD_REQUEST)
@@ -2527,6 +2530,7 @@ def manifest_entry_untally_view(request):
                 manifest_trip=manifest,
                 fare_type='discount' if passenger_type == 'discount' else 'base',
                 success=False,
+                is_correction=True,
                 message='Tally correction: No manifest entry exists for this trip and destination.',
             )
             return Response(
@@ -2544,6 +2548,7 @@ def manifest_entry_untally_view(request):
                 manifest_trip=manifest,
                 fare_type='discount' if passenger_type == 'discount' else 'base',
                 success=False,
+                is_correction=True,
                 message='Tally correction: Cannot untally because passenger_count is already zero.',
             )
             return Response(
@@ -2565,6 +2570,7 @@ def manifest_entry_untally_view(request):
                 manifest_trip=manifest,
                 fare_type='base',
                 success=False,
+                is_correction=True,
                 message=message,
             )
             return Response(
@@ -2587,6 +2593,7 @@ def manifest_entry_untally_view(request):
                 manifest_trip=manifest,
                 fare_type='discount',
                 success=False,
+                is_correction=True,
                 message='Tally correction: Cannot untally discount passenger because discount_count is already zero.',
             )
             return Response(
@@ -2609,6 +2616,8 @@ def manifest_entry_untally_view(request):
             manifest_trip=manifest,
             fare_type='discount' if passenger_type == 'discount' else 'base',
             success=True,
+            is_correction=True,
+            fare_charged=-(destination.discount_fare if passenger_type == 'discount' else destination.base_fare),
             message=f'Tally correction: Removed {passenger_type} passenger from tally.',
         )
 

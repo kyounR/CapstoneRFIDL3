@@ -598,6 +598,7 @@ class TapLog(models.Model):
 	fare_type = models.CharField(max_length=20, choices=[('base', 'Base'), ('discount', 'Discount')], null=True, blank=True)
 	fare_charged = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
 	remaining_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+	is_correction = models.BooleanField(default=False)
 	refunded = models.BooleanField(default=False)
 	refunded_at = models.DateTimeField(null=True, blank=True)
 	refunded_by = models.ForeignKey(

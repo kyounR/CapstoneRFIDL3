@@ -1180,15 +1180,33 @@ def reports_view(request):
     tx_qs = Transaction.objects.filter(timestamp__date=report_date)
 
     totals = tx_qs.aggregate(
-        total_topups=Sum('amount', filter=Q(transaction_type=Transaction.TransactionType.TOPUP)),
-        total_fares=Sum('amount', filter=Q(transaction_type=Transaction.TransactionType.FARE)),
-        transaction_count=Count('id'),
+        topup_amount=Sum('amount', filter=Q(transaction_type=Transaction.TransactionType.TOPUP)),
+        topup_reversal_amount=Sum('amount', filter=Q(transaction_type=Transaction.TransactionType.TOPUP_REVERSAL)),
+        fare_amount=Sum('amount', filter=Q(transaction_type=Transaction.TransactionType.FARE)),
+        refund_amount=Sum('amount', filter=Q(transaction_type=Transaction.TransactionType.REFUND)),
+        transaction_count=Count(
+            'id',
+            filter=~Q(transaction_type__in=[
+                Transaction.TransactionType.REFUND,
+                Transaction.TransactionType.TOPUP_REVERSAL,
+            ]),
+        ),
     )
 
     cashier_breakdown_qs = (
-        tx_qs.filter(transaction_type=Transaction.TransactionType.TOPUP, cashier__isnull=False)
+        tx_qs.filter(
+            transaction_type__in=[
+                Transaction.TransactionType.TOPUP,
+                Transaction.TransactionType.TOPUP_REVERSAL,
+            ],
+            cashier__isnull=False,
+        )
         .values('cashier', 'cashier__username', 'cashier__full_name')
-        .annotate(total_topups=Sum('amount'), topup_count=Count('id'))
+        .annotate(
+            topup_amount=Sum('amount', filter=Q(transaction_type=Transaction.TransactionType.TOPUP)),
+            topup_reversal_amount=Sum('amount', filter=Q(transaction_type=Transaction.TransactionType.TOPUP_REVERSAL)),
+            topup_count=Count('id', filter=Q(transaction_type=Transaction.TransactionType.TOPUP)),
+        )
         .order_by('cashier__username')
     )
 
@@ -1197,7 +1215,7 @@ def reports_view(request):
             'cashier_id': row['cashier'],
             'cashier_username': row['cashier__username'],
             'cashier_full_name': row['cashier__full_name'],
-            'total_topups': row['total_topups'] or Decimal('0.00'),
+            'total_topups': (row['topup_amount'] or Decimal('0.00')) - (row['topup_reversal_amount'] or Decimal('0.00')),
             'topup_count': row['topup_count'],
         }
         for row in cashier_breakdown_qs
@@ -1240,8 +1258,8 @@ def reports_view(request):
     return Response(
         {
             'date': report_date,
-            'total_topups_amount': totals['total_topups'] or Decimal('0.00'),
-            'total_fare_amount': totals['total_fares'] or Decimal('0.00'),
+            'total_topups_amount': (totals['topup_amount'] or Decimal('0.00')) - (totals['topup_reversal_amount'] or Decimal('0.00')),
+            'total_fare_amount': (totals['fare_amount'] or Decimal('0.00')) - (totals['refund_amount'] or Decimal('0.00')),
             'transaction_count': totals['transaction_count'] or 0,
             'cashier_topup_breakdown': cashier_breakdown,
             'cash_fare_total_amount': cash_fare_totals['total_cash_fares'] or Decimal('0.00'),

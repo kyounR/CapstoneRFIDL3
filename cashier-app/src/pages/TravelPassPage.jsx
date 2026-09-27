@@ -494,33 +494,35 @@ function TravelPassPage() {
               const discountRemoveKey = `${destination.id}-discount-remove`
               const destinationReceiptId = receiptIds[destination.id]
               const isSelectedForTap = tapSelection?.destination_id === destination.id
-              const compactButtonStyle = { minWidth: '44px', height: '44px', padding: '0 12px' }
+              const removeButtonStyle = { minWidth: '32px', height: '36px', padding: '0 8px' }
+              const addButtonStyle = { minWidth: '64px', height: '44px', padding: '0 14px' }
+              const targetButtonStyle = { width: '36px', height: '36px', padding: 0 }
               return (
                 <div key={destination.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', borderColor: isSelectedForTap ? 'var(--success)' : 'var(--border)', boxShadow: isSelectedForTap ? '0 0 0 2px rgba(47, 191, 158, 0.18)' : 'none' }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                     <strong>{destination.destination_name}</strong>
-                    <span className="numeric" style={{ whiteSpace: 'nowrap' }}>{destination.base_fare}</span>
+                    {!isFinalized ? <button type="button" onClick={isSelectedForTap ? handleClearTapSelection : () => handleSetForTap(destination)} disabled={busyAction !== ''} className={isSelectedForTap ? 'btn-primary' : 'btn-secondary'} style={targetButtonStyle} title={isSelectedForTap ? `Clear ${destination.destination_name} tap selection` : `Set ${destination.destination_name} as next tap`} aria-label={isSelectedForTap ? `Clear ${destination.destination_name} tap selection` : `Set ${destination.destination_name} as next tap`}>
+                      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M12 2v4M12 18v4M2 12h4M18 12h4" fill="none" stroke="currentColor" strokeWidth="2" /></svg>
+                    </button> : null}
                   </div>
+                  <div className="numeric" style={{ fontSize: '0.9rem' }}>{destination.base_fare}</div>
                   {atCapacity ? <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span className="badge badge--danger">At capacity</span><button type="button" onClick={switchVehicle} className="btn-secondary" style={{ padding: '3px 8px', fontSize: '0.8rem' }}>Switch</button></div> : null}
-                  <div className="numeric" style={{ fontSize: '0.9rem' }}>Reg {entry.passenger_count - entry.discount_count} - Disc {entry.discount_count} - Total {entry.passenger_count}</div>
                   {!isFinalized ? <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '8px', borderTop: '1px solid var(--border)' }}>
-                      <span style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600 }}>Set for next tap</span>
-                      <button type="button" onClick={isSelectedForTap ? handleClearTapSelection : () => handleSetForTap(destination)} disabled={busyAction !== ''} className="btn-primary" style={{ ...compactButtonStyle, padding: 0 }} title="Tap" aria-label={isSelectedForTap ? `Clear ${destination.destination_name} tap selection` : `Set ${destination.destination_name} for next tap`}>
-                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M12 2v4M12 18v4M2 12h4M18 12h4" fill="none" stroke="currentColor" strokeWidth="2" /></svg>
-                      </button>
-                    </div>
                     {isSelectedForTap ? <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--success)' }}><span className="badge badge--success">Tap armed</span><button type="button" onClick={handleClearTapSelection} disabled={busyAction !== ''} className="btn-secondary" style={{ padding: '2px 6px', fontSize: '0.75rem' }}>{busyAction === 'clear-tap-selection' ? 'Clearing...' : 'Clear'}</button></div> : null}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ minWidth: '28px', fontSize: '0.8rem', fontWeight: 600 }}>Reg</span>
-                      <button type="button" onClick={() => handleTally(destination, 'regular', 'remove')} disabled={entry.passenger_count - entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={compactButtonStyle} aria-label={`Remove regular passenger from ${destination.destination_name}`}>{busyAction === regularRemoveKey ? '...' : '-'}</button>
-                      <button type="button" onClick={() => handleTally(destination, 'regular', 'add')} disabled={busyAction !== ''} className="btn-primary" style={compactButtonStyle} aria-label={`Add regular passenger to ${destination.destination_name}`}>{busyAction === regularAddKey ? '...' : '+'}</button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingTop: '8px', borderTop: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600 }}>Regular</span>
+                        <button type="button" onClick={() => handleTally(destination, 'regular', 'remove')} disabled={entry.passenger_count - entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={removeButtonStyle} aria-label={`Remove regular passenger from ${destination.destination_name}`}>{busyAction === regularRemoveKey ? '...' : '-'}</button>
+                        <span className="numeric" style={{ minWidth: '24px', textAlign: 'center', fontWeight: 600 }}>{entry.passenger_count - entry.discount_count}</span>
+                        <button type="button" onClick={() => handleTally(destination, 'regular', 'add')} disabled={busyAction !== ''} className="btn-primary" style={addButtonStyle} aria-label={`Add regular passenger to ${destination.destination_name}`}>{busyAction === regularAddKey ? '...' : '+1'}</button>
+                      </div>
+                      {!destination.discount_exempt ? <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600 }}>Discount</span>
+                        <button type="button" onClick={() => handleTally(destination, 'discount', 'remove')} disabled={entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={removeButtonStyle} aria-label={`Remove discount passenger from ${destination.destination_name}`}>{busyAction === discountRemoveKey ? '...' : '-'}</button>
+                        <span className="numeric" style={{ minWidth: '24px', textAlign: 'center', fontWeight: 600 }}>{entry.discount_count}</span>
+                        <button type="button" onClick={() => handleTally(destination, 'discount', 'add')} disabled={busyAction !== ''} className="btn-primary" style={addButtonStyle} aria-label={`Add discount passenger to ${destination.destination_name}`}>{busyAction === discountAddKey ? '...' : '+1'}</button>
+                      </div> : null}
                     </div>
-                    {!destination.discount_exempt ? <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minHeight: '44px' }}>
-                      <span style={{ minWidth: '28px', fontSize: '0.8rem', fontWeight: 600 }}>Disc</span>
-                      <button type="button" onClick={() => handleTally(destination, 'discount', 'remove')} disabled={entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={compactButtonStyle} aria-label={`Remove discount passenger from ${destination.destination_name}`}>{busyAction === discountRemoveKey ? '...' : '-'}</button>
-                      <button type="button" onClick={() => handleTally(destination, 'discount', 'add')} disabled={busyAction !== ''} className="btn-primary" style={compactButtonStyle} aria-label={`Add discount passenger to ${destination.destination_name}`}>{busyAction === discountAddKey ? '...' : '+'}</button>
-                    </div> : <div aria-hidden="true" style={{ minHeight: '44px' }} />}
                     {destinationReceiptId ? <button type="button" onClick={() => setReceiptId(destinationReceiptId)} className="btn-secondary" style={{ alignSelf: 'flex-start', padding: '5px 9px', fontSize: '0.8rem' }}>Print Boarding Confirmation</button> : null}
                   </> : <div aria-hidden="true" style={{ minHeight: '140px' }} />}
                 </div>

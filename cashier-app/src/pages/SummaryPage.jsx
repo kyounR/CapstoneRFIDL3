@@ -254,7 +254,7 @@ function SummaryPage() {
                             <thead><tr><th>Destination</th><th>Fare Type</th><th>Amount</th><th>Timestamp</th></tr></thead>
                             <tbody>
                               {cashierCashFares.length ? cashierCashFares.map((fare) => <tr key={`${fare.destination_name}-${fare.timestamp}`}>
-                                <td>{fare.destination_name}</td>
+                                <td>{fare.destination_name}{fare.is_correction ? <span className="badge badge--pending" style={{ marginLeft: '8px' }}>Correction</span> : null}</td>
                                 <td>{fare.fare_type === 'discount' ? 'Discount' : 'Regular'}</td>
                                 <td className="numeric">{fare.fare_charged}</td>
                                 <td>{new Date(fare.timestamp).toLocaleString()}</td>

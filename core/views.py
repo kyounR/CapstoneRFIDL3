@@ -1330,6 +1330,7 @@ def cashier_cash_fares_report_view(request):
             'destination_name': tap_log.destination.destination_name if tap_log.destination else '',
             'fare_type': tap_log.fare_type,
             'fare_charged': tap_log.fare_charged,
+            'is_correction': tap_log.is_correction,
             'timestamp': tap_log.timestamp,
         }
         for tap_log in tap_logs

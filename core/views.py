@@ -918,7 +918,9 @@ def tap_log_recent_view(request):
         return _role_forbidden_response('view the tap log')
 
     date_param = request.query_params.get('date')
-    source_filter = {} if request.query_params.get('source') == 'all' else {'source': 'rfid'}
+    source_filter: dict[str, object] = {'is_correction': False}
+    if request.query_params.get('source') != 'all':
+        source_filter['source'] = 'rfid'
     if date_param is None:
         logs = TapLog.objects.filter(**source_filter).select_related('destination', 'manifest_trip', 'manifest_trip__vehicle').order_by('-timestamp')[:20]
     else:
@@ -1210,14 +1212,17 @@ def reports_view(request):
 
     cash_fare_totals = cash_fares_qs.aggregate(
         total_cash_fares=Sum('fare_charged'),
-        cash_fare_count=Count('id'),
+        cash_fare_count=Count('id', filter=Q(is_correction=False)),
     )
 
     # Cashier breakdown for cash fares
     cash_fare_breakdown_qs = (
         cash_fares_qs.filter(cashier__isnull=False)
         .values('cashier', 'cashier__username', 'cashier__full_name')
-        .annotate(total_cash_fares=Sum('fare_charged'), cash_fare_count=Count('id'))
+        .annotate(
+            total_cash_fares=Sum('fare_charged'),
+            cash_fare_count=Count('id', filter=Q(is_correction=False)),
+        )
         .order_by('cashier__username')
     )
 

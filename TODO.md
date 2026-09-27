@@ -2,20 +2,17 @@
 
 ## 🚀 Active & Pending Tasks
 - [ ] Add unit tests
-- [ ] More detail for audit log when a travel pass is canceled (use actual flavor text instead of `had_passengers = false`)
 - [ ] Granularity to CALTRANSCO management report *(Pending UAT & client feedback)*
-- [ ] General UI pass for every tab (fix Travel Pass tab styling being larger than others)
+- [ ] General UI pass for every tab
 - [ ] **(MAJOR)** Official government-compliant receipt implementation
-- [ ] Revise UI of the travel pass page
-- [ ] **(MAJOR) (HARDWARE)** Add an LED to the RFID reader and a buzzer/beeper for auditory feedback
-- [ ] Add clarification when vehicle is at capacity or over capacity
-- [ ] Another pass to Remittance Automation
+- [ ] **(MAJOR) (HARDWARE)** Add an LED to the RFID reader and a buzzer/beeper for auditory feedback (status: still waiting on delivery)
+
 
 ---
 
 ## 💬 To Be Discussed / Blocked
 - [ ] Allow one cardholder to pay for non-cardholders if they are part of the same group
-- [ ] Change "passenger" field in transaction history to be more representative (currently shows "cash" instead of name; just needs a rename)
+- [ ] Rented vehicle by a group of passengers, or if passenger has a lot of gear that takes up passenger capacity (charter)
 
 ---
 
@@ -50,6 +47,11 @@
 - [x] Revise current index logic of boarding code color shape
 - [x] Fix boarding status page to be non-scrollable and resized accordingly
 - [x] **(MAJOR)** Revise Remittance feature entirely and automate it (linked to Travel Pass)
+- [x] Add clarification when vehicle is at capacity or over capacity
+- [x] Transaction history should list down the vehicle plate (but not on boarding pass)
+- [x] Change "passenger" field in transaction history to be more representative (currently shows "cash" instead of name; just needs a rename)
+- [x] Revise UI of the travel pass page
+- [x] Another pass to Remittance Automation
 
 ### Public Feeds & Security
 - [x] Add extra info to public-facing tap feed (show deductions, exclude current balance)

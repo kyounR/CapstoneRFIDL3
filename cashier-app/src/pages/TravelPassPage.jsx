@@ -268,7 +268,7 @@ function TravelPassPage() {
         setLatestBoarding({
           tapLogId: response.data.tap_log_id,
           destinationName: destination.destination_name,
-          fareCharged: passengerType === 'discount' ? destination.discount_fare : destination.base_fare,
+          fareCharged: response.data.fare_charged,
           fareType: passengerType === 'discount' ? 'discount' : 'base',
         })
       }

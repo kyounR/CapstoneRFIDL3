@@ -2443,6 +2443,7 @@ def manifest_entry_tally_view(request):
 
     response_data = FareManifestEntrySerializer(entry).data
     response_data['tap_log_id'] = tap_log.id
+    response_data['fare_charged'] = tap_log.fare_charged
     return Response(response_data, status=status.HTTP_200_OK)
 
 

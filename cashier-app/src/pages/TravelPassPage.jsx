@@ -522,7 +522,7 @@ function TravelPassPage() {
             {destinations.map((destination) => {
               const entry = entries[destination.id] || { passenger_count: 0, discount_count: 0, total_fare: '0.00' }
               const destinationCapacityStatus = destinationCapacityStatuses.find((status) => status.destination.id === destination.id)
-              const tileCapacityBackground = destinationCapacityStatus?.isOverCapacity ? 'rgba(229, 72, 77, 0.16)' : destinationCapacityStatus ? 'rgba(242, 169, 59, 0.10)' : undefined
+              const tileCapacityBackground = destinationCapacityStatus?.isOverCapacity ? 'color-mix(in srgb, var(--danger) 16%, transparent)' : destinationCapacityStatus ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : undefined
               const regularAddKey = `${destination.id}-regular-add`
               const discountAddKey = `${destination.id}-discount-add`
               const regularRemoveKey = `${destination.id}-regular-remove`
@@ -532,7 +532,7 @@ function TravelPassPage() {
               const addButtonStyle = { minWidth: '64px', height: '44px', padding: '0 14px' }
               const targetButtonStyle = { width: '36px', height: '36px', padding: 0 }
               return (
-                <div key={destination.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', backgroundColor: tileCapacityBackground, borderColor: isSelectedForTap ? 'var(--success)' : 'var(--border)', boxShadow: isSelectedForTap ? '0 0 0 3px rgba(47, 191, 158, 0.32)' : 'none' }}>
+                <div key={destination.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', backgroundColor: tileCapacityBackground, borderColor: isSelectedForTap ? 'var(--success)' : 'var(--border)', boxShadow: isSelectedForTap ? '0 0 0 3px color-mix(in srgb, var(--success) 32%, transparent)' : 'none' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                     <strong>{destination.destination_name}</strong>
                     {!isFinalized ? <button type="button" onClick={isSelectedForTap ? handleClearTapSelection : () => handleSetForTap(destination)} disabled={busyAction !== ''} className={isSelectedForTap ? 'btn-primary' : 'btn-secondary'} style={targetButtonStyle} title={isSelectedForTap ? `Clear ${destination.destination_name} tap selection` : `Set ${destination.destination_name} as next tap`} aria-label={isSelectedForTap ? `Clear ${destination.destination_name} tap selection` : `Set ${destination.destination_name} as next tap`}>

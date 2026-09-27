@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import SectionTabs from '../components/SectionTabs'
 import ReceiptModal from '../components/ReceiptModal'
 import api from '../api/client'
@@ -56,9 +56,10 @@ function TravelPassPage() {
   const [busyAction, setBusyAction] = useState('')
   const [showFinalizeForm, setShowFinalizeForm] = useState(false)
   const [departureTime, setDepartureTime] = useState('')
-  const [receiptIds, setReceiptIds] = useState({})
   const [receiptId, setReceiptId] = useState(null)
+  const [latestBoarding, setLatestBoarding] = useState(null)
   const [error, setError] = useState('')
+  const latestRfidTapId = useRef(null)
 
   async function fetchActivePasses() {
     setIsLoadingPicker(true)
@@ -178,7 +179,21 @@ function TravelPassPage() {
           setTapSelection(selection?.manifest_trip_id === manifest.id ? selection : null)
 
           // Update recent taps and entries together (React batches into one render)
-          setRecentTaps(getListData(recentTapsResponse.data))
+          const nextRecentTaps = getListData(recentTapsResponse.data)
+          const newestTap = nextRecentTaps[0]
+          if (newestTap?.id !== latestRfidTapId.current) {
+            if (latestRfidTapId.current != null && newestTap?.success) {
+              setLatestBoarding({
+                tapLogId: newestTap.id,
+                passengerName: newestTap.passenger_name,
+                destinationName: newestTap.destination_name,
+                fareCharged: newestTap.fare_charged,
+                fareType: newestTap.fare_type,
+              })
+            }
+            latestRfidTapId.current = newestTap?.id ?? null
+          }
+          setRecentTaps(nextRecentTaps)
           setEntries(entriesByDestination(getListData(entriesResponse.data)))
         }
       } catch (requestError) {
@@ -198,8 +213,9 @@ function TravelPassPage() {
   async function selectManifest(selectedManifest) {
     setManifest(selectedManifest)
     setEntries(entriesByDestination(selectedManifest.entries))
-    setReceiptIds({})
     setReceiptId(null)
+    setLatestBoarding(null)
+    latestRfidTapId.current = null
     setTapSelection(null)
     setDepartureTime(selectedManifest.departure_time || '')
     setShowFinalizeForm(false)
@@ -249,7 +265,12 @@ function TravelPassPage() {
       })
       setEntries((currentEntries) => ({ ...currentEntries, [response.data.destination]: response.data }))
       if (direction === 'add' && response.data.tap_log_id) {
-        setReceiptIds((currentReceiptIds) => ({ ...currentReceiptIds, [destination.id]: response.data.tap_log_id }))
+        setLatestBoarding({
+          tapLogId: response.data.tap_log_id,
+          destinationName: destination.destination_name,
+          fareCharged: passengerType === 'discount' ? destination.discount_fare : destination.base_fare,
+          fareType: passengerType === 'discount' ? 'discount' : 'base',
+        })
       }
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not update tally.')
@@ -357,8 +378,9 @@ function TravelPassPage() {
       await api.post(`manifests/${manifest.id}/cancel/`)
       setManifest(null)
       setEntries({})
-      setReceiptIds({})
       setReceiptId(null)
+      setLatestBoarding(null)
+      latestRfidTapId.current = null
       setShowFinalizeForm(false)
       setPageState(0)
       await fetchActivePasses()
@@ -372,8 +394,9 @@ function TravelPassPage() {
   function switchVehicle() {
     setManifest(null)
     setEntries({})
-    setReceiptIds({})
     setReceiptId(null)
+    setLatestBoarding(null)
+    latestRfidTapId.current = null
     setTapSelection(null)
     setRecentTaps([])
     setShowFinalizeForm(false)
@@ -504,13 +527,12 @@ function TravelPassPage() {
               const discountAddKey = `${destination.id}-discount-add`
               const regularRemoveKey = `${destination.id}-regular-remove`
               const discountRemoveKey = `${destination.id}-discount-remove`
-              const destinationReceiptId = receiptIds[destination.id]
               const isSelectedForTap = tapSelection?.destination_id === destination.id
               const removeButtonStyle = { minWidth: '32px', height: '36px', padding: '0 8px' }
               const addButtonStyle = { minWidth: '64px', height: '44px', padding: '0 14px' }
               const targetButtonStyle = { width: '36px', height: '36px', padding: 0 }
               return (
-                <div key={destination.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', backgroundColor: tileCapacityBackground, borderColor: isSelectedForTap ? 'var(--success)' : 'var(--border)', boxShadow: isSelectedForTap ? '0 0 0 2px rgba(47, 191, 158, 0.18)' : 'none' }}>
+                <div key={destination.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', backgroundColor: tileCapacityBackground, borderColor: isSelectedForTap ? 'var(--success)' : 'var(--border)', boxShadow: isSelectedForTap ? '0 0 0 3px rgba(47, 191, 158, 0.32)' : 'none' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                     <strong>{destination.destination_name}</strong>
                     {!isFinalized ? <button type="button" onClick={isSelectedForTap ? handleClearTapSelection : () => handleSetForTap(destination)} disabled={busyAction !== ''} className={isSelectedForTap ? 'btn-primary' : 'btn-secondary'} style={targetButtonStyle} title={isSelectedForTap ? `Clear ${destination.destination_name} tap selection` : `Set ${destination.destination_name} as next tap`} aria-label={isSelectedForTap ? `Clear ${destination.destination_name} tap selection` : `Set ${destination.destination_name} as next tap`}>
@@ -519,7 +541,6 @@ function TravelPassPage() {
                   </div>
                   <div className="numeric" style={{ fontSize: '0.9rem' }}>{destination.base_fare}</div>
                   {!isFinalized ? <>
-                    {isSelectedForTap ? <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--success)' }}><span className="badge badge--success">Tap armed</span><button type="button" onClick={handleClearTapSelection} disabled={busyAction !== ''} className="btn-secondary" style={{ padding: '2px 6px', fontSize: '0.75rem' }}>{busyAction === 'clear-tap-selection' ? 'Clearing...' : 'Clear'}</button></div> : null}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingTop: '8px', borderTop: '1px solid var(--border)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <span style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600 }}>Regular</span>
@@ -534,7 +555,6 @@ function TravelPassPage() {
                         <button type="button" onClick={() => handleTally(destination, 'discount', 'add')} disabled={busyAction !== ''} className="btn-primary" style={addButtonStyle} aria-label={`Add discount passenger to ${destination.destination_name}`}>{busyAction === discountAddKey ? '...' : '+1'}</button>
                       </div> : null}
                     </div>
-                    {destinationReceiptId ? <button type="button" onClick={() => setReceiptId(destinationReceiptId)} className="btn-secondary" style={{ alignSelf: 'flex-start', padding: '5px 9px', fontSize: '0.8rem' }}>Print Boarding Confirmation</button> : null}
                   </> : <div aria-hidden="true" style={{ minHeight: '140px' }} />}
                 </div>
               )
@@ -590,6 +610,17 @@ function TravelPassPage() {
           </div>
         </section>
       ) : null}
+      {latestBoarding ? <aside style={{ position: 'fixed', left: '24px', bottom: '24px', zIndex: 3, width: 'min(320px, calc(100vw - 48px))', padding: '14px', background: 'var(--surface)', border: '1px solid var(--success)', borderRadius: 'var(--radius)', boxShadow: '0 12px 28px rgba(0, 0, 0, 0.28)' }} role="status">
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+          <div>
+            <strong>Boarding recorded</strong>
+            <div style={{ marginTop: '4px', fontSize: '0.9rem' }}>{latestBoarding.passengerName || 'Manual tally'} · {latestBoarding.destinationName}</div>
+            <div className="numeric" style={{ marginTop: '2px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{latestBoarding.fareType === 'discount' ? 'Discount' : 'Regular'} · {latestBoarding.fareCharged}</div>
+          </div>
+          <button type="button" onClick={() => setLatestBoarding(null)} className="btn-secondary" style={{ padding: '2px 7px', lineHeight: 1 }} aria-label="Dismiss boarding confirmation">x</button>
+        </div>
+        <button type="button" onClick={() => setReceiptId(latestBoarding.tapLogId)} className="btn-primary" style={{ marginTop: '12px', width: '100%' }}>Print Boarding Confirmation</button>
+      </aside> : null}
       <ReceiptModal tapLogId={receiptId} onClose={() => setReceiptId(null)} />
     </div>
   )

@@ -300,10 +300,11 @@ function DailyRemittancePage() {
         <section>
           <button type="button" onClick={switchRemittance} className="btn-secondary" style={{ marginBottom: '12px' }}>Back to Remittances</button>
           <div className="card" style={{ marginBottom: '20px' }}>
-            <h2 style={{ marginTop: 0 }}>{selectedAvailable?.departure_terminal_name || remittance.terminal} - {selectedAvailable?.plate_number || remittance.vehicle}</h2>
-            <p><strong>Driver:</strong> {detailDriver?.full_name || remittance.driver}</p>
-            <p><strong>Date:</strong> {remittance.date}</p>
-            <span className={`badge ${remittance.is_finalized ? 'badge--success' : 'badge--pending'}`}>{remittance.is_finalized ? 'Finalized' : 'In Progress'}</span>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+              <h2 style={{ margin: 0 }}>{selectedAvailable?.departure_terminal_name || remittance.terminal} - {selectedAvailable?.plate_number || remittance.vehicle}</h2>
+              <span className={`badge ${remittance.is_finalized ? 'badge--success' : 'badge--pending'}`}>{remittance.is_finalized ? 'Finalized' : 'In Progress'}</span>
+            </div>
+            <p style={{ marginBottom: remittance.substitute_fee != null ? '16px' : 0 }}><strong>Driver:</strong> {detailDriver?.full_name || remittance.driver} <span aria-hidden="true">&middot;</span> <strong>Date:</strong> {remittance.date}</p>
             {remittance.substitute_fee != null ? (
               <p style={{ paddingLeft: '12px', borderLeft: '3px solid var(--accent)' }}>
                 Substitute driver — original assigned driver: {originalAssignedDriver?.full_name || remittance.original_assigned_driver}, fee: <span className="numeric">{remittance.substitute_fee}</span>
@@ -351,28 +352,25 @@ function DailyRemittancePage() {
             </div>
           ) : null}
 
-          <h3>Computed Figures</h3>
-          <div className="numeric" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '4px 12px', marginBottom: '20px' }}>
-            <span>Gross: {remittance.gross}</span>
-            <span aria-hidden="true">·</span>
-            <span>Terminal Fee ({remittance.terminal_fee_percentage}%): {remittance.terminal_fee}</span>
-            <span aria-hidden="true">·</span>
-            <span>Subtotal: {remittance.subtotal}</span>
-            <span aria-hidden="true">·</span>
-            <span>Net Pay: {remittance.net_pay}</span>
-          </div>
-
-          <h3>Fees</h3>
-          <p className="numeric"><strong>Terminal Fee:</strong> {remittance.terminal_fee} (computed)</p>
-          {feeFields.map(([field, label]) => (
-            <p key={field} className="numeric"><strong>{label}:</strong> {remittance[field]}</p>
-          ))}
-          {!remittance.is_finalized ? <>
-            <button type="button" onClick={handleFinalize} disabled={busyAction !== ''} className="btn-primary" style={{ marginTop: '20px' }}>Finalize Remittance</button>
-            <button type="button" onClick={handleCancel} disabled={busyAction !== ''} className="btn-secondary" style={{ marginTop: '20px', marginLeft: '8px' }}>
+          <section className="card" style={{ maxWidth: '560px', marginTop: '20px' }}>
+            <h3 style={{ marginTop: 0 }}>Statement</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px' }}><span>Gross (dispatch rounds)</span><span className="numeric">{remittance.gross}</span></div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px' }}><span>Terminal fee ({remittance.terminal_fee_percentage}%)</span><span className="numeric">- {remittance.terminal_fee}</span></div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px', paddingTop: '10px', borderTop: '1px solid var(--border)', fontWeight: 600 }}><span>Subtotal</span><span className="numeric">{remittance.subtotal}</span></div>
+              {feeFields.map(([field, label]) => (
+                <div key={field} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px', color: 'var(--text-secondary)' }}><span>{label}</span><span className="numeric">- {remittance[field]}</span></div>
+              ))}
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px', alignItems: 'baseline', paddingTop: '14px', borderTop: '1px solid var(--border)', fontSize: '1.35rem', fontWeight: 700 }}><span>Net pay</span><span className="numeric">{remittance.net_pay}</span></div>
+              {remittance.substitute_fee != null ? <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}><span>Substitute fee (separate settlement)</span><span className="numeric">{remittance.substitute_fee}</span></div> : null}
+            </div>
+          </section>
+          {!remittance.is_finalized ? <div className="card" style={{ position: 'sticky', bottom: 0, zIndex: 1, display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px', padding: '12px 16px' }}>
+            <button type="button" onClick={handleFinalize} disabled={busyAction !== ''} className="btn-primary">Finalize Remittance</button>
+            <button type="button" onClick={handleCancel} disabled={busyAction !== ''} className="btn-secondary">
               {busyAction === 'cancel' ? 'Canceling...' : 'Cancel Remittance'}
             </button>
-          </> : null}
+          </div> : null}
         </section>
       ) : null}
     </div>

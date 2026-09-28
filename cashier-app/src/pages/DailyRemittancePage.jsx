@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
+import { RefreshCw } from 'lucide-react'
 import SectionTabs from '../components/SectionTabs'
 import api from '../api/client'
 
@@ -26,6 +27,7 @@ function DailyRemittancePage() {
   const [remittance, setRemittance] = useState(null)
   const [rounds, setRounds] = useState([])
   const [roundRemovalReasons, setRoundRemovalReasons] = useState({})
+  const [expandedRoundId, setExpandedRoundId] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [busyAction, setBusyAction] = useState('')
   const [error, setError] = useState('')
@@ -171,6 +173,7 @@ function DailyRemittancePage() {
         data: { reason: reason.trim() },
       })
       await loadRemittanceDetails(remittance.id)
+      setExpandedRoundId(null)
       setRoundRemovalReasons((currentReasons) => {
         const nextReasons = { ...currentReasons }
         delete nextReasons[round.id]
@@ -181,6 +184,15 @@ function DailyRemittancePage() {
     } finally {
       setBusyAction('')
     }
+  }
+
+  function closeRoundExclusion(roundId) {
+    setExpandedRoundId(null)
+    setRoundRemovalReasons((currentReasons) => {
+      const nextReasons = { ...currentReasons }
+      delete nextReasons[roundId]
+      return nextReasons
+    })
   }
 
   async function handleFinalize() {
@@ -312,45 +324,49 @@ function DailyRemittancePage() {
             ) : null}
           </div>
 
-          <h3>Dispatch Rounds</h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+            <h3>Dispatch Rounds</h3>
+            {!remittance.is_finalized ? <button type="button" onClick={handleSyncRounds} disabled={busyAction !== ''} className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 9px', fontSize: '0.85rem' }} aria-label="Sync from Travel Passes">
+              {busyAction === 'sync-rounds' ? 'Syncing...' : <><RefreshCw size={15} aria-hidden="true" /> Sync</>}
+            </button> : null}
+          </div>
           {rounds.length > 0 ? (
             <div className="card" style={{ padding: 0, marginBottom: '12px', overflow: 'hidden' }}>
               <table className="table">
-                <thead><tr><th>Round</th><th>Amount</th><th>Departure Time</th><th>Source</th>{!remittance.is_finalized ? <th>Action</th> : null}</tr></thead>
-                <tbody>{rounds.map((round) => <tr key={round.id} style={round.is_excluded ? { color: 'var(--text-secondary)', textDecoration: 'line-through' } : undefined}>
-                  <td className="numeric">{round.round_number}</td>
-                  <td className="numeric">{round.amount}</td>
-                  <td className="numeric">{round.departure_time}</td>
-                  <td>{round.is_excluded ? <span className="badge badge--pending" style={{ textDecoration: 'none' }}>Excluded</span> : <>{round.source_trip ? `Auto-generated from Travel Pass #${round.source_trip}` : 'Legacy manual round'}{round.departure_terminal_name ? ` - ${round.departure_terminal_name}` : ''}</>}</td>
-                  {!remittance.is_finalized ? <td>
-                    {round.is_excluded ? null : <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '280px' }}>
-                      <input
-                        type="text"
-                        value={roundRemovalReasons[round.id] || ''}
-                        onChange={(event) => setRoundRemovalReasons((currentReasons) => ({ ...currentReasons, [round.id]: event.target.value }))}
-                        placeholder="Reason for removal"
-                        aria-label={`Reason for removing dispatch round ${round.round_number}`}
-                        className="input"
-                        style={{ minWidth: 0, flex: 1 }}
-                      />
-                      <button type="button" onClick={() => handleRemoveRound(round)} disabled={busyAction !== '' || !(roundRemovalReasons[round.id] || '').trim()} className="btn-secondary">
-                        {busyAction === `remove-round-${round.id}` ? 'Removing...' : 'Remove'}
-                      </button>
-                    </div>
-                    {!(roundRemovalReasons[round.id] || '').trim() ? <span style={{ display: 'block', marginTop: '4px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Enter a reason to enable removal</span> : null}
-                    </>}
-                  </td> : null}
-                </tr>)}</tbody>
+                <thead><tr><th>Round</th><th>Departed</th><th>Travel Pass</th><th>Amount</th>{!remittance.is_finalized ? <th>Action</th> : null}</tr></thead>
+                <tbody>{rounds.map((round) => {
+                  const isExclusionPanelOpen = expandedRoundId === round.id
+                  const usesDifferentTerminal = round.departure_terminal != null && String(round.departure_terminal) !== String(remittance.terminal)
+                  const travelPassLabel = round.source_trip ? `#${round.source_trip}` : 'Legacy'
+                  return <Fragment key={round.id}>
+                    <tr style={round.is_excluded ? { color: 'var(--text-secondary)', textDecoration: 'line-through' } : undefined}>
+                      <td className="numeric">{round.round_number}</td>
+                      <td className="numeric">{round.departure_time?.slice(0, 5) || '-'}</td>
+                      <td>{travelPassLabel}{usesDifferentTerminal && round.departure_terminal_name ? ` - ${round.departure_terminal_name}` : ''}{round.is_excluded ? <span className="badge badge--pending" style={{ marginLeft: '8px', textDecoration: 'none' }}>Excluded</span> : null}</td>
+                      <td className="numeric" style={{ textAlign: 'right' }}>{round.amount}</td>
+                      {!remittance.is_finalized ? <td>{round.is_excluded ? null : <button type="button" onClick={() => setExpandedRoundId(round.id)} disabled={busyAction !== ''} style={{ padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontFamily: 'var(--font-body)', cursor: 'pointer' }}>Exclude</button>}</td> : null}
+                    </tr>
+                    {isExclusionPanelOpen ? <tr><td colSpan="5" style={{ background: 'var(--bg-elevated)' }}>
+                      <p style={{ marginTop: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Excluded rounds stay on record but don't count toward this remittance's totals.</p>
+                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                        <input
+                          type="text"
+                          value={roundRemovalReasons[round.id] || ''}
+                          onChange={(event) => setRoundRemovalReasons((currentReasons) => ({ ...currentReasons, [round.id]: event.target.value }))}
+                          placeholder="Reason for exclusion"
+                          aria-label={`Reason for excluding dispatch round ${round.round_number}`}
+                          className="input"
+                          style={{ minWidth: '220px', flex: 1 }}
+                        />
+                        <button type="button" onClick={() => handleRemoveRound(round)} disabled={busyAction !== '' || !(roundRemovalReasons[round.id] || '').trim()} className="btn-primary">{busyAction === `remove-round-${round.id}` ? 'Excluding...' : 'Confirm'}</button>
+                        <button type="button" onClick={() => closeRoundExclusion(round.id)} disabled={busyAction !== ''} className="btn-secondary">Cancel</button>
+                      </div>
+                    </td></tr> : null}
+                  </Fragment>
+                })}</tbody>
               </table>
             </div>
           ) : busyAction === 'sync-rounds' ? <p>Syncing dispatch rounds...</p> : <p>No rounds added yet.</p>}
-          {!remittance.is_finalized ? (
-            <div className="card" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
-              <span>Sync finalized Travel Passes for this vehicle, date, and terminal.</span>
-              <button type="button" onClick={handleSyncRounds} disabled={busyAction !== ''} className="btn-primary">{busyAction === 'sync-rounds' ? 'Syncing...' : 'Sync Dispatch Rounds'}</button>
-            </div>
-          ) : null}
 
           <section className="card" style={{ maxWidth: '560px', marginTop: '20px' }}>
             <h3 style={{ marginTop: 0 }}>Statement</h3>

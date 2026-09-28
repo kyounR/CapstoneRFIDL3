@@ -160,6 +160,12 @@ h3 {
   color: var(--danger);
 }
 
+.badge--neutral {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
 .terminal-tag--a,
 .terminal-tag--b {
   display: inline-block;

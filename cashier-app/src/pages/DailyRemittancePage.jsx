@@ -7,6 +7,10 @@ function getListData(data) {
   return Array.isArray(data) ? data : data.results || []
 }
 
+function formatDeduction(amount) {
+  return Number(amount) > 0 ? `- ${amount}` : amount
+}
+
 const feeFields = [
   ['ps_fee', 'PS Fee'],
   ['water_fee', 'Water Fee'],
@@ -333,7 +337,7 @@ function DailyRemittancePage() {
           {rounds.length > 0 ? (
             <div className="card" style={{ padding: 0, marginBottom: '12px', overflow: 'hidden' }}>
               <table className="table">
-                <thead><tr><th>Round</th><th>Departed</th><th>Travel Pass</th><th>Amount</th>{!remittance.is_finalized ? <th>Action</th> : null}</tr></thead>
+                <thead><tr><th>Round</th><th>Departed</th><th>Travel Pass</th><th style={{ textAlign: 'right' }}>Amount</th>{!remittance.is_finalized ? <th>Action</th> : null}</tr></thead>
                 <tbody>{rounds.map((round) => {
                   const isExclusionPanelOpen = expandedRoundId === round.id
                   const usesDifferentTerminal = round.departure_terminal != null && String(round.departure_terminal) !== String(remittance.terminal)
@@ -342,7 +346,7 @@ function DailyRemittancePage() {
                     <tr style={round.is_excluded ? { color: 'var(--text-secondary)', textDecoration: 'line-through' } : undefined}>
                       <td className="numeric">{round.round_number}</td>
                       <td className="numeric">{round.departure_time?.slice(0, 5) || '-'}</td>
-                      <td>{travelPassLabel}{usesDifferentTerminal && round.departure_terminal_name ? ` - ${round.departure_terminal_name}` : ''}{round.is_excluded ? <span className="badge badge--pending" style={{ marginLeft: '8px', textDecoration: 'none' }}>Excluded</span> : null}</td>
+                      <td>{travelPassLabel}{usesDifferentTerminal && round.departure_terminal_name ? ` - ${round.departure_terminal_name}` : ''}{round.is_excluded ? <span className="badge badge--neutral" style={{ marginLeft: '8px', textDecoration: 'none' }}>Excluded</span> : null}</td>
                       <td className="numeric" style={{ textAlign: 'right' }}>{round.amount}</td>
                       {!remittance.is_finalized ? <td>{round.is_excluded ? null : <button type="button" onClick={() => setExpandedRoundId(round.id)} disabled={busyAction !== ''} style={{ padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontFamily: 'var(--font-body)', cursor: 'pointer' }}>Exclude</button>}</td> : null}
                     </tr>
@@ -372,10 +376,10 @@ function DailyRemittancePage() {
             <h3 style={{ marginTop: 0 }}>Statement</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px' }}><span>Gross (dispatch rounds)</span><span className="numeric">{remittance.gross}</span></div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px' }}><span>Terminal fee ({remittance.terminal_fee_percentage}%)</span><span className="numeric">- {remittance.terminal_fee}</span></div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px' }}><span>Terminal fee ({remittance.terminal_fee_percentage}%)</span><span className="numeric">{formatDeduction(remittance.terminal_fee)}</span></div>
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px', paddingTop: '10px', borderTop: '1px solid var(--border)', fontWeight: 600 }}><span>Subtotal</span><span className="numeric">{remittance.subtotal}</span></div>
               {feeFields.map(([field, label]) => (
-                <div key={field} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px', color: 'var(--text-secondary)' }}><span>{label}</span><span className="numeric">- {remittance[field]}</span></div>
+                <div key={field} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px', color: 'var(--text-secondary)' }}><span>{label}</span><span className="numeric">{formatDeduction(remittance[field])}</span></div>
               ))}
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px', alignItems: 'baseline', paddingTop: '14px', borderTop: '1px solid var(--border)', fontSize: '1.35rem', fontWeight: 700 }}><span>Net pay</span><span className="numeric">{remittance.net_pay}</span></div>
               {remittance.substitute_fee != null ? <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}><span>Substitute fee (separate settlement)</span><span className="numeric">{remittance.substitute_fee}</span></div> : null}

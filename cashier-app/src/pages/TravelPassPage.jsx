@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Crosshair } from 'lucide-react'
 import SectionTabs from '../components/SectionTabs'
 import ReceiptModal from '../components/ReceiptModal'
 import api from '../api/client'
@@ -536,7 +537,7 @@ function TravelPassPage() {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                     <strong>{destination.destination_name}</strong>
                     {!isFinalized ? <button type="button" onClick={isSelectedForTap ? handleClearTapSelection : () => handleSetForTap(destination)} disabled={busyAction !== ''} className={isSelectedForTap ? 'btn-primary' : 'btn-secondary'} style={targetButtonStyle} title={isSelectedForTap ? `Clear ${destination.destination_name} tap selection` : `Set ${destination.destination_name} as next tap`} aria-label={isSelectedForTap ? `Clear ${destination.destination_name} tap selection` : `Set ${destination.destination_name} as next tap`}>
-                      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M12 2v4M12 18v4M2 12h4M18 12h4" fill="none" stroke="currentColor" strokeWidth="2" /></svg>
+                      <Crosshair size={16} aria-hidden="true" />
                     </button> : null}
                   </div>
                   <div className="numeric" style={{ fontSize: '0.9rem' }}>{destination.base_fare}</div>

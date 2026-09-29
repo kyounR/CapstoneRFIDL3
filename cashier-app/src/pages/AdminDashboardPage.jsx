@@ -9,6 +9,10 @@ function getToday() {
   return `${year}-${month}-${day}`
 }
 
+function formatCurrency(value) {
+  return Number(value).toFixed(2)
+}
+
 function AdminDashboardPage() {
   const today = getToday()
   const [startDate, setStartDate] = useState(today)
@@ -84,27 +88,27 @@ function AdminDashboardPage() {
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '12px', marginBottom: '24px' }}>
             <div className="card"><strong>Total Passengers</strong><p className="numeric" style={{ fontSize: '28px', marginBottom: 0 }}>{dashboard.total_passengers}</p></div>
-            <div className="card"><strong>Total Income</strong><p className="numeric" style={{ fontSize: '28px', marginBottom: 0 }}>{dashboard.total_income}</p></div>
+            <div className="card"><strong>Total Income</strong><p className="numeric" style={{ fontSize: '28px', marginBottom: 0 }}>{formatCurrency(dashboard.total_income)}</p></div>
             <div className="card"><strong>Total Discount Passengers</strong><p className="numeric" style={{ fontSize: '28px', marginBottom: 0 }}>{dashboard.total_discount_passengers}</p></div>
             <div className="card"><strong>Trip Count</strong><p className="numeric" style={{ fontSize: '28px', marginBottom: 0 }}>{dashboard.trip_count}</p></div>
           </div>
 
           <h2>Popular Destinations</h2>
           <table className="table" style={{ marginBottom: '24px' }}>
-            <thead><tr><th>Destination</th><th>Passenger Count</th><th>Total Fare</th></tr></thead>
+            <thead><tr><th>Destination</th><th style={{ textAlign: 'right' }}>Passenger Count</th><th style={{ textAlign: 'right' }}>Total Fare</th></tr></thead>
             <tbody>
               {dashboard.popular_destinations.map((destination) => (
-                <tr key={destination.destination_id}><td>{destination.destination_name}</td><td className="numeric">{destination.passenger_count}</td><td className="numeric">{destination.total_fare}</td></tr>
+                <tr key={destination.destination_id}><td>{destination.destination_name}</td><td className="numeric" style={{ textAlign: 'right' }}>{destination.passenger_count}</td><td className="numeric" style={{ textAlign: 'right' }}>{formatCurrency(destination.total_fare)}</td></tr>
               ))}
             </tbody>
           </table>
 
           <h2>Daily Breakdown</h2>
           <table className="table">
-            <thead><tr><th>Date</th><th>Total Passengers</th><th>Total Income</th></tr></thead>
+            <thead><tr><th>Date</th><th style={{ textAlign: 'right' }}>Total Passengers</th><th style={{ textAlign: 'right' }}>Total Income</th></tr></thead>
             <tbody>
               {dashboard.daily_breakdown.map((day) => (
-                <tr key={day.date}><td>{day.date}</td><td className="numeric">{day.total_passengers}</td><td className="numeric">{day.total_income}</td></tr>
+                <tr key={day.date}><td>{day.date}</td><td className="numeric" style={{ textAlign: 'right' }}>{day.total_passengers}</td><td className="numeric" style={{ textAlign: 'right' }}>{formatCurrency(day.total_income)}</td></tr>
               ))}
             </tbody>
           </table>

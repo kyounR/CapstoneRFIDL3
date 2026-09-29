@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from 'react'
+import { Lock, LockOpen, Pencil } from 'lucide-react'
 import SectionTabs from '../components/SectionTabs'
 import api from '../api/client'
 
@@ -12,6 +13,10 @@ function getToday() {
 
 function getListData(data) {
   return Array.isArray(data) ? data : data.results || []
+}
+
+function formatDeduction(amount) {
+  return Number(amount) > 0 ? `- ${amount}` : amount
 }
 
 const feeFields = [
@@ -41,6 +46,7 @@ function DailyRemittanceHistoryPage() {
   const [reason, setReason] = useState('')
   const [editError, setEditError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [adminCorrectionToggles, setAdminCorrectionToggles] = useState({})
   const isAdmin = localStorage.getItem('userRole') === 'admin'
 
   useEffect(() => {
@@ -160,9 +166,9 @@ function DailyRemittanceHistoryPage() {
     }
   }
 
-  function editButton(type, id, field, value) {
-    if (!isAdmin || !detail?.is_finalized) return null
-    return <button type="button" onClick={(event) => { event.stopPropagation(); startEdit(type, id, field, value) }} className="btn-secondary" style={{ marginLeft: '6px', padding: '3px 7px', fontSize: '0.85em' }}>Edit (Admin)</button>
+  function editButton(remittanceId, type, id, field, value, ariaLabel) {
+    if (!isAdmin || !detail?.is_finalized || !adminCorrectionToggles[remittanceId]) return null
+    return <button type="button" onClick={(event) => { event.stopPropagation(); startEdit(type, id, field, value) }} className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', marginLeft: '6px', padding: 0 }} aria-label={ariaLabel} title={ariaLabel}><Pencil size={14} aria-hidden="true" /></button>
   }
 
   function editControls(type, id, field, input) {
@@ -186,21 +192,11 @@ function DailyRemittanceHistoryPage() {
     const vehicle = vehicles.find((item) => item.id === remittance.vehicle)
     const driver = drivers.find((item) => item.id === remittance.driver)
     return <div className="card" style={{ marginBottom: '16px' }} onClick={(event) => event.stopPropagation()}>
-      <p><strong>Terminal:</strong> {terminal?.name || remittance.terminal}{editButton('remittance', remittance.id, 'terminal', remittance.terminal)}</p>
+      <h2 style={{ margin: 0 }}>{terminal?.name || remittance.terminal} - {vehicle?.plate_number || remittance.vehicle}{editButton(remittance.id, 'remittance', remittance.id, 'terminal', remittance.terminal, 'Edit terminal (admin)')}</h2>
       {editControls('remittance', remittance.id, 'terminal', <select value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input">{terminals.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>)}
-      <p><strong>Cashier:</strong> {remittance.cashier_full_name || remittance.cashier_username}</p>
-      <p><strong>Vehicle:</strong> {vehicle?.plate_number || remittance.vehicle}</p>
-      <p><strong>Driver:</strong> {driver?.full_name || remittance.driver}{editButton('remittance', remittance.id, 'driver', remittance.driver)}</p>
+      <p><strong>Cashier:</strong> {remittance.cashier_full_name || remittance.cashier_username} <span aria-hidden="true">&middot;</span> <strong>Driver:</strong> {driver?.full_name || remittance.driver}{editButton(remittance.id, 'remittance', remittance.id, 'driver', remittance.driver, 'Edit driver (admin)')} <span aria-hidden="true">&middot;</span> <strong>Date:</strong> {remittance.date}{editButton(remittance.id, 'remittance', remittance.id, 'date', remittance.date, 'Edit date (admin)')}</p>
       {editControls('remittance', remittance.id, 'driver', <select value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input">{drivers.map((item) => <option key={item.id} value={item.id}>{item.full_name}</option>)}</select>)}
-      <p><strong>Date:</strong> {remittance.date}{editButton('remittance', remittance.id, 'date', remittance.date)}</p>
       {editControls('remittance', remittance.id, 'date', <input type="date" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input" />)}
-      {remittance.substitute_fee != null ? (
-        <p style={{ paddingLeft: '12px', borderLeft: '3px solid var(--accent)' }}>
-          Substitute driver — original assigned driver: {drivers.find((item) => item.id === remittance.original_assigned_driver)?.full_name || remittance.original_assigned_driver}, actual driver: {driver?.full_name || remittance.driver}, fee: <span className="numeric">{remittance.substitute_fee}</span>
-        </p>
-      ) : null}
-      {editButton('remittance', remittance.id, 'substitute_fee', remittance.substitute_fee)}
-      {editControls('remittance', remittance.id, 'substitute_fee', <input type="number" min="0" step="0.01" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input numeric" />)}
     </div>
   }
 
@@ -226,12 +222,10 @@ function DailyRemittanceHistoryPage() {
         groups[key].items.push(item)
         return groups
       }, {})).map(([key, group], groupIndex) => {
-        const totals = group.items.reduce((result, item) => ({ gross: result.gross + Number(item.gross || 0), terminal: result.terminal + Number(item.terminal_fee || 0), subtotal: result.subtotal + Number(item.subtotal || 0), netPay: result.netPay + Number(item.net_pay || 0) }), { gross: 0, terminal: 0, subtotal: 0, netPay: 0 })
         const terminalTagClass = groupIndex % 2 === 0 ? 'terminal-tag--a' : 'terminal-tag--b'
         return <section key={key} style={{ marginBottom: '28px' }}>
           <h2><span className={terminalTagClass} style={{ marginRight: '10px' }}>{group.name}</span></h2>
-          <p className="numeric">Day totals — Gross: {totals.gross.toFixed(2)}, Terminal Fees: {totals.terminal.toFixed(2)}, Subtotal: {totals.subtotal.toFixed(2)}, Net Pay: {totals.netPay.toFixed(2)}</p>
-          <table className="table"><thead><tr><th>Driver</th><th>Vehicle</th><th>Net Pay</th><th>Status</th></tr></thead><tbody>
+          <table className="table"><thead><tr><th>Driver</th><th>Vehicle</th><th>Status</th></tr></thead><tbody>
             {group.items.map((item) => {
               const vehicle = vehicles.find((entry) => entry.id === item.vehicle)
               const driver = drivers.find((entry) => entry.id === item.driver)
@@ -239,22 +233,49 @@ function DailyRemittanceHistoryPage() {
                 <tr onClick={() => toggleDetail(item.id)} style={{ cursor: 'pointer' }}>
                   <td>{driver?.full_name || item.driver}</td>
                   <td>{vehicle?.plate_number || item.vehicle}</td>
-                  <td className="numeric">{item.net_pay}</td>
                   <td>
                     <span className={`status-dot ${item.is_cancelled ? 'status-dot--danger' : item.is_finalized ? 'status-dot--success' : 'status-dot--pending'}`} style={{ marginRight: '6px' }} />
                     <span className={`badge ${item.is_cancelled ? 'badge--danger' : item.is_finalized ? 'badge--success' : 'badge--pending'}`}>{item.is_cancelled ? 'Cancelled' : item.is_finalized ? 'Finalized' : 'In Progress'}</span>
                   </td>
                 </tr>
-                {expandedId === item.id ? <tr><td colSpan="4">{isLoadingDetail || !detail ? <p>Loading details...</p> : <>
+                {expandedId === item.id ? <tr><td colSpan="3">{isLoadingDetail || !detail ? <p>Loading details...</p> : <>
+                  {isAdmin ? <button
+                    type="button"
+                    onClick={() => setAdminCorrectionToggles((currentToggles) => ({ ...currentToggles, [detail.id]: !currentToggles[detail.id] }))}
+                    className={adminCorrectionToggles[detail.id] ? 'btn-primary' : 'btn-secondary'}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 9px', fontSize: '0.85rem', marginBottom: '12px' }}
+                    aria-pressed={Boolean(adminCorrectionToggles[detail.id])}
+                  >{adminCorrectionToggles[detail.id] ? <LockOpen size={15} aria-hidden="true" /> : <Lock size={15} aria-hidden="true" />}Admin correction</button> : null}
                   {renderHeader(detail)}
                   <h3>Dispatch Rounds</h3>
-                  <table className="table"><thead><tr><th>Round</th><th>Amount</th><th>Time</th></tr></thead><tbody>{rounds.map((round) => <tr key={round.id}><td className="numeric">{round.round_number}</td><td className="numeric">{round.amount}{editButton('round', round.id, 'amount', round.amount)}</td><td className="numeric">{round.departure_time}{editButton('round', round.id, 'departure_time', round.departure_time)}</td></tr>)}</tbody></table>
+                  <table className="table"><thead><tr><th>Round</th><th>Travel Pass</th><th>Amount</th><th>Time</th></tr></thead><tbody>{rounds.map((round) => {
+                    const usesDifferentTerminal = round.departure_terminal != null && String(round.departure_terminal) !== String(detail.terminal)
+                    const travelPassLabel = round.source_trip ? `#${round.source_trip}` : 'Legacy'
+                    return <tr key={round.id} style={round.is_excluded ? { color: 'var(--text-secondary)', textDecoration: 'line-through' } : undefined}>
+                      <td className="numeric">{round.round_number}</td>
+                      <td>{travelPassLabel}{usesDifferentTerminal && round.departure_terminal_name ? ` - ${round.departure_terminal_name}` : ''}{round.is_excluded ? <span className="badge badge--neutral" style={{ marginLeft: '8px', textDecoration: 'none' }}>Excluded</span> : null}</td>
+                      <td className="numeric">{round.amount}{editButton(detail.id, 'round', round.id, 'amount', round.amount, `Edit dispatch round ${round.round_number} amount (admin)`)}</td>
+                      <td className="numeric">{round.departure_time?.slice(0, 5) || '-'}{editButton(detail.id, 'round', round.id, 'departure_time', round.departure_time, `Edit dispatch round ${round.round_number} departure time (admin)`)}</td>
+                    </tr>
+                  })}</tbody></table>
                   {rounds.map((round) => <Fragment key={`${round.id}-edit`}>{editControls('round', round.id, 'amount', <input type="number" min="0" step="0.01" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input numeric" />)}{editControls('round', round.id, 'departure_time', <input type="time" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input" />)}</Fragment>)}
-                  <h3>Fees</h3>
-                  <p className="numeric"><strong>Terminal Fee:</strong> {detail.terminal_fee} (computed)</p>
-                  <p className="numeric"><strong>Net Pay:</strong> {detail.net_pay}</p>
-                  {feeFields.map(([field, label]) => <p className="numeric" key={field}><strong>{label}:</strong> {detail[field]}{editButton('remittance', detail.id, field, detail[field])}</p>)}
-                  {feeFields.map(([field]) => editControls('remittance', detail.id, field, <input type="number" min="0" step="0.01" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input numeric" />))}
+                  <section className="card" style={{ maxWidth: '560px', marginTop: '20px' }}>
+                    <h3 style={{ marginTop: 0 }}>Statement</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px' }}><span>Gross (dispatch rounds)</span><span className="numeric">{detail.gross}</span></div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px' }}><span>Terminal fee ({detail.terminal_fee_percentage}%)</span><span className="numeric">{formatDeduction(detail.terminal_fee)}</span></div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px', paddingTop: '10px', borderTop: '1px solid var(--border)', fontWeight: 600 }}><span>Subtotal</span><span className="numeric">{detail.subtotal}</span></div>
+                      {feeFields.map(([field, label]) => <Fragment key={field}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px', color: 'var(--text-secondary)' }}><span>{label}</span><span className="numeric">{formatDeduction(detail[field])}{editButton(detail.id, 'remittance', detail.id, field, detail[field], `Edit ${label.toLowerCase()} (admin)`)}</span></div>
+                        {editControls('remittance', detail.id, field, <input type="number" min="0" step="0.01" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input numeric" />)}
+                      </Fragment>)}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px', alignItems: 'baseline', paddingTop: '14px', borderTop: '1px solid var(--border)', fontSize: '1.35rem', fontWeight: 700 }}><span>Net pay</span><span className="numeric">{detail.net_pay}</span></div>
+                      {detail.substitute_fee != null ? <Fragment>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '24px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}><span>Substitute fee (separate settlement)</span><span className="numeric">{detail.substitute_fee}{editButton(detail.id, 'remittance', detail.id, 'substitute_fee', detail.substitute_fee, 'Edit substitute fee (admin)')}</span></div>
+                        {editControls('remittance', detail.id, 'substitute_fee', <input type="number" min="0" step="0.01" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input numeric" />)}
+                      </Fragment> : null}
+                    </div>
+                  </section>
                   <h3>Correction History</h3>
                   {corrections.length === 0 ? <p>No corrections have been made to this remittance.</p> : <table className="table"><thead><tr><th>Field</th><th>Round</th><th>Old Value</th><th>New Value</th><th>Admin</th><th>When</th><th>Reason</th></tr></thead><tbody>{corrections.map((correction) => <tr key={correction.id}><td>{correction.field_name}</td><td>{correction.dispatch_round_number || 'Remittance'}</td><td className="numeric">{correction.old_value}</td><td className="numeric">{correction.new_value}</td><td>{correction.admin_full_name || correction.admin_username}</td><td>{correction.corrected_at}</td><td>{correction.reason}</td></tr>)}</tbody></table>}
                 </>}</td></tr> : null}

@@ -1,6 +1,27 @@
 import { useEffect, useState } from 'react'
 import api from '../api/client'
 
+function groupConsecutiveFailures(taps) {
+  const groupedTaps = []
+
+  taps.forEach((tap) => {
+    const previousTap = groupedTaps[groupedTaps.length - 1]
+    const matchesPreviousFailure = !tap.success
+      && previousTap?.failureCount
+      && previousTap.card_uid === tap.card_uid
+      && previousTap.message === tap.message
+
+    if (matchesPreviousFailure) {
+      previousTap.failureCount += 1
+      return
+    }
+
+    groupedTaps.push({ ...tap, failureCount: tap.success ? 0 : 1 })
+  })
+
+  return groupedTaps
+}
+
 function TapFeedPage() {
   const [taps, setTaps] = useState([])
   const [error, setError] = useState('')
@@ -33,6 +54,8 @@ function TapFeedPage() {
       clearInterval(intervalId)
     }
   }, [selectedDate])
+
+  const feedTaps = groupConsecutiveFailures(taps)
 
   return (
     <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'var(--font-body)', fontSize: '1.4rem' }}>
@@ -68,7 +91,7 @@ function TapFeedPage() {
         <p style={{ fontSize: '1.6rem' }}>No taps yet today.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {taps.map((tap) => (
+          {feedTaps.map((tap) => (
             <div
               key={tap.id}
               style={{
@@ -96,6 +119,7 @@ function TapFeedPage() {
                 <p style={{ fontSize: '1.8rem', fontWeight: 'bold', margin: 0, fontFamily: 'var(--font-display)' }}>
                   {tap.passenger_name ? tap.passenger_name : 'Unregistered card'}
                   {tap.destination_name ? ` → ${tap.destination_name}` : ''}
+                  {tap.failureCount > 1 ? <span className="badge badge--danger" style={{ marginLeft: '10px', verticalAlign: 'middle' }}>x{tap.failureCount}</span> : null}
                 </p>
                 <p style={{ fontSize: '1.4rem', margin: '8px 0 0' }}>{tap.message}</p>
                 <p style={{ fontSize: '1.2rem', margin: '8px 0 0', color: 'var(--text-secondary)' }}>

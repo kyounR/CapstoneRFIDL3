@@ -337,7 +337,7 @@ function DailyRemittancePage() {
           {rounds.length > 0 ? (
             <div className="card" style={{ padding: 0, marginBottom: '12px', overflow: 'hidden' }}>
               <table className="table">
-                <thead><tr><th>Round</th><th>Departed</th><th>Travel Pass</th><th style={{ textAlign: 'right' }}>Amount</th>{!remittance.is_finalized ? <th>Action</th> : null}</tr></thead>
+                <thead><tr><th>Round</th><th>Departed</th><th>Travel Pass</th><th>Dispatcher</th><th style={{ textAlign: 'right' }}>Amount</th>{!remittance.is_finalized ? <th>Action</th> : null}</tr></thead>
                 <tbody>{rounds.map((round) => {
                   const isExclusionPanelOpen = expandedRoundId === round.id
                   const usesDifferentTerminal = round.departure_terminal != null && String(round.departure_terminal) !== String(remittance.terminal)
@@ -347,10 +347,11 @@ function DailyRemittancePage() {
                       <td className="numeric">{round.round_number}</td>
                       <td className="numeric">{round.departure_time?.slice(0, 5) || '-'}</td>
                       <td>{travelPassLabel}{usesDifferentTerminal && round.departure_terminal_name ? ` - ${round.departure_terminal_name}` : ''}{round.is_excluded ? <span className="badge badge--neutral" style={{ marginLeft: '8px', textDecoration: 'none' }}>Excluded</span> : null}</td>
+                      <td>{round.dispatcher_name ?? '--'}</td>
                       <td className="numeric" style={{ textAlign: 'right' }}>{round.amount}</td>
                       {!remittance.is_finalized ? <td>{round.is_excluded ? null : <button type="button" onClick={() => setExpandedRoundId(round.id)} disabled={busyAction !== ''} style={{ padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontFamily: 'var(--font-body)', cursor: 'pointer' }}>Exclude</button>}</td> : null}
                     </tr>
-                    {isExclusionPanelOpen ? <tr><td colSpan="5" style={{ background: 'var(--bg-elevated)' }}>
+                    {isExclusionPanelOpen ? <tr><td colSpan="6" style={{ background: 'var(--bg-elevated)' }}>
                       <p style={{ marginTop: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Excluded rounds stay on record but don't count toward this remittance's totals.</p>
                       <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                         <input

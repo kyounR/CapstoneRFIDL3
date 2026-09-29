@@ -248,7 +248,7 @@ function DailyRemittanceHistoryPage() {
                   >{adminCorrectionToggles[detail.id] ? <LockOpen size={15} aria-hidden="true" /> : <Lock size={15} aria-hidden="true" />}Admin correction</button> : null}
                   {renderHeader(detail)}
                   <h3>Dispatch Rounds</h3>
-                  <table className="table"><thead><tr><th>Round</th><th>Travel Pass</th><th>Amount</th><th>Time</th></tr></thead><tbody>{rounds.map((round) => {
+                  <table className="table"><thead><tr><th>Round</th><th>Travel Pass</th><th>Dispatcher</th><th>Amount</th><th>Time</th></tr></thead><tbody>{rounds.map((round) => {
                     const usesDifferentTerminal = round.departure_terminal != null && String(round.departure_terminal) !== String(detail.terminal)
                     const travelPassLabel = round.source_trip ? `#${round.source_trip}` : 'Legacy'
                     const editingField = editing?.type === 'round' && editing.id === round.id ? editing.field : null
@@ -256,10 +256,11 @@ function DailyRemittanceHistoryPage() {
                       <tr style={round.is_excluded ? { color: 'var(--text-secondary)', textDecoration: 'line-through' } : undefined}>
                         <td className="numeric">{round.round_number}</td>
                         <td>{travelPassLabel}{usesDifferentTerminal && round.departure_terminal_name ? ` - ${round.departure_terminal_name}` : ''}{round.is_excluded ? <span className="badge badge--neutral" style={{ marginLeft: '8px', textDecoration: 'none' }}>Excluded</span> : null}</td>
+                        <td>{round.dispatcher_name ?? '--'}</td>
                         <td className="numeric">{round.amount}{editButton(detail.id, 'round', round.id, 'amount', round.amount, `Edit dispatch round ${round.round_number} amount (admin)`)}</td>
                         <td className="numeric">{round.departure_time?.slice(0, 5) || '-'}{editButton(detail.id, 'round', round.id, 'departure_time', round.departure_time, `Edit dispatch round ${round.round_number} departure time (admin)`)}</td>
                       </tr>
-                      {editingField ? <tr><td colSpan="4" style={{ background: 'var(--bg-elevated)' }}>
+                      {editingField ? <tr><td colSpan="5" style={{ background: 'var(--bg-elevated)' }}>
                         {editingField === 'amount'
                           ? editControls('round', round.id, 'amount', <input type="number" min="0" step="0.01" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input numeric" />)
                           : editControls('round', round.id, 'departure_time', <input type="time" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input" />)}

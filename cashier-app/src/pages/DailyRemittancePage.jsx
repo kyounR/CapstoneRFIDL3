@@ -286,8 +286,7 @@ function DailyRemittancePage() {
           <p><strong>Vehicle:</strong> {selectedAvailable.plate_number}</p>
           <p><strong>Terminal:</strong> {selectedAvailable.departure_terminal_name}</p>
           <p><strong>Date:</strong> {selectedAvailable.date}</p>
-          <label htmlFor="driver">Driver</label>
-          {selectedAvailable.assigned_driver_id && !differentDriver ? <p>{selectedAvailable.assigned_driver_full_name}</p> : null}
+          {selectedAvailable.assigned_driver_id && !differentDriver ? <p><strong>Driver:</strong> {selectedAvailable.assigned_driver_full_name}</p> : null}
           {!selectedAvailable.assigned_driver_id ? <p>No assigned driver. Select a driver below.</p> : null}
           {selectedAvailable.assigned_driver_id ? (
             <label style={{ display: 'block', margin: '12px 0' }}>
@@ -295,10 +294,13 @@ function DailyRemittancePage() {
             </label>
           ) : null}
           {differentDriver || !selectedAvailable.assigned_driver_id ? (
-            <select id="driver" value={driverId} onChange={(event) => setDriverId(event.target.value)} required className="input" style={{ display: 'block', width: '100%', margin: '4px 0 12px' }}>
-              <option value="">Select a driver</option>
-              {drivers.map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name}</option>)}
-            </select>
+            <>
+              <label htmlFor="driver">Driver</label>
+              <select id="driver" value={driverId} onChange={(event) => setDriverId(event.target.value)} required className="input" style={{ display: 'block', width: '100%', margin: '4px 0 12px' }}>
+                <option value="">Select a driver</option>
+                {drivers.map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name}</option>)}
+              </select>
+            </>
           ) : null}
           {selectedAvailable.assigned_driver_id && differentDriver ? (
             <div style={{ marginBottom: '12px', paddingLeft: '12px', borderLeft: '3px solid var(--accent)' }}>

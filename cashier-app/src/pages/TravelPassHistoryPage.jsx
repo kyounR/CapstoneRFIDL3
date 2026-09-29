@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from 'react'
+import { Pencil } from 'lucide-react'
 import SectionTabs from '../components/SectionTabs'
 import api from '../api/client'
 
@@ -12,6 +13,14 @@ function getToday() {
 
 function getListData(data) {
   return Array.isArray(data) ? data : data.results || []
+}
+
+function formatDeparture(pass) {
+  if (pass.departure_time) {
+    return pass.departure_time
+  }
+
+  return pass.is_cancelled ? '\u2014' : 'Not yet finalized'
 }
 
 function TravelPassHistoryPage() {
@@ -30,6 +39,7 @@ function TravelPassHistoryPage() {
   const [editValue, setEditValue] = useState('')
   const [reason, setReason] = useState('')
   const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const [adminCorrectionToggles, setAdminCorrectionToggles] = useState({})
 
   const isAdmin = localStorage.getItem('userRole') === 'admin'
 
@@ -193,8 +203,8 @@ function TravelPassHistoryPage() {
     )
   }
 
-  function renderAdminEditButton(type, id, field, value) {
-    if (!isAdmin || (editing && !(editing.type === type && editing.id === id && editing.field === field))) {
+  function renderAdminEditButton(manifestId, type, id, field, value, ariaLabel) {
+    if (!isAdmin || !adminCorrectionToggles[manifestId] || (editing && !(editing.type === type && editing.id === id && editing.field === field))) {
       return null
     }
 
@@ -206,10 +216,10 @@ function TravelPassHistoryPage() {
           startEdit(type, id, field, value)
         }}
         className="btn-secondary"
-        style={{ marginLeft: '6px', padding: '3px 7px', fontSize: '0.85em' }}
-      >
-        Edit (Admin)
-      </button>
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', marginLeft: '6px', padding: 0 }}
+        aria-label={ariaLabel}
+        title={ariaLabel}
+      ><Pencil size={14} aria-hidden="true" /></button>
     )
   }
 
@@ -223,7 +233,7 @@ function TravelPassHistoryPage() {
       <div className="card" style={{ marginBottom: '16px' }} onClick={(event) => event.stopPropagation()}>
         <p>
           <strong>Vehicle:</strong> {vehicle?.plate_number || pass.vehicle}
-          {renderAdminEditButton('trip', pass.id, 'vehicle', pass.vehicle)}
+          {renderAdminEditButton(pass.id, 'trip', pass.id, 'vehicle', pass.vehicle, 'Edit vehicle (admin)')}
         </p>
         {isEditingVehicle ? renderEditControls('trip', pass.id, 'vehicle', (
           <select value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input">
@@ -232,12 +242,12 @@ function TravelPassHistoryPage() {
         )) : null}
         <p>
           <strong>Date:</strong> {pass.date}
-          {renderAdminEditButton('trip', pass.id, 'date', pass.date)}
+          {renderAdminEditButton(pass.id, 'trip', pass.id, 'date', pass.date, 'Edit date (admin)')}
         </p>
         {isEditingDate ? renderEditControls('trip', pass.id, 'date', <input type="date" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input" />) : null}
         <p>
-          <strong>Departure:</strong> {pass.departure_time || 'Not yet finalized'}
-          {renderAdminEditButton('trip', pass.id, 'departure_time', pass.departure_time || '')}
+          <strong>Departure:</strong> {formatDeparture(pass)}
+          {renderAdminEditButton(pass.id, 'trip', pass.id, 'departure_time', pass.departure_time || '', 'Edit departure (admin)')}
         </p>
         {isEditingDeparture ? renderEditControls('trip', pass.id, 'departure_time', <input type="time" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input" />) : null}
       </div>
@@ -267,7 +277,7 @@ function TravelPassHistoryPage() {
 
       {!isLoading && travelPasses.length > 0 ? (
         <table className="table">
-          <thead><tr><th>Vehicle</th><th>Cashier</th><th>Departure</th><th>Total Passengers</th><th>Total Fare</th><th>Status</th></tr></thead>
+          <thead><tr><th>Vehicle</th><th>Cashier</th><th>Departure</th><th style={{ textAlign: 'right' }}>Total Passengers</th><th style={{ textAlign: 'right' }}>Total Fare</th><th>Status</th></tr></thead>
           <tbody>
             {travelPasses.map((travelPass) => {
               const isExpanded = expandedId === travelPass.id
@@ -277,9 +287,9 @@ function TravelPassHistoryPage() {
                   <tr onClick={() => toggleExpanded(travelPass.id)} style={{ cursor: 'pointer' }}>
                     <td>{vehicle?.plate_number || travelPass.vehicle}</td>
                     <td>{travelPass.cashier_full_name || travelPass.cashier_username || travelPass.cashier}</td>
-                    <td>{travelPass.departure_time || 'Not yet finalized'}</td>
-                    <td className="numeric">{travelPass.total_passengers}</td>
-                    <td className="numeric">{travelPass.total_fare}</td>
+                    <td>{formatDeparture(travelPass)}</td>
+                    <td className="numeric" style={{ textAlign: 'right' }}>{travelPass.total_passengers}</td>
+                    <td className="numeric" style={{ textAlign: 'right' }}>{travelPass.total_fare}</td>
                     <td>
                       <span className={`status-dot ${travelPass.is_cancelled ? 'status-dot--danger' : travelPass.is_finalized ? 'status-dot--success' : 'status-dot--pending'}`} style={{ marginRight: '6px' }} />
                       <span className={`badge ${travelPass.is_cancelled ? 'badge--danger' : travelPass.is_finalized ? 'badge--success' : 'badge--pending'}`}>{travelPass.is_cancelled ? 'Cancelled' : travelPass.is_finalized ? 'Finalized' : 'In Progress'}</span>
@@ -289,15 +299,22 @@ function TravelPassHistoryPage() {
                     <tr><td colSpan="6">
                       {isLoadingDetail || !detailPass ? <p>Loading Travel Pass details...</p> : (
                         <>
+                          {isAdmin ? <button
+                            type="button"
+                            onClick={() => setAdminCorrectionToggles((currentToggles) => ({ ...currentToggles, [detailPass.id]: !currentToggles[detailPass.id] }))}
+                            className="btn-secondary"
+                            style={{ padding: '5px 9px', fontSize: '0.85rem', marginBottom: '12px' }}
+                            aria-pressed={Boolean(adminCorrectionToggles[detailPass.id])}
+                          >Admin correction</button> : null}
                           {detailPass.is_finalized && isAdmin ? renderTripHeader(detailPass) : (
                             <div style={{ marginBottom: '16px' }}>
                               <strong>Vehicle:</strong> {vehicle?.plate_number || detailPass.vehicle} {' | '}
                               <strong>Date:</strong> {detailPass.date} {' | '}
-                              <strong>Departure:</strong> {detailPass.departure_time || 'Not yet finalized'}
+                              <strong>Departure:</strong> {formatDeparture(detailPass)}
                             </div>
                           )}
                           <table className="table">
-                            <thead><tr><th>Destination</th><th>Regular</th><th>Discount</th><th>Total</th><th>Total Fare</th></tr></thead>
+                            <thead><tr><th>Destination</th><th>Regular</th><th>Discount</th><th style={{ textAlign: 'right' }}>Total</th><th style={{ textAlign: 'right' }}>Total Fare</th></tr></thead>
                             <tbody>
                               {detailPass.entries?.length ? detailPass.entries.map((entry) => {
                                 const destinationName = entry.destination_details?.destination_name || entry.destination_name
@@ -306,16 +323,16 @@ function TravelPassHistoryPage() {
                                     <td>{destinationName}</td>
                                     <td className="numeric">
                                       {entry.passenger_count - entry.discount_count}
-                                      {detailPass.is_finalized ? renderAdminEditButton('entry', entry.id, 'passenger_count', entry.passenger_count) : null}
+                                      {detailPass.is_finalized ? renderAdminEditButton(detailPass.id, 'entry', entry.id, 'passenger_count', entry.passenger_count, `Edit ${destinationName} regular count (admin)`) : null}
                                       {detailPass.is_finalized && editing?.type === 'entry' && editing.id === entry.id && editing.field === 'passenger_count' ? renderEditControls('entry', entry.id, 'passenger_count', <input type="number" min="0" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input numeric" />) : null}
                                     </td>
                                     <td className="numeric">
                                       {entry.discount_count}
-                                      {detailPass.is_finalized ? renderAdminEditButton('entry', entry.id, 'discount_count', entry.discount_count) : null}
+                                      {detailPass.is_finalized ? renderAdminEditButton(detailPass.id, 'entry', entry.id, 'discount_count', entry.discount_count, `Edit ${destinationName} discount count (admin)`) : null}
                                       {detailPass.is_finalized && editing?.type === 'entry' && editing.id === entry.id && editing.field === 'discount_count' ? renderEditControls('entry', entry.id, 'discount_count', <input type="number" min="0" value={editValue} onChange={(event) => setEditValue(event.target.value)} className="input numeric" />) : null}
                                     </td>
-                                    <td className="numeric">{entry.passenger_count}</td>
-                                    <td className="numeric">{entry.total_fare}</td>
+                                    <td className="numeric" style={{ textAlign: 'right' }}>{entry.passenger_count}</td>
+                                    <td className="numeric" style={{ textAlign: 'right' }}>{entry.total_fare}</td>
                                   </tr>
                                 )
                               }) : <tr><td colSpan="5">No entries recorded.</td></tr>}

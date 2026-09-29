@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react'
-import { Pencil } from 'lucide-react'
+import { Lock, LockOpen, Pencil } from 'lucide-react'
 import SectionTabs from '../components/SectionTabs'
 import api from '../api/client'
 
@@ -302,10 +302,10 @@ function TravelPassHistoryPage() {
                           {isAdmin ? <button
                             type="button"
                             onClick={() => setAdminCorrectionToggles((currentToggles) => ({ ...currentToggles, [detailPass.id]: !currentToggles[detailPass.id] }))}
-                            className="btn-secondary"
-                            style={{ padding: '5px 9px', fontSize: '0.85rem', marginBottom: '12px' }}
+                            className={adminCorrectionToggles[detailPass.id] ? 'btn-primary' : 'btn-secondary'}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 9px', fontSize: '0.85rem', marginBottom: '12px' }}
                             aria-pressed={Boolean(adminCorrectionToggles[detailPass.id])}
-                          >Admin correction</button> : null}
+                          >{adminCorrectionToggles[detailPass.id] ? <LockOpen size={15} aria-hidden="true" /> : <Lock size={15} aria-hidden="true" />}Admin correction</button> : null}
                           {detailPass.is_finalized && isAdmin ? renderTripHeader(detailPass) : (
                             <div style={{ marginBottom: '16px' }}>
                               <strong>Vehicle:</strong> {vehicle?.plate_number || detailPass.vehicle} {' | '}

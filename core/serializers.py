@@ -138,6 +138,11 @@ class DispatchRoundSerializer(serializers.ModelSerializer):
         read_only=True,
         allow_null=True,
     )
+    dispatcher_name = serializers.CharField(
+        source='source_trip.dispatcher.full_name',
+        read_only=True,
+        allow_null=True,
+    )
 
     class Meta:
         model = DispatchRound

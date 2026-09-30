@@ -104,6 +104,7 @@ def _sync_dispatch_rounds(remittance, cashier):
                 date=remittance.date,
                 departure_terminal=remittance.terminal,
                 is_finalized=True,
+                is_cancelled=False,
                 dispatch_round__isnull=True,
             ).order_by('departure_time')
         )
@@ -178,6 +179,7 @@ def _get_report_date_range(request):
 def _finalized_entries_in_date_range(start_date, end_date):
     return FareManifestEntry.objects.filter(
         manifest_trip__is_finalized=True,
+        manifest_trip__is_cancelled=False,
         manifest_trip__date__range=(start_date, end_date),
     )
 
@@ -205,6 +207,7 @@ def admin_dashboard_view(request):
     )
     trip_count = ManifestTrip.objects.filter(
         is_finalized=True,
+        is_cancelled=False,
         date__range=(start_date, end_date),
     ).count()
     popular_destinations = finalized_entries.values(
@@ -609,6 +612,7 @@ def tap_destination_view(request):
     manifest_trip = ManifestTrip.objects.select_related('vehicle').filter(
         id=manifest_trip_id,
         is_finalized=False,
+        is_cancelled=False,
     ).first()
     if manifest_trip is None:
         return Response(
@@ -1117,6 +1121,7 @@ def tap_log_latest_public_view(request):
 def boarding_status_view(request):
     boarding_trips = ManifestTrip.objects.filter(
         is_finalized=False,
+        is_cancelled=False,
     ).select_related(
         'vehicle__line',
     ).annotate(
@@ -1423,6 +1428,7 @@ class DailyRemittanceViewSet(viewsets.ModelViewSet):
     def available(self, request):
         finalized_trips = ManifestTrip.objects.filter(
             is_finalized=True,
+            is_cancelled=False,
             departure_terminal__isnull=False,
         ).select_related('vehicle', 'vehicle__assigned_driver', 'departure_terminal')
 

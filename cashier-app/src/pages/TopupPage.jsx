@@ -143,7 +143,11 @@ function TopupPage() {
   async function handleSubmit(event) {
     event.preventDefault()
     const topupTarget = cardLookup?.passenger?.full_name || cardUid.trim()
-    if (!window.confirm(`Top up ${amount} to ${topupTarget}?`)) {
+    const cardStatus = cardLookup?.status
+    const confirmationMessage = cardStatus && cardStatus !== 'active'
+      ? `This card is currently marked as ${cardStatus.charAt(0).toUpperCase()}${cardStatus.slice(1)}. Top up ${amount} to ${topupTarget} anyway?`
+      : `Top up ${amount} to ${topupTarget}?`
+    if (!window.confirm(confirmationMessage)) {
       return
     }
 
@@ -301,7 +305,7 @@ function TopupPage() {
           <div className="card" style={{ marginBottom: '12px' }}>
             <p className="numeric">Card UID: {cardLookup.uid}</p>
             <p className="numeric">Balance: {cardLookup.balance}</p>
-            <p>
+            <p style={cardLookup.status !== 'active' ? { padding: '8px 12px', borderLeft: `3px solid ${cardLookup.status === 'deactivated' ? 'var(--danger)' : 'var(--accent)'}`, background: 'var(--bg-elevated)' } : undefined}>
               Status:{' '}
               <span className={`badge ${CARD_STATUS_BADGE[cardLookup.status] || 'badge--pending'}`}>
                 <span className={`status-dot ${CARD_STATUS_DOT[cardLookup.status] || 'status-dot--pending'}`} style={{ marginRight: '6px' }} />

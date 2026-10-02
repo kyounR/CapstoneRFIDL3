@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 
 // Page-level Active/History sub-navigation, distinct from the main header nav.
-function SectionTabs({ activePath, historyPath, compact = false }) {
+function SectionTabs({ activePath, historyPath, historyLabel = 'History', compact = false }) {
   const location = useLocation()
   const isHistory = location.pathname === historyPath || location.pathname.startsWith(`${historyPath}/`)
 
@@ -27,7 +27,7 @@ function SectionTabs({ activePath, historyPath, compact = false }) {
       }}
     >
       <Link to={activePath} style={tabStyle(!isHistory)}>Active</Link>
-      <Link to={historyPath} style={tabStyle(isHistory)}>History</Link>
+      <Link to={historyPath} style={tabStyle(isHistory)}>{historyLabel}</Link>
     </div>
   )
 }

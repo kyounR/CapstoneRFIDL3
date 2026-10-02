@@ -78,8 +78,7 @@ function DailyRemittanceHistoryPage() {
       setCorrections([])
       try {
         const response = await api.get('remittances/', { params: { date } })
-        const historyRemittances = getListData(response.data).filter((remittance) => remittance.is_finalized === true || remittance.is_cancelled === true)
-        setRemittances(historyRemittances)
+        setRemittances(getListData(response.data))
       } catch (requestError) {
         setRemittances([])
         setError(requestError.response?.data?.detail || 'Could not load remittance history.')
@@ -202,8 +201,8 @@ function DailyRemittanceHistoryPage() {
 
   return <div style={{ width: '100%', maxWidth: '1600px', margin: '40px auto', padding: '0 24px', fontFamily: 'var(--font-body)' }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '20px' }}>
-      <h1 style={{ margin: 0 }}>Daily Remittance History</h1>
-      <SectionTabs activePath="/remittance" historyPath="/remittance/history" compact />
+      <h1 style={{ margin: 0 }}>Daily Remittance Ledger</h1>
+      <SectionTabs activePath="/remittance" historyPath="/remittance/history" historyLabel="Ledger" compact />
     </div>
     <div style={{ marginBottom: '16px' }}><label htmlFor="historyDate">Date</label><input id="historyDate" type="date" value={date} onChange={(event) => setDate(event.target.value)} className="input" style={{ marginLeft: '8px' }} /></div>
     {error ? (
@@ -225,20 +224,31 @@ function DailyRemittanceHistoryPage() {
         const terminalTagClass = groupIndex % 2 === 0 ? 'terminal-tag--a' : 'terminal-tag--b'
         return <section key={key} style={{ marginBottom: '28px' }}>
           <h2><span className={terminalTagClass} style={{ marginRight: '10px' }}>{group.name}</span></h2>
-          <table className="table"><thead><tr><th>Driver</th><th>Vehicle</th><th>Status</th></tr></thead><tbody>
-            {group.items.map((item) => {
-              const vehicle = vehicles.find((entry) => entry.id === item.vehicle)
-              const driver = drivers.find((entry) => entry.id === item.driver)
-              return <Fragment key={item.id}>
-                <tr onClick={() => toggleDetail(item.id)} style={{ cursor: 'pointer' }}>
-                  <td>{driver?.full_name || item.driver}</td>
-                  <td>{vehicle?.plate_number || item.vehicle}</td>
-                  <td>
-                    <span className={`status-dot ${item.is_cancelled ? 'status-dot--danger' : item.is_finalized ? 'status-dot--success' : 'status-dot--pending'}`} style={{ marginRight: '6px' }} />
-                    <span className={`badge ${item.is_cancelled ? 'badge--danger' : item.is_finalized ? 'badge--success' : 'badge--pending'}`}>{item.is_cancelled ? 'Cancelled' : item.is_finalized ? 'Finalized' : 'In Progress'}</span>
-                  </td>
-                </tr>
-                {expandedId === item.id ? <tr><td colSpan="3">{isLoadingDetail || !detail ? <p>Loading details...</p> : <>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="table" style={{ minWidth: '1700px' }}><thead><tr><th>Driver</th><th>Vehicle</th><th style={{ textAlign: 'right' }}>Gross</th><th style={{ textAlign: 'right' }}>Terminal Fee</th><th style={{ textAlign: 'right' }}>Subtotal</th><th style={{ textAlign: 'right' }}>PS Fee</th><th style={{ textAlign: 'right' }}>Water Fee</th><th style={{ textAlign: 'right' }}>Dsp. Coll. Fee</th><th style={{ textAlign: 'right' }}>FTB</th><th style={{ textAlign: 'right' }}>Savings</th><th style={{ textAlign: 'right' }}>Trust Fund</th><th style={{ textAlign: 'right' }}>Net Pay</th><th>Status</th></tr></thead><tbody>
+              {group.items.map((item) => {
+                const vehicle = vehicles.find((entry) => entry.id === item.vehicle)
+                const driver = drivers.find((entry) => entry.id === item.driver)
+                return <Fragment key={item.id}>
+                  <tr onClick={() => toggleDetail(item.id)} style={{ cursor: 'pointer' }}>
+                    <td>{driver?.full_name || item.driver}</td>
+                    <td>{vehicle?.plate_number || item.vehicle}</td>
+                    <td className="numeric" style={{ textAlign: 'right' }}>{item.gross}</td>
+                    <td className="numeric" style={{ textAlign: 'right' }}>{item.terminal_fee}</td>
+                    <td className="numeric" style={{ textAlign: 'right' }}>{item.subtotal}</td>
+                    <td className="numeric" style={{ textAlign: 'right' }}>{item.ps_fee}</td>
+                    <td className="numeric" style={{ textAlign: 'right' }}>{item.water_fee}</td>
+                    <td className="numeric" style={{ textAlign: 'right' }}>{item.dispatcher_collection_fee}</td>
+                    <td className="numeric" style={{ textAlign: 'right' }}>{item.ftb}</td>
+                    <td className="numeric" style={{ textAlign: 'right' }}>{item.savings}</td>
+                    <td className="numeric" style={{ textAlign: 'right' }}>{item.trust_fund}</td>
+                    <td className="numeric" style={{ textAlign: 'right' }}>{item.net_pay}</td>
+                    <td>
+                      <span className={`status-dot ${item.is_cancelled ? 'status-dot--danger' : item.is_finalized ? 'status-dot--success' : 'status-dot--pending'}`} style={{ marginRight: '6px' }} />
+                      <span className={`badge ${item.is_cancelled ? 'badge--danger' : item.is_finalized ? 'badge--success' : 'badge--pending'}`}>{item.is_cancelled ? 'Cancelled' : item.is_finalized ? 'Finalized' : 'In Progress'}</span>
+                    </td>
+                  </tr>
+                  {expandedId === item.id ? <tr><td colSpan="13">{isLoadingDetail || !detail ? <p>Loading details...</p> : <>
                   {isAdmin ? <button
                     type="button"
                     onClick={() => setAdminCorrectionToggles((currentToggles) => ({ ...currentToggles, [detail.id]: !currentToggles[detail.id] }))}
@@ -286,10 +296,11 @@ function DailyRemittanceHistoryPage() {
                   </section>
                   <h3>Correction History</h3>
                   {corrections.length === 0 ? <p>No corrections have been made to this remittance.</p> : <table className="table"><thead><tr><th>Field</th><th>Round</th><th>Old Value</th><th>New Value</th><th>Admin</th><th>When</th><th>Reason</th></tr></thead><tbody>{corrections.map((correction) => <tr key={correction.id}><td>{correction.field_name}</td><td>{correction.dispatch_round_number || 'Remittance'}</td><td className="numeric">{correction.old_value}</td><td className="numeric">{correction.new_value}</td><td>{correction.admin_full_name || correction.admin_username}</td><td>{correction.corrected_at}</td><td>{correction.reason}</td></tr>)}</tbody></table>}
-                </>}</td></tr> : null}
-              </Fragment>
-            })}
-          </tbody></table>
+                  </>}</td></tr> : null}
+                </Fragment>
+              })}
+            </tbody></table>
+          </div>
         </section>
       })}
     </> : null}

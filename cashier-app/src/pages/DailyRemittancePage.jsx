@@ -257,7 +257,7 @@ function DailyRemittancePage() {
     <div style={{ width: '100%', maxWidth: '1600px', margin: '40px auto', padding: '0 24px', fontFamily: 'var(--font-body)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '20px' }}>
         <h1 style={{ margin: 0 }}>Daily Remittance</h1>
-        <SectionTabs activePath="/remittance" historyPath="/remittance/history" compact />
+        <SectionTabs activePath="/remittance" historyPath="/remittance/history" historyLabel="Ledger" compact />
       </div>
       {error ? (
         <p>

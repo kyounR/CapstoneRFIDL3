@@ -138,9 +138,20 @@ h3 {
     color: #000;
   }
 
+  header {
+    display: none !important;
+  }
+
+  .ledger-page,
+  .ledger-page * {
+    background: transparent !important;
+    color: #000 !important;
+  }
+
   .ledger-page {
     margin: 0 !important;
     padding: 0 !important;
+    background: #fff !important;
     color: #000;
   }
 

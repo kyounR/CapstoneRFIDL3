@@ -47,6 +47,7 @@ function DailyRemittanceHistoryPage() {
   const [editError, setEditError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [adminCorrectionToggles, setAdminCorrectionToggles] = useState({})
+  const [printedAt, setPrintedAt] = useState('')
   const isAdmin = localStorage.getItem('userRole') === 'admin'
 
   useEffect(() => {
@@ -141,6 +142,11 @@ function DailyRemittanceHistoryPage() {
     setEditError('')
   }
 
+  function handlePrint() {
+    setPrintedAt(new Date().toLocaleString())
+    window.setTimeout(() => window.print(), 0)
+  }
+
   async function saveEdit() {
     if (!reason.trim()) {
       setEditError('Reason for correction is required.')
@@ -199,12 +205,16 @@ function DailyRemittanceHistoryPage() {
     </div>
   }
 
-  return <div style={{ width: '100%', margin: '40px auto', padding: '0 24px', fontFamily: 'var(--font-body)' }}>
+  return <div className="ledger-page" style={{ width: '100%', margin: '40px auto', padding: '0 24px', fontFamily: 'var(--font-body)' }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '20px' }}>
       <h1 style={{ margin: 0 }}>Daily Remittance Ledger</h1>
-      <SectionTabs activePath="/remittance" historyPath="/remittance/history" historyLabel="Ledger" compact />
+      <div className="print-hidden" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <button type="button" onClick={handlePrint} className="btn-secondary">Print</button>
+        <SectionTabs activePath="/remittance" historyPath="/remittance/history" historyLabel="Ledger" compact />
+      </div>
     </div>
-    <div style={{ marginBottom: '16px' }}><label htmlFor="historyDate">Date</label><input id="historyDate" type="date" value={date} onChange={(event) => setDate(event.target.value)} className="input" style={{ marginLeft: '8px' }} /></div>
+    <div className="ledger-print-metadata print-only"><p><strong>Date:</strong> {date}</p><p>Printed on {printedAt || new Date().toLocaleString()}</p></div>
+    <div className="print-hidden" style={{ marginBottom: '16px' }}><label htmlFor="historyDate">Date</label><input id="historyDate" type="date" value={date} onChange={(event) => setDate(event.target.value)} className="input" style={{ marginLeft: '8px' }} /></div>
     {error ? (
       <p>
         <span className="status-dot status-dot--danger" style={{ marginRight: '8px' }} />
@@ -222,9 +232,9 @@ function DailyRemittanceHistoryPage() {
         return groups
       }, {})).map(([key, group], groupIndex) => {
         const terminalTagClass = groupIndex % 2 === 0 ? 'terminal-tag--a' : 'terminal-tag--b'
-        return <section key={key} style={{ marginBottom: '28px' }}>
+        return <section key={key} className="ledger-terminal-group" style={{ marginBottom: '28px' }}>
           <h2><span className={terminalTagClass} style={{ marginRight: '10px' }}>{group.name}</span></h2>
-          <div style={{ overflowX: 'auto' }}>
+          <div className="ledger-table-scroll" style={{ overflowX: 'auto' }}>
             <table className="table ledger-table" style={{ minWidth: '1500px' }}><thead><tr><th>Driver</th><th>Vehicle</th><th style={{ textAlign: 'right' }}>Gross</th><th style={{ textAlign: 'right' }}>Term. Fee</th><th style={{ textAlign: 'right' }}>Subtotal</th><th style={{ textAlign: 'right' }}>PS Fee</th><th style={{ textAlign: 'right' }}>Water Fee</th><th style={{ textAlign: 'right' }}>Dsp. Coll. Fee</th><th style={{ textAlign: 'right' }}>FTB</th><th style={{ textAlign: 'right' }}>Savings</th><th style={{ textAlign: 'right' }}>Trust Fund</th><th style={{ textAlign: 'right' }}>Net Pay</th><th>Status</th></tr></thead><tbody>
               {group.items.map((item) => {
                 const vehicle = vehicles.find((entry) => entry.id === item.vehicle)

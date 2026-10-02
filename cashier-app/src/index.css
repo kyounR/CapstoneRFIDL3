@@ -114,6 +114,11 @@ h3 {
   border-bottom: 1px solid var(--border);
 }
 
+.ledger-table th,
+.ledger-table td {
+  padding: 9px 10px;
+}
+
 .table tr:hover {
   background: var(--surface-hover);
 }

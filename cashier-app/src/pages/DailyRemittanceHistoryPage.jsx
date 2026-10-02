@@ -199,7 +199,7 @@ function DailyRemittanceHistoryPage() {
     </div>
   }
 
-  return <div style={{ width: '100%', maxWidth: '1600px', margin: '40px auto', padding: '0 24px', fontFamily: 'var(--font-body)' }}>
+  return <div style={{ width: '100%', margin: '40px auto', padding: '0 24px', fontFamily: 'var(--font-body)' }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '20px' }}>
       <h1 style={{ margin: 0 }}>Daily Remittance Ledger</h1>
       <SectionTabs activePath="/remittance" historyPath="/remittance/history" historyLabel="Ledger" compact />
@@ -225,7 +225,7 @@ function DailyRemittanceHistoryPage() {
         return <section key={key} style={{ marginBottom: '28px' }}>
           <h2><span className={terminalTagClass} style={{ marginRight: '10px' }}>{group.name}</span></h2>
           <div style={{ overflowX: 'auto' }}>
-            <table className="table" style={{ minWidth: '1700px' }}><thead><tr><th>Driver</th><th>Vehicle</th><th style={{ textAlign: 'right' }}>Gross</th><th style={{ textAlign: 'right' }}>Terminal Fee</th><th style={{ textAlign: 'right' }}>Subtotal</th><th style={{ textAlign: 'right' }}>PS Fee</th><th style={{ textAlign: 'right' }}>Water Fee</th><th style={{ textAlign: 'right' }}>Dsp. Coll. Fee</th><th style={{ textAlign: 'right' }}>FTB</th><th style={{ textAlign: 'right' }}>Savings</th><th style={{ textAlign: 'right' }}>Trust Fund</th><th style={{ textAlign: 'right' }}>Net Pay</th><th>Status</th></tr></thead><tbody>
+            <table className="table ledger-table" style={{ minWidth: '1500px' }}><thead><tr><th>Driver</th><th>Vehicle</th><th style={{ textAlign: 'right' }}>Gross</th><th style={{ textAlign: 'right' }}>Term. Fee</th><th style={{ textAlign: 'right' }}>Subtotal</th><th style={{ textAlign: 'right' }}>PS Fee</th><th style={{ textAlign: 'right' }}>Water Fee</th><th style={{ textAlign: 'right' }}>Dsp. Coll. Fee</th><th style={{ textAlign: 'right' }}>FTB</th><th style={{ textAlign: 'right' }}>Savings</th><th style={{ textAlign: 'right' }}>Trust Fund</th><th style={{ textAlign: 'right' }}>Net Pay</th><th>Status</th></tr></thead><tbody>
               {group.items.map((item) => {
                 const vehicle = vehicles.find((entry) => entry.id === item.vehicle)
                 const driver = drivers.find((entry) => entry.id === item.driver)

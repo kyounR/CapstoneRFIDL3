@@ -186,16 +186,18 @@ class Command(BaseCommand):
             destination, destination_created = Destination.objects.get_or_create(
                 destination_name=destination_name,
                 defaults={
+                    'line': line,
                     'base_fare': Decimal(base_fare),
                     'discount_exempt': discount_exempt,
                     'is_active': True,
                 },
             )
             if not destination_created:
+                destination.line = line
                 destination.base_fare = Decimal(base_fare)
                 destination.discount_exempt = discount_exempt
                 destination.is_active = True
-                destination.save(update_fields=['base_fare', 'discount_exempt', 'is_active'])
+                destination.save(update_fields=['line', 'base_fare', 'discount_exempt', 'is_active'])
             self._record_result(
                 f'Destination: {destination_name}',
                 destination_created,

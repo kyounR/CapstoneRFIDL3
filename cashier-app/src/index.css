@@ -148,6 +148,11 @@ h3 {
     color: #000 !important;
   }
 
+  .ledger-page,
+  .ledger-page * {
+    visibility: visible !important;
+  }
+
   .ledger-page {
     margin: 0 !important;
     padding: 0 !important;
@@ -364,7 +369,7 @@ h3 {
 }
 
 @media print {
-  body * {
+  body:has(.receipt-modal-overlay) * {
     visibility: hidden !important;
   }
 

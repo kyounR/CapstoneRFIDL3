@@ -6,7 +6,8 @@
 - [ ] General UI pass for every tab
 - [ ] **(MAJOR)** Official government-compliant receipt implementation
 - [ ] **(MAJOR) (HARDWARE)** Add an LED to the RFID reader and a buzzer/beeper for auditory feedback (status: still waiting on delivery)
-
+- [ ] Admin correction should not be accessible in cancelled travel passes/remittances
+- [ ] Fix alignment of tables in admin dashboard
 
 ---
 
@@ -52,6 +53,7 @@
 - [x] Change "passenger" field in transaction history to be more representative (currently shows "cash" instead of name; just needs a rename)
 - [x] Revise UI of the travel pass page
 - [x] Another pass to Remittance Automation
+- [x] Dispatcher should be shown in Remittance
 
 ### Public Feeds & Security
 - [x] Add extra info to public-facing tap feed (show deductions, exclude current balance)

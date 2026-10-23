@@ -2660,7 +2660,7 @@ class DestinationViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'head', 'options']
 
     def get_queryset(self):
-        queryset = Destination.objects.all().order_by('base_fare', 'destination_name')
+        queryset = Destination.objects.all().order_by('departure_terminal_id', 'base_fare', 'destination_name')
         # Apply is_active filter only if ?active_only=true is passed
         active_only = self.request.query_params.get('active_only', '').lower() == 'true'
         if active_only:

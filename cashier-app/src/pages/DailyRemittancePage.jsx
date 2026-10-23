@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
+import { useConfirm } from '../components/ConfirmDialog'
 import SectionTabs from '../components/SectionTabs'
 import api from '../api/client'
 
@@ -21,6 +22,7 @@ const feeFields = [
 ]
 
 function DailyRemittancePage() {
+  const confirm = useConfirm()
   const [pageState, setPageState] = useState(0)
   const [availableEntries, setAvailableEntries] = useState([])
   const [drivers, setDrivers] = useState([])
@@ -200,7 +202,7 @@ function DailyRemittancePage() {
   }
 
   async function handleFinalize() {
-    if (!window.confirm('Finalize this remittance? It cannot be edited afterward.')) return
+    if (!(await confirm('Finalize this remittance? It cannot be edited afterward.'))) return
     setBusyAction('finalize')
     setError('')
     try {
@@ -223,7 +225,7 @@ function DailyRemittancePage() {
       ? `This remittance has ${roundCount} dispatch rounds already added. Cancelling will mark it as cancelled and remove it from active remittances; the record itself is preserved. Are you sure?`
       : 'Cancel this remittance?'
 
-    if (!window.confirm(confirmationMessage)) return
+    if (!(await confirm(confirmationMessage))) return
 
     setBusyAction('cancel')
     setError('')

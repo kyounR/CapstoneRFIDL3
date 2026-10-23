@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Crosshair } from 'lucide-react'
+import { useConfirm } from '../components/ConfirmDialog'
 import SectionTabs from '../components/SectionTabs'
 import ReceiptModal from '../components/ReceiptModal'
 import api from '../api/client'
@@ -35,6 +36,7 @@ function entriesByDestination(entries = []) {
 }
 
 function TravelPassPage() {
+  const confirm = useConfirm()
   const [pageState, setPageState] = useState(0)
   const [activePasses, setActivePasses] = useState([])
   const [vehicles, setVehicles] = useState([])
@@ -312,7 +314,7 @@ function TravelPassPage() {
 
   async function handleCancelBoarding(tap) {
     const confirmMessage = `Refund ${tap.fare_charged} to this card and remove this passenger from the tally? This cannot be undone.`
-    if (!window.confirm(confirmMessage)) {
+    if (!(await confirm(confirmMessage))) {
       return
     }
 
@@ -338,8 +340,8 @@ function TravelPassPage() {
   }
 
   async function handleFinalize(event) {
-    if (!window.confirm('Finalize this Travel Pass? It cannot be edited afterward.')) return
     event.preventDefault()
+    if (!(await confirm('Finalize this Travel Pass? It cannot be edited afterward.'))) return
     if (!departureTime) {
       setError('Departure time is required to finalize the Travel Pass.')
       return
@@ -369,7 +371,7 @@ function TravelPassPage() {
       ? `This Travel Pass has ${passengerCount} passengers already tallied. Cancelling will mark it as cancelled and remove it from active Travel Passes; the record itself is preserved. Are you sure?`
       : 'Cancel this Travel Pass?'
 
-    if (!window.confirm(confirmationMessage)) {
+    if (!(await confirm(confirmationMessage))) {
       return
     }
 

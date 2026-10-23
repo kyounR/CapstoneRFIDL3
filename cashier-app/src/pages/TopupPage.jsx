@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useConfirm } from '../components/ConfirmDialog'
 import api from '../api/client'
 
 const CARD_STATUS_BADGE = {
@@ -14,6 +15,7 @@ const CARD_STATUS_DOT = {
 }
 
 function TopupPage() {
+  const confirm = useConfirm()
   const [cardUid, setCardUid] = useState('')
   const [cardLookup, setCardLookup] = useState(null)
   const [lookupMessage, setLookupMessage] = useState('')
@@ -147,7 +149,7 @@ function TopupPage() {
     const confirmationMessage = cardStatus && cardStatus !== 'active'
       ? `This card is currently marked as ${cardStatus.charAt(0).toUpperCase()}${cardStatus.slice(1)}. Top up ${amount} to ${topupTarget} anyway?`
       : `Top up ${amount} to ${topupTarget}?`
-    if (!window.confirm(confirmationMessage)) {
+    if (!(await confirm(confirmationMessage))) {
       return
     }
 

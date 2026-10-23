@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useConfirm } from './ConfirmDialog'
 import api from '../api/client'
 
 function getListData(data) {
@@ -17,6 +18,7 @@ function createFormValues(fields, record = {}) {
 }
 
 function EntityManager({ endpoint, title, fields, getSubmitWarning }) {
+  const confirm = useConfirm()
   const [records, setRecords] = useState([])
   const [relatedOptions, setRelatedOptions] = useState({})
   const [editingRecord, setEditingRecord] = useState(null)
@@ -124,7 +126,7 @@ function EntityManager({ endpoint, title, fields, getSubmitWarning }) {
     }, {})
 
     const warningMessage = getSubmitWarning?.(payload, records, editingRecord)
-    if (warningMessage && !window.confirm(`${warningMessage} Continue anyway?`)) {
+    if (warningMessage && !(await confirm(`${warningMessage} Continue anyway?`))) {
       return
     }
 

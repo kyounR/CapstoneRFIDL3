@@ -125,7 +125,8 @@ function TravelPassPage() {
 
     const selectedVehicle = vehicles.find((vehicle) => vehicle.id === Number(manifest.vehicle))
     const lineId = selectedVehicle?.line
-    if (!lineId) {
+    const departureTerminal = manifest.departure_terminal
+    if (!lineId || !departureTerminal) {
       setDestinations([])
       return
     }
@@ -136,7 +137,7 @@ function TravelPassPage() {
       setIsLoadingDestinations(true)
       try {
         const response = await api.get('destinations/', {
-          params: { active_only: true, line: lineId },
+          params: { active_only: true, line: lineId, departure_terminal: departureTerminal },
         })
         if (isMounted) {
           setDestinations(getListData(response.data))
@@ -157,7 +158,7 @@ function TravelPassPage() {
     return () => {
       isMounted = false
     }
-  }, [pageState, manifest?.id, manifest?.vehicle, vehicles])
+  }, [pageState, manifest?.id, manifest?.vehicle, manifest?.departure_terminal, vehicles])
 
   useEffect(() => {
     if (pageState !== 2 || !manifest) {

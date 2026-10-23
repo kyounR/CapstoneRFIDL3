@@ -88,9 +88,22 @@ class TerminalSerializer(serializers.ModelSerializer):
 
 
 class DriverSerializer(serializers.ModelSerializer):
+    driver_code = serializers.SerializerMethodField()
+
+    def get_driver_code(self, driver):
+        return f'DRV-{driver.pk:04d}'
+
     class Meta:
         model = Driver
-        fields = '__all__'
+        fields = [
+            'id',
+            'driver_code',
+            'full_name',
+            'contact_number',
+            'participates_in_savings',
+            'participates_in_trust_fund',
+            'is_active',
+        ]
 
 
 class DispatcherSerializer(serializers.ModelSerializer):

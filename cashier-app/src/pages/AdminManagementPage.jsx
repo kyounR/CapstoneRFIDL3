@@ -43,6 +43,7 @@ const MANAGEMENT_TABS = [
     { key: 'is_active', label: 'Active', type: 'checkbox', default: true },
   ] },
   { label: 'Drivers', endpoint: 'drivers/', fields: [
+    { key: 'driver_code', label: 'Driver ID', type: 'text', readOnly: true },
     { key: 'full_name', label: 'Full Name', type: 'text', required: true },
     { key: 'contact_number', label: 'Contact Number', type: 'text' },
     { key: 'participates_in_savings', label: 'Participates in Savings', type: 'checkbox', default: true },

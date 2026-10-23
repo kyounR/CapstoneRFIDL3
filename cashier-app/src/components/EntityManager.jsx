@@ -19,10 +19,11 @@ function createFormValues(fields, record = {}) {
 
 function EntityManager({ endpoint, title, fields, getSubmitWarning }) {
   const confirm = useConfirm()
+  const formFields = fields.filter((field) => !field.readOnly)
   const [records, setRecords] = useState([])
   const [relatedOptions, setRelatedOptions] = useState({})
   const [editingRecord, setEditingRecord] = useState(null)
-  const [formValues, setFormValues] = useState(() => createFormValues(fields))
+  const [formValues, setFormValues] = useState(() => createFormValues(formFields))
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
@@ -90,19 +91,19 @@ function EntityManager({ endpoint, title, fields, getSubmitWarning }) {
 
   function openAddForm() {
     setEditingRecord({})
-    setFormValues(createFormValues(fields))
+    setFormValues(createFormValues(formFields))
     setError('')
   }
 
   function openEditForm(record) {
     setEditingRecord(record)
-    setFormValues(createFormValues(fields, record))
+    setFormValues(createFormValues(formFields, record))
     setError('')
   }
 
   function closeForm() {
     setEditingRecord(null)
-    setFormValues(createFormValues(fields))
+    setFormValues(createFormValues(formFields))
   }
 
   function updateValue(field, value) {
@@ -113,7 +114,7 @@ function EntityManager({ endpoint, title, fields, getSubmitWarning }) {
     event.preventDefault()
     setError('')
 
-    const payload = fields.reduce((values, field) => {
+    const payload = formFields.reduce((values, field) => {
       const value = formValues[field.key]
       if (field.type === 'number' && value === '') {
         values[field.key] = null
@@ -170,7 +171,7 @@ function EntityManager({ endpoint, title, fields, getSubmitWarning }) {
       {editingRecord ? (
         <form onSubmit={handleSubmit} style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginBottom: '20px' }}>
           <h3 style={{ marginTop: 0 }}>{editingRecord.id ? `Edit ${title.slice(0, -1)}` : `Add ${title.slice(0, -1)}`}</h3>
-          {fields.filter((field) => !field.listOnly).map((field) => (
+          {formFields.filter((field) => !field.listOnly).map((field) => (
             <div key={field.key} style={{ marginBottom: '12px' }}>
               {field.type === 'checkbox' ? (
                 <label>

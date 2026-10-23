@@ -2668,6 +2668,9 @@ class DestinationViewSet(AdminAuditMixin, viewsets.ModelViewSet):
         line_id = self.request.query_params.get('line')
         if line_id:
             queryset = queryset.filter(line_id=line_id)
+        departure_terminal = self.request.query_params.get('departure_terminal')
+        if departure_terminal:
+            queryset = queryset.filter(departure_terminal_id=departure_terminal)
         return queryset
 
     def initial(self, request, *args, **kwargs):

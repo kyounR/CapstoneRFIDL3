@@ -126,10 +126,22 @@ class TransactionSerializer(serializers.ModelSerializer):
 
 class DestinationSerializer(serializers.ModelSerializer):
     discount_fare = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    departure_terminal_name = serializers.CharField(source='departure_terminal.name', read_only=True)
 
     class Meta:
         model = Destination
-        fields = '__all__'
+        fields = [
+            'id',
+            'destination_name',
+            'line',
+            'departure_terminal',
+            'departure_terminal_name',
+            'base_fare',
+            'discount_exempt',
+            'capacity_limit',
+            'is_active',
+            'discount_fare',
+        ]
 
 
 class LineSerializer(serializers.ModelSerializer):

@@ -17,9 +17,12 @@ function createFormValues(fields, record = {}) {
   }, {})
 }
 
-function EntityManager({ endpoint, title, fields, getSubmitWarning }) {
+function EntityManager({ endpoint, title, fields, getSubmitWarning, filterFields = [] }) {
   const confirm = useConfirm()
   const formFields = fields.filter((field) => !field.readOnly)
+  const filterDefinitions = filterFields
+    .map((filterField) => fields.find((field) => field.key === filterField))
+    .filter((field) => field?.type === 'select' && field.relatedEndpoint)
   const [records, setRecords] = useState([])
   const [relatedOptions, setRelatedOptions] = useState({})
   const [editingRecord, setEditingRecord] = useState(null)
@@ -28,6 +31,7 @@ function EntityManager({ endpoint, title, fields, getSubmitWarning }) {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   const [searchText, setSearchText] = useState('')
+  const [filterValues, setFilterValues] = useState({})
 
   async function fetchRecords() {
     setIsLoading(true)
@@ -85,9 +89,14 @@ function EntityManager({ endpoint, title, fields, getSubmitWarning }) {
   const normalizedSearchText = searchText.trim().toLowerCase()
   const hasActiveField = fields.some((field) => field.key === 'is_active')
   const tableFields = fields.filter((field) => field.key !== 'is_active')
-  const visibleRecords = normalizedSearchText
-    ? records.filter((record) => fields.some((field) => String(getDisplayValue(record, field)).toLowerCase().includes(normalizedSearchText)))
-    : records
+  const visibleRecords = records.filter((record) => {
+    const matchesSearch = !normalizedSearchText
+      || fields.some((field) => String(getDisplayValue(record, field)).toLowerCase().includes(normalizedSearchText))
+    const matchesFilters = filterDefinitions.every((field) => (
+      !filterValues[field.key] || record[field.key] == filterValues[field.key]
+    ))
+    return matchesSearch && matchesFilters
+  })
 
   function openAddForm() {
     setEditingRecord({})
@@ -197,15 +206,31 @@ function EntityManager({ endpoint, title, fields, getSubmitWarning }) {
 
       {isLoading ? <p>Loading {title.toLowerCase()}...</p> : (
         <>
-          <input
-            type="search"
-            value={searchText}
-            onChange={(event) => setSearchText(event.target.value)}
-            placeholder={`Search ${title.toLowerCase()}...`}
-            aria-label={`Search ${title}`}
-            className="input"
-            style={{ display: 'block', width: '100%', marginBottom: '12px' }}
-          />
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
+            <input
+              type="search"
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              placeholder={`Search ${title.toLowerCase()}...`}
+              aria-label={`Search ${title}`}
+              className="input"
+              style={{ flex: '1 1 240px' }}
+            />
+            {filterDefinitions.map((field) => (
+              <label key={field.key}>
+                <span className="visually-hidden">Filter by {field.label}</span>
+                <select
+                  value={filterValues[field.key] || ''}
+                  onChange={(event) => setFilterValues((currentValues) => ({ ...currentValues, [field.key]: event.target.value }))}
+                  aria-label={`Filter by ${field.label}`}
+                  className="input"
+                >
+                  <option value="">All {field.label}s</option>
+                  {(relatedOptions[field.key] || []).map((option) => <option key={option.value ?? option.id} value={option.value ?? option.id}>{option.label || getOptionLabel(field, option)}</option>)}
+                </select>
+              </label>
+            ))}
+          </div>
           <div style={{ overflowX: 'auto' }}>
           <table className="table">
             <thead><tr>{tableFields.map((field) => <th key={field.key}>{field.label}</th>)}{hasActiveField ? <th>Status</th> : null}<th>Actions</th></tr></thead>

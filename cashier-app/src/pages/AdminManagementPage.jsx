@@ -34,7 +34,7 @@ const MANAGEMENT_TABS = [
     { key: 'discount_exempt', label: 'Discount Exempt', type: 'checkbox' },
     { key: 'capacity_limit', label: 'Capacity Limit', type: 'number' },
     { key: 'is_active', label: 'Active', type: 'checkbox', default: true },
-  ] },
+  ], filterFields: ['departure_terminal'] },
   { label: 'Lines', endpoint: 'lines/', fields: [
     { key: 'name', label: 'Name', type: 'text', required: true },
     { key: 'is_active', label: 'Active', type: 'checkbox', default: true },
@@ -400,7 +400,7 @@ function AdminManagementPage() {
         <button type="button" onClick={() => setActiveTab('Fee Settings')} className={activeTab === 'Fee Settings' ? 'btn-primary' : 'btn-secondary'}>Fee Settings</button>
         <button type="button" onClick={() => setActiveTab('Audit Log')} className={activeTab === 'Audit Log' ? 'btn-primary' : 'btn-secondary'}>Audit Log</button>
       </nav>
-      {activeTab === 'Fee Settings' ? <FeeSettingsForm /> : activeTab === 'Users' ? <UserManager /> : activeTab === 'Audit Log' ? <AuditLogManager /> : activeTab === 'Passengers' ? <PassengerManager /> : <EntityManager key={selectedTab.label} endpoint={selectedTab.endpoint} title={selectedTab.label} fields={selectedTab.fields} getSubmitWarning={selectedTab.getSubmitWarning} />}
+      {activeTab === 'Fee Settings' ? <FeeSettingsForm /> : activeTab === 'Users' ? <UserManager /> : activeTab === 'Audit Log' ? <AuditLogManager /> : activeTab === 'Passengers' ? <PassengerManager /> : <EntityManager key={selectedTab.label} endpoint={selectedTab.endpoint} title={selectedTab.label} fields={selectedTab.fields} getSubmitWarning={selectedTab.getSubmitWarning} filterFields={selectedTab.filterFields} />}
     </div>
   )
 }

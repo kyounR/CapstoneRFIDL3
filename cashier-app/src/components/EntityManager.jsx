@@ -217,18 +217,16 @@ function EntityManager({ endpoint, title, fields, getSubmitWarning, filterFields
               style={{ flex: '1 1 240px' }}
             />
             {filterDefinitions.map((field) => (
-              <label key={field.key}>
-                <span className="visually-hidden">Filter by {field.label}</span>
-                <select
-                  value={filterValues[field.key] || ''}
-                  onChange={(event) => setFilterValues((currentValues) => ({ ...currentValues, [field.key]: event.target.value }))}
-                  aria-label={`Filter by ${field.label}`}
-                  className="input"
-                >
-                  <option value="">All {field.label}s</option>
-                  {(relatedOptions[field.key] || []).map((option) => <option key={option.value ?? option.id} value={option.value ?? option.id}>{option.label || getOptionLabel(field, option)}</option>)}
-                </select>
-              </label>
+              <select
+                key={field.key}
+                value={filterValues[field.key] || ''}
+                onChange={(event) => setFilterValues((currentValues) => ({ ...currentValues, [field.key]: event.target.value }))}
+                aria-label={`Filter by ${field.label}`}
+                className="input"
+              >
+                <option value="">All {field.label}s</option>
+                {(relatedOptions[field.key] || []).map((option) => <option key={option.value ?? option.id} value={option.value ?? option.id}>{option.label || getOptionLabel(field, option)}</option>)}
+              </select>
             ))}
           </div>
           <div style={{ overflowX: 'auto' }}>

@@ -340,6 +340,38 @@ h3 {
   padding-top: 18px;
 }
 
+.confirm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.confirm-modal-content {
+  width: min(100%, 420px);
+  padding: 28px;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+}
+
+.confirm-modal-content p {
+  margin: 0;
+}
+
+.confirm-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 18px;
+}
+
 .boarding-code-badge {
   display: inline-flex;
   flex: 0 0 auto;

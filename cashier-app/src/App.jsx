@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { ConfirmProvider } from './components/ConfirmDialog'
 import RequireAdmin from './components/RequireAdmin'
 import RequireAuth from './components/RequireAuth'
 import AdminDashboardPage from './pages/AdminDashboardPage'
@@ -19,28 +20,30 @@ import TravelPassHistoryPage from './pages/TravelPassHistoryPage'
 
 function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/display" element={<PublicTapDisplayPage />} />
-      <Route path="/board" element={<BoardingStatusPage />} />
-      <Route element={<RequireAuth />}>
-        <Route path="/home" element={<HomePage />} />
-        <Route path="/topup" element={<TopupPage />} />
-        <Route path="/summary" element={<SummaryPage />} />
-        <Route path="/travel-pass" element={<TravelPassPage />} />
-        <Route path="/travel-pass/history" element={<TravelPassHistoryPage />} />
-        <Route path="/remittance" element={<DailyRemittancePage />} />
-        <Route path="/remittance/history" element={<DailyRemittanceHistoryPage />} />
-        <Route path="/tap-feed" element={<TapFeedPage />} />
-        <Route path="/transaction-history" element={<TransactionHistoryPage />} />
-        <Route element={<RequireAdmin />}>
-          <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-          <Route path="/admin/manage" element={<AdminManagementPage />} />
-          <Route path="/admin/reports" element={<AdminReportPage />} />
+    <ConfirmProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/display" element={<PublicTapDisplayPage />} />
+        <Route path="/board" element={<BoardingStatusPage />} />
+        <Route element={<RequireAuth />}>
+          <Route path="/home" element={<HomePage />} />
+          <Route path="/topup" element={<TopupPage />} />
+          <Route path="/summary" element={<SummaryPage />} />
+          <Route path="/travel-pass" element={<TravelPassPage />} />
+          <Route path="/travel-pass/history" element={<TravelPassHistoryPage />} />
+          <Route path="/remittance" element={<DailyRemittancePage />} />
+          <Route path="/remittance/history" element={<DailyRemittanceHistoryPage />} />
+          <Route path="/tap-feed" element={<TapFeedPage />} />
+          <Route path="/transaction-history" element={<TransactionHistoryPage />} />
+          <Route element={<RequireAdmin />}>
+            <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+            <Route path="/admin/manage" element={<AdminManagementPage />} />
+            <Route path="/admin/reports" element={<AdminReportPage />} />
+          </Route>
         </Route>
-      </Route>
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </ConfirmProvider>
   )
 }
 

@@ -444,3 +444,207 @@ h3 {
     background: #fff;
   }
 }
+/* ---------- Travel Pass: destination cards and tally bar ---------- */
+
+.btn-outline-accent {
+  background: transparent;
+  color: var(--accent);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-outline-accent:hover:not(:disabled) {
+  background: rgba(242, 169, 59, 0.14);
+}
+
+.btn-danger-outline {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+.btn-danger-outline:hover:not(:disabled) {
+  background: rgba(229, 72, 77, 0.14);
+}
+
+.btn-danger-outline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.badge--lg {
+  padding: 6px 14px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Header row: the whole name + fare area arms the card for the next RFID tap. */
+.destination-arm {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  gap: 6px;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0 -6px;
+  padding: 4px 5px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+}
+
+button.destination-arm {
+  cursor: pointer;
+}
+
+button.destination-arm:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.destination-arm--armed,
+button.destination-arm--armed:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+  border-color: var(--success);
+}
+
+.destination-arm__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.destination-arm__fare {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.destination-arm__icon {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+}
+
+.destination-arm--armed .destination-arm__fare,
+.destination-arm--armed .destination-arm__icon {
+  color: var(--success);
+}
+
+.queue-chip {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 4px 12px;
+  color: var(--accent);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: rgba(242, 169, 59, 0.16);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+.queue-chip:hover:not(:disabled) {
+  background: rgba(242, 169, 59, 0.28);
+}
+
+.tally-count {
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+}
+
+.tally-add {
+  height: 44px;
+  padding: 0 8px;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.tally-minus {
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+}
+
+.destination-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
+  margin-top: auto;
+}
+
+.destination-subtotal {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tally-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+  padding: 12px 16px;
+}
+
+.tally-bar__totals {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 20px;
+  color: var(--text-secondary);
+}
+
+.tally-bar__figure {
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.tally-bar__armed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.tally-bar__armed--on {
+  color: var(--success);
+}
+
+.tally-bar__armed strong {
+  color: var(--text-primary);
+}
+
+.tally-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  white-space: nowrap;
+}

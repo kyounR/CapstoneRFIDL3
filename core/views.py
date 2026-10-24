@@ -2524,6 +2524,94 @@ def manifest_entry_tally_view(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+def manifest_entry_pull_from_queue_view(request):
+    if not _has_cashier_or_admin_role(request):
+        return _role_forbidden_response('pull passengers from the queue')
+
+    manifest_trip_id = request.data.get('manifest_trip')
+    destination_id = request.data.get('destination')
+    if not manifest_trip_id or not destination_id:
+        return Response(
+            {'error': 'manifest_trip and destination are required.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    with transaction.atomic():
+        manifest = ManifestTrip.objects.select_for_update().filter(pk=manifest_trip_id).first()
+        if manifest is None:
+            return Response({'error': 'ManifestTrip not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if manifest.is_finalized or manifest.is_cancelled:
+            return Response({'error': 'Cannot pull passengers into a closed Travel Pass.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        tap_log = TapLog.objects.select_for_update().select_related('destination').filter(
+            manifest_trip__isnull=True,
+            success=True,
+            is_correction=False,
+            queue_cancelled=False,
+            destination_id=destination_id,
+            destination__line=manifest.vehicle.line,
+            destination__departure_terminal=manifest.departure_terminal,
+        ).order_by('timestamp').first()
+        if tap_log is None:
+            return Response({'error': 'No pending queue entry exists for this destination.'}, status=status.HTTP_404_NOT_FOUND)
+
+        tap_log.manifest_trip = manifest
+        tap_log.save(update_fields=['manifest_trip'])
+
+        destination = tap_log.destination
+        entry = FareManifestEntry.objects.select_for_update().filter(
+            manifest_trip=manifest,
+            destination=destination,
+        ).first()
+        if entry is None:
+            entry = FareManifestEntry(
+                manifest_trip=manifest,
+                destination=destination,
+                passenger_count=0,
+                discount_count=0,
+                total_fare=Decimal('0.00'),
+                source=FareManifestEntry.Source.MANUAL,
+            )
+
+        entry.passenger_count += 1
+        if tap_log.fare_type == 'discount':
+            entry.discount_count += 1
+        _recompute_manifest_entry_total(entry)
+        entry.save()
+
+    response_data = FareManifestEntrySerializer(entry).data
+    response_data['tap_log_id'] = tap_log.id
+    response_data['fare_charged'] = tap_log.fare_charged
+    return Response(response_data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def manifest_entry_queue_counts_view(request):
+    if not _has_cashier_or_admin_role(request):
+        return _role_forbidden_response('view queue counts')
+
+    line_id = request.query_params.get('line')
+    departure_terminal_id = request.query_params.get('departure_terminal')
+    if not line_id or not departure_terminal_id:
+        return Response(
+            {'error': 'line and departure_terminal are required.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    queue_counts = TapLog.objects.filter(
+        manifest_trip__isnull=True,
+        success=True,
+        is_correction=False,
+        queue_cancelled=False,
+        destination__line_id=line_id,
+        destination__departure_terminal_id=departure_terminal_id,
+    ).values('destination_id').annotate(count=Count('id'))
+    return Response({row['destination_id']: row['count'] for row in queue_counts}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def tap_log_queue_view(request):
     if not _has_cashier_or_admin_role(request):
         return _role_forbidden_response('add passengers to the queue')

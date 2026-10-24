@@ -2479,6 +2479,60 @@ def manifest_entry_tally_view(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+def tap_log_queue_view(request):
+    if not _has_cashier_or_admin_role(request):
+        return _role_forbidden_response('add passengers to the queue')
+
+    destination_id = request.data.get('destination')
+    passenger_type = request.data.get('passenger_type')
+    if not destination_id or not passenger_type:
+        return Response(
+            {'error': 'destination and passenger_type are required.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if passenger_type not in {'regular', 'discount'}:
+        return Response(
+            {'error': 'passenger_type must be regular or discount.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    destination = Destination.objects.filter(id=destination_id, is_active=True).first()
+    if destination is None:
+        return Response({'error': 'Destination not found or inactive.'}, status=status.HTTP_404_NOT_FOUND)
+    if passenger_type == 'discount' and destination.discount_exempt:
+        return Response(
+            {'error': 'This destination does not allow discount fares.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    fare_charged = destination.discount_fare if passenger_type == 'discount' else destination.base_fare
+    tap_log = TapLog.objects.create(
+        card_uid='',
+        card=None,
+        destination=destination,
+        manifest_trip=None,
+        passenger_name='',
+        success=True,
+        message='Added to queue.',
+        fare_type='discount' if passenger_type == 'discount' else 'base',
+        fare_charged=fare_charged,
+        remaining_balance=None,
+        source=TapLog.Source.MANUAL,
+        cashier=request.user,
+    )
+    return Response(
+        {
+            'id': tap_log.id,
+            'destination_name': destination.destination_name,
+            'fare_type': tap_log.fare_type,
+            'fare_charged': tap_log.fare_charged,
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def manifest_entry_untally_view(request):
     if not _has_cashier_or_admin_role(request):
         return _role_forbidden_response('untally manifest entries')

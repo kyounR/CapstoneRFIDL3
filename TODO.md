@@ -5,9 +5,8 @@
 - [ ] Granularity to CALTRANSCO management report *(Pending UAT & client feedback)*
 - [ ] General UI pass for every tab
 - [ ] **(MAJOR)** Official government-compliant receipt implementation
-- [ ] **(MAJOR) (HARDWARE)** Add an LED to the RFID reader and a buzzer/beeper for auditory feedback (status: still waiting on delivery)
-- [ ] Admin correction should not be accessible in cancelled travel passes/remittances
 - [ ] Fix alignment of tables in admin dashboard
+- [ ] Add machine readable codes to Django tap endpoint, rework React code in order for granularity with buzzer (and to silence beep during state where duplicate taps)
 
 ---
 
@@ -54,6 +53,8 @@
 - [x] Revise UI of the travel pass page
 - [x] Another pass to Remittance Automation
 - [x] Dispatcher should be shown in Remittance
+- [x] Admin correction should not be accessible in cancelled travel passes/remittances
+- [x] **(MAJOR) (HARDWARE)** Add an LED to the RFID reader and a buzzer/beeper for auditory feedback
 
 ### Public Feeds & Security
 - [x] Add extra info to public-facing tap feed (show deductions, exclude current balance)

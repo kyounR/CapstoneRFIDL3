@@ -2841,6 +2841,86 @@ def manifest_entry_untally_view(request):
     return Response(FareManifestEntrySerializer(entry).data, status=status.HTTP_200_OK)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def manifest_entry_send_to_queue_view(request):
+    if not _has_cashier_or_admin_role(request):
+        return _role_forbidden_response('send passengers to the queue')
+
+    payload, error_response = _manifest_tally_payload(request)
+    if error_response is not None:
+        return error_response
+
+    assert payload is not None
+    manifest_trip_id, destination_id, passenger_type = payload
+    fare_type = 'discount' if passenger_type == 'discount' else 'base'
+    with transaction.atomic():
+        manifest = ManifestTrip.objects.select_for_update().filter(id=manifest_trip_id).first()
+        if manifest is None:
+            return Response({'error': 'ManifestTrip not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if manifest.is_finalized:
+            return Response({'error': 'Cannot send passengers from a finalized ManifestTrip to the queue.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        destination = Destination.objects.filter(id=destination_id, is_active=True).first()
+        if destination is None:
+            return Response({'error': 'Destination not found or inactive.'}, status=status.HTTP_404_NOT_FOUND)
+        if destination.line_id != manifest.vehicle.line_id:
+            return Response(
+                {'error': 'Destination does not belong to the selected Travel Pass vehicle line.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        entry = FareManifestEntry.objects.select_for_update().filter(
+            manifest_trip=manifest,
+            destination=destination,
+        ).first()
+        if entry is None:
+            return Response(
+                {'error': 'No manifest entry exists for this trip and destination.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if entry.passenger_count <= 0:
+            return Response(
+                {'error': 'Cannot send a passenger to the queue because passenger_count is already zero.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if passenger_type == 'regular' and entry.passenger_count - entry.discount_count <= 0:
+            return Response(
+                {'error': 'Cannot send a regular passenger to the queue when all remaining passengers are discount.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if passenger_type == 'discount' and entry.discount_count <= 0:
+            return Response(
+                {'error': 'Cannot send a discount passenger to the queue because discount_count is already zero.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        tap_log = TapLog.objects.select_for_update().filter(
+            manifest_trip=manifest,
+            destination=destination,
+            source=TapLog.Source.MANUAL,
+            success=True,
+            is_correction=False,
+            fare_type=fare_type,
+        ).first()
+        if tap_log is None:
+            return Response(
+                {'error': 'No matching manual queue entry exists for this Travel Pass and destination.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        tap_log.manifest_trip = None
+        tap_log.save(update_fields=['manifest_trip'])
+
+        entry.passenger_count -= 1
+        if passenger_type == 'discount':
+            entry.discount_count -= 1
+        _recompute_manifest_entry_total(entry)
+        entry.save()
+
+    return Response(FareManifestEntrySerializer(entry).data, status=status.HTTP_200_OK)
+
+
 class DestinationViewSet(AdminAuditMixin, viewsets.ModelViewSet):
     serializer_class = DestinationSerializer
     permission_classes = [IsAuthenticated]

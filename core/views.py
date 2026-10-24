@@ -1992,6 +1992,12 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
             manifest.cancelled_at = timezone.now()
             manifest.cancelled_by = request.user
             manifest.save(update_fields=['is_cancelled', 'cancelled_at', 'cancelled_by'])
+            TapLog.objects.filter(
+                manifest_trip=manifest,
+                source=TapLog.Source.MANUAL,
+                success=True,
+                is_correction=False,
+            ).update(manifest_trip=None)
             log_admin_action(
                 request.user,
                 'updated',

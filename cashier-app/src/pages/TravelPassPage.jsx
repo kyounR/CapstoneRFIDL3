@@ -49,6 +49,7 @@ function TravelPassPage() {
   const [date, setDate] = useState(getToday())
   const [manifest, setManifest] = useState(null)
   const [entries, setEntries] = useState({})
+  const [queueCounts, setQueueCounts] = useState({})
   const [tapSelection, setTapSelection] = useState(null)
   const [recentTaps, setRecentTaps] = useState([])
   const [isLoadingPicker, setIsLoadingPicker] = useState(true)
@@ -202,6 +203,7 @@ function TravelPassPage() {
 
   useEffect(() => {
     if (pageState !== 2 || !manifest) {
+      setQueueCounts({})
       return
     }
 
@@ -209,12 +211,19 @@ function TravelPassPage() {
 
     async function pollAllBoardData() {
       try {
-        const [tapSelResponse, recentTapsResponse, entriesResponse] = await Promise.all([
+        const selectedVehicle = vehicles.find((vehicle) => vehicle.id === Number(manifest.vehicle))
+        const queueCountsRequest = selectedVehicle?.line && manifest.departure_terminal
+          ? api.get('manifest-entries/queue-counts/', {
+            params: { line: selectedVehicle.line, departure_terminal: manifest.departure_terminal },
+          })
+          : Promise.resolve({ data: {} })
+        const [tapSelResponse, recentTapsResponse, entriesResponse, queueCountsResponse] = await Promise.all([
           api.get('tap-destination/'),
           api.get(`manifests/${manifest.id}/recent-taps/`),
           api.get('manifest-entries/', {
             params: { manifest_trip: manifest.id },
           }),
+          queueCountsRequest,
         ])
 
         if (isMounted) {
@@ -239,6 +248,7 @@ function TravelPassPage() {
           }
           setRecentTaps(nextRecentTaps)
           setEntries(entriesByDestination(getListData(entriesResponse.data)))
+          setQueueCounts(queueCountsResponse.data)
         }
       } catch (requestError) {
         // Silent fail for polling: retry on next cycle without interrupting
@@ -252,11 +262,12 @@ function TravelPassPage() {
       isMounted = false
       clearInterval(intervalId)
     }
-  }, [pageState, manifest?.id])
+  }, [pageState, manifest?.id, manifest?.vehicle, manifest?.departure_terminal, vehicles])
 
   async function selectManifest(selectedManifest) {
     setManifest(selectedManifest)
     setEntries(entriesByDestination(selectedManifest.entries))
+    setQueueCounts({})
     setReceiptId(null)
     setLatestBoarding(null)
     latestRfidTapId.current = null
@@ -358,6 +369,41 @@ function TravelPassPage() {
       }
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not update tally.')
+    } finally {
+      setBusyAction('')
+    }
+  }
+
+  async function handlePullFromQueue(destination) {
+    const actionKey = `${destination.id}-pull-queue`
+    setError('')
+    setBusyAction(actionKey)
+    try {
+      const response = await api.post('manifest-entries/pull-from-queue/', {
+        manifest_trip: manifest.id,
+        destination: destination.id,
+      })
+      setEntries((currentEntries) => ({ ...currentEntries, [response.data.destination]: response.data }))
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || 'Could not pull this passenger from the queue.')
+    } finally {
+      setBusyAction('')
+    }
+  }
+
+  async function handleSendToQueue(destination, passengerType) {
+    const actionKey = `${destination.id}-${passengerType}-send-queue`
+    setError('')
+    setBusyAction(actionKey)
+    try {
+      const response = await api.post('manifest-entries/send-to-queue/', {
+        manifest_trip: manifest.id,
+        destination: destination.id,
+        passenger_type: passengerType,
+      })
+      setEntries((currentEntries) => ({ ...currentEntries, [response.data.destination]: response.data }))
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || 'Could not send this passenger to the queue.')
     } finally {
       setBusyAction('')
     }
@@ -647,8 +693,13 @@ function TravelPassPage() {
               const discountAddKey = `${destination.id}-discount-add`
               const regularRemoveKey = `${destination.id}-regular-remove`
               const discountRemoveKey = `${destination.id}-discount-remove`
+              const regularSendQueueKey = `${destination.id}-regular-send-queue`
+              const discountSendQueueKey = `${destination.id}-discount-send-queue`
+              const pullFromQueueKey = `${destination.id}-pull-queue`
+              const queueCount = Number(queueCounts[destination.id] || 0)
               const isSelectedForTap = tapSelection?.destination_id === destination.id
               const removeButtonStyle = { minWidth: '32px', height: '36px', padding: '0 8px' }
+              const sendToQueueButtonStyle = { height: '36px', padding: '0 10px', color: 'var(--accent)', borderColor: 'var(--accent)', whiteSpace: 'nowrap' }
               const addButtonStyle = { minWidth: '64px', height: '44px', padding: '0 14px' }
               const targetButtonStyle = { width: '36px', height: '36px', padding: 0 }
               return (
@@ -661,16 +712,19 @@ function TravelPassPage() {
                   </div>
                   <div className="numeric" style={{ fontSize: '0.9rem' }}>{destination.base_fare}</div>
                   {!isFinalized ? <>
+                    {queueCount > 0 ? <button type="button" onClick={() => handlePullFromQueue(destination)} disabled={busyAction !== ''} className="btn-primary" style={{ width: '100%' }}>{busyAction === pullFromQueueKey ? 'Pulling...' : `Pull from Queue (${queueCount} waiting)`}</button> : null}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingTop: '8px', borderTop: '1px solid var(--border)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
                         <span style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600 }}>Regular</span>
                         <button type="button" onClick={() => handleTally(destination, 'regular', 'remove')} disabled={entry.passenger_count - entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={removeButtonStyle} aria-label={`Remove regular passenger from ${destination.destination_name}`}>{busyAction === regularRemoveKey ? '...' : '-'}</button>
+                        <button type="button" onClick={() => handleSendToQueue(destination, 'regular')} disabled={entry.passenger_count - entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={sendToQueueButtonStyle}>{busyAction === regularSendQueueKey ? 'Sending...' : 'Send to Queue'}</button>
                         <span className="numeric" style={{ minWidth: '24px', textAlign: 'center', fontWeight: 600 }}>{entry.passenger_count - entry.discount_count}</span>
                         <button type="button" onClick={() => handleTally(destination, 'regular', 'add')} disabled={busyAction !== ''} className="btn-primary" style={addButtonStyle} aria-label={`Add regular passenger to ${destination.destination_name}`}>{busyAction === regularAddKey ? '...' : '+1'}</button>
                       </div>
-                      {!destination.discount_exempt ? <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      {!destination.discount_exempt ? <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
                         <span style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600 }}>Discount</span>
                         <button type="button" onClick={() => handleTally(destination, 'discount', 'remove')} disabled={entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={removeButtonStyle} aria-label={`Remove discount passenger from ${destination.destination_name}`}>{busyAction === discountRemoveKey ? '...' : '-'}</button>
+                        <button type="button" onClick={() => handleSendToQueue(destination, 'discount')} disabled={entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={sendToQueueButtonStyle}>{busyAction === discountSendQueueKey ? 'Sending...' : 'Send to Queue'}</button>
                         <span className="numeric" style={{ minWidth: '24px', textAlign: 'center', fontWeight: 600 }}>{entry.discount_count}</span>
                         <button type="button" onClick={() => handleTally(destination, 'discount', 'add')} disabled={busyAction !== ''} className="btn-primary" style={addButtonStyle} aria-label={`Add discount passenger to ${destination.destination_name}`}>{busyAction === discountAddKey ? '...' : '+1'}</button>
                       </div> : null}

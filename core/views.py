@@ -1812,28 +1812,73 @@ class ManifestTripViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         vehicle = serializer.validated_data['vehicle']
-        code_count = len(BOARDING_CODE_PALETTE)
-        latest_trip = ManifestTrip.objects.filter(
-            vehicle__line=vehicle.line,
-            boarding_code_index__isnull=False,
-        ).order_by('-id').first()
-        start_index = 0 if latest_trip is None else (latest_trip.boarding_code_index + 1) % code_count
-        active_indexes = set(
-            ManifestTrip.objects.filter(
-                is_finalized=False,
-                is_cancelled=False,
+        with transaction.atomic():
+            code_count = len(BOARDING_CODE_PALETTE)
+            latest_trip = ManifestTrip.objects.filter(
                 vehicle__line=vehicle.line,
-            ).values_list('boarding_code_index', flat=True)
-        )
-        boarding_code_index = next(
-            (
-                (start_index + offset) % code_count
-                for offset in range(code_count)
-                if (start_index + offset) % code_count not in active_indexes
-            ),
-            0,
-        )
-        serializer.save(cashier=self.request.user, boarding_code_index=boarding_code_index)
+                boarding_code_index__isnull=False,
+            ).order_by('-id').first()
+            start_index = 0 if latest_trip is None else (latest_trip.boarding_code_index + 1) % code_count
+            active_indexes = set(
+                ManifestTrip.objects.filter(
+                    is_finalized=False,
+                    is_cancelled=False,
+                    vehicle__line=vehicle.line,
+                ).values_list('boarding_code_index', flat=True)
+            )
+            boarding_code_index = next(
+                (
+                    (start_index + offset) % code_count
+                    for offset in range(code_count)
+                    if (start_index + offset) % code_count not in active_indexes
+                ),
+                0,
+            )
+            manifest_trip = serializer.save(cashier=self.request.user, boarding_code_index=boarding_code_index)
+
+            pending_queue_entries = TapLog.objects.select_for_update().filter(
+                manifest_trip__isnull=True,
+                success=True,
+                is_correction=False,
+                queue_cancelled=False,
+                destination__line=vehicle.line,
+                destination__departure_terminal=manifest_trip.departure_terminal,
+            ).select_related('destination').order_by('timestamp')
+            passenger_count = 0
+            destination_counts = {}
+
+            for tap_log in pending_queue_entries:
+                destination = tap_log.destination
+                destination_count = destination_counts.get(destination.id, 0)
+                if destination.capacity_limit is not None and destination_count >= destination.capacity_limit:
+                    continue
+                if vehicle.passenger_capacity is not None and passenger_count >= vehicle.passenger_capacity:
+                    break
+
+                tap_log.manifest_trip = manifest_trip
+                tap_log.save(update_fields=['manifest_trip'])
+
+                entry = FareManifestEntry.objects.select_for_update().filter(
+                    manifest_trip=manifest_trip,
+                    destination=destination,
+                ).first()
+                if entry is None:
+                    entry = FareManifestEntry(
+                        manifest_trip=manifest_trip,
+                        destination=destination,
+                        passenger_count=0,
+                        discount_count=0,
+                        total_fare=Decimal('0.00'),
+                        source=FareManifestEntry.Source.MANUAL,
+                    )
+
+                entry.passenger_count += 1
+                if tap_log.fare_type == 'discount':
+                    entry.discount_count += 1
+                _recompute_manifest_entry_total(entry)
+                entry.save()
+                passenger_count += 1
+                destination_counts[destination.id] = destination_count + 1
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.queryset)

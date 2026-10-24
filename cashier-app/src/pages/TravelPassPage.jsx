@@ -839,12 +839,8 @@ function TravelPassPage() {
                       </div> : null}
                     </div>
                   </> : <div aria-hidden="true" style={{ minHeight: '72px' }} />}
-                  <div className="numeric" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px', borderTop: '1px solid var(--border)', fontSize: '0.85rem' }}>
-                    <strong>Running tally</strong>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-                      <span>{entry.passenger_count} passengers - PHP{Number(entry.total_fare).toFixed(2)}</span>
-                      {destinationCapacityStatus?.isOverCapacity ? <span className="badge badge--danger">Over capacity ({destinationCapacityStatus.count}/{destinationCapacityStatus.capacityLimit})</span> : null}
-                    </div>
+                  <div className="numeric" style={{ minWidth: 0, paddingTop: '8px', borderTop: '1px solid var(--border)', fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {entry.passenger_count} passengers - P{Number(entry.total_fare).toFixed(2)}
                   </div>
                 </div>
               )

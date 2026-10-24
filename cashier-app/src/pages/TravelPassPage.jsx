@@ -653,6 +653,7 @@ function TravelPassPage() {
     [destinations, entries],
   )
   const isFinalized = manifest?.is_finalized === true
+  const armedDestination = destinations.find((destination) => destination.id === tapSelection?.destination_id) || null
 
   return (
     <div style={{ width: '100%', maxWidth: '1600px', margin: '40px auto', padding: '0 24px', fontFamily: 'var(--font-body)' }}>
@@ -789,7 +790,7 @@ function TravelPassPage() {
             </div>
           </div>
           {isLoadingDestinations ? <p>Loading destinations...</p> : null}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', alignItems: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', alignItems: 'stretch', gridAutoRows: '1fr' }}>
             {destinations.map((destination) => {
               const entry = entries[destination.id] || { passenger_count: 0, discount_count: 0, total_fare: '0.00' }
               const destinationCapacityStatus = destinationCapacityStatuses.find((status) => status.destination.id === destination.id)
@@ -803,44 +804,46 @@ function TravelPassPage() {
               const pullFromQueueKey = `${destination.id}-pull-queue`
               const queueCount = Number(queueCounts[destination.id] || 0)
               const isSelectedForTap = tapSelection?.destination_id === destination.id
-              const iconButtonStyle = { width: '32px', height: '32px', padding: 0, borderRadius: '50%' }
-              const tallyRowStyle = { display: 'grid', gridTemplateColumns: '32px 32px minmax(0, 1fr) 32px', alignItems: 'center', gap: '8px' }
+              const iconButtonStyle = { width: '40px', height: '40px', padding: 0, borderRadius: '50%' }
+              const tallyRowStyle = { display: 'grid', gridTemplateColumns: '40px 30px minmax(0, 1fr) 40px', alignItems: 'center', gap: '6px' }
+              const regularCount = entry.passenger_count - entry.discount_count
+              const armLabel = isSelectedForTap ? `Clear ${destination.destination_name} tap selection` : `Arm ${destination.destination_name} for the next card tap`
+              const pullLabel = `${queueCount} waiting in the queue for ${destination.destination_name}. Pull one onto this Travel Pass.`
               return (
-                <div key={destination.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '12px', backgroundColor: tileCapacityBackground, borderColor: isSelectedForTap ? 'var(--success)' : 'var(--border)', boxShadow: isSelectedForTap ? '0 0 0 3px color-mix(in srgb, var(--success) 32%, transparent)' : 'none' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                        <strong>{destination.destination_name}</strong>
-                        <span className="numeric" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>P{destination.base_fare}</span>
-                      </div>
-                      {queueCount > 0 && !isFinalized ? <button type="button" onClick={() => handlePullFromQueue(destination)} disabled={busyAction !== ''} className="btn-secondary" style={{ marginTop: '6px', padding: '3px 8px', fontSize: '0.8rem' }}>{busyAction === pullFromQueueKey ? 'Pulling...' : `${queueCount} waiting - Pull`}</button> : null}
-                    </div>
-                    {!isFinalized ? <button type="button" onClick={isSelectedForTap ? handleClearTapSelection : () => handleSetForTap(destination)} disabled={busyAction !== ''} className={isSelectedForTap ? 'btn-primary' : 'btn-secondary'} style={iconButtonStyle} title={isSelectedForTap ? `Clear ${destination.destination_name} tap selection` : `Set ${destination.destination_name} as next tap`} aria-label={isSelectedForTap ? `Clear ${destination.destination_name} tap selection` : `Set ${destination.destination_name} as next tap`}>
-                      <Crosshair size={16} aria-hidden="true" />
-                    </button> : null}
+                <div key={destination.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '12px', backgroundColor: tileCapacityBackground, borderColor: isSelectedForTap ? 'var(--success)' : 'var(--border)', boxShadow: isSelectedForTap ? '0 0 0 3px color-mix(in srgb, var(--success) 45%, transparent)' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {!isFinalized ? <button type="button" onClick={isSelectedForTap ? handleClearTapSelection : () => handleSetForTap(destination)} disabled={busyAction !== ''} className={`destination-arm${isSelectedForTap ? ' destination-arm--armed' : ''}`} aria-pressed={isSelectedForTap} title={armLabel} aria-label={armLabel}>
+                      <span className="destination-arm__name">{destination.destination_name}</span>
+                      <span className="numeric destination-arm__fare">P{destination.base_fare}</span>
+                      <Crosshair size={16} aria-hidden="true" className="destination-arm__icon" />
+                    </button> : <div className="destination-arm">
+                      <span className="destination-arm__name">{destination.destination_name}</span>
+                      <span className="numeric destination-arm__fare">P{destination.base_fare}</span>
+                    </div>}
                   </div>
                   {!isFinalized ? <>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '8px', borderTop: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>
                       <div style={tallyRowStyle}>
-                        <button type="button" onClick={() => handleTally(destination, 'regular', 'remove')} disabled={entry.passenger_count - entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={iconButtonStyle} aria-label={`Remove regular passenger from ${destination.destination_name}`}>{busyAction === regularRemoveKey ? '...' : '-'}</button>
-                        <span className="numeric" style={{ textAlign: 'center', fontWeight: 600 }}>{entry.passenger_count - entry.discount_count}</span>
-                        <button type="button" onClick={() => handleTally(destination, 'regular', 'add')} disabled={busyAction !== ''} className="btn-primary" style={{ height: '32px', padding: '0 10px' }} aria-label={`Add regular passenger to ${destination.destination_name}`}>{busyAction === regularAddKey ? '...' : '+1 Reg'}</button>
-                        <button type="button" onClick={() => handleSendToQueue(destination, 'regular')} disabled={entry.passenger_count - entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={iconButtonStyle} title={`Send regular passenger to queue from ${destination.destination_name}`} aria-label={`Send regular passenger to queue from ${destination.destination_name}`}>
-                          {busyAction === regularSendQueueKey ? '...' : <Send size={15} aria-hidden="true" />}
-                        </button>
+                        <button type="button" onClick={() => handleTally(destination, 'regular', 'remove')} disabled={regularCount <= 0 || busyAction !== ''} className="btn-secondary tally-minus" style={iconButtonStyle} aria-label={`Remove regular passenger from ${destination.destination_name}`}>{busyAction === regularRemoveKey ? '...' : '-'}</button>
+                        <span className="numeric tally-count">{regularCount}</span>
+                        <button type="button" onClick={() => handleTally(destination, 'regular', 'add')} disabled={busyAction !== ''} className="btn-primary tally-add" aria-label={`Add regular passenger to ${destination.destination_name}`}>{busyAction === regularAddKey ? '...' : '+1 Reg'}</button>
+                        {regularCount > 0 ? <button type="button" onClick={() => handleSendToQueue(destination, 'regular')} disabled={busyAction !== ''} className="btn-secondary" style={iconButtonStyle} title={`Send regular passenger to queue from ${destination.destination_name}`} aria-label={`Send regular passenger to queue from ${destination.destination_name}`}>
+                          {busyAction === regularSendQueueKey ? '...' : <Send size={16} aria-hidden="true" />}
+                        </button> : <span aria-hidden="true" />}
                       </div>
                       {!destination.discount_exempt ? <div style={tallyRowStyle}>
-                        <button type="button" onClick={() => handleTally(destination, 'discount', 'remove')} disabled={entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={iconButtonStyle} aria-label={`Remove discount passenger from ${destination.destination_name}`}>{busyAction === discountRemoveKey ? '...' : '-'}</button>
-                        <span className="numeric" style={{ textAlign: 'center', fontWeight: 600 }}>{entry.discount_count}</span>
-                        <button type="button" onClick={() => handleTally(destination, 'discount', 'add')} disabled={busyAction !== ''} className="btn-primary" style={{ height: '32px', padding: '0 10px' }} aria-label={`Add discount passenger to ${destination.destination_name}`}>{busyAction === discountAddKey ? '...' : '+1 Disc'}</button>
-                        <button type="button" onClick={() => handleSendToQueue(destination, 'discount')} disabled={entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary" style={iconButtonStyle} title={`Send discount passenger to queue from ${destination.destination_name}`} aria-label={`Send discount passenger to queue from ${destination.destination_name}`}>
-                          {busyAction === discountSendQueueKey ? '...' : <Send size={15} aria-hidden="true" />}
-                        </button>
+                        <button type="button" onClick={() => handleTally(destination, 'discount', 'remove')} disabled={entry.discount_count <= 0 || busyAction !== ''} className="btn-secondary tally-minus" style={iconButtonStyle} aria-label={`Remove discount passenger from ${destination.destination_name}`}>{busyAction === discountRemoveKey ? '...' : '-'}</button>
+                        <span className="numeric tally-count">{entry.discount_count}</span>
+                        <button type="button" onClick={() => handleTally(destination, 'discount', 'add')} disabled={busyAction !== ''} className="btn-outline-accent tally-add" aria-label={`Add discount passenger to ${destination.destination_name}`}>{busyAction === discountAddKey ? '...' : '+1 Disc'}</button>
+                        {entry.discount_count > 0 ? <button type="button" onClick={() => handleSendToQueue(destination, 'discount')} disabled={busyAction !== ''} className="btn-secondary" style={iconButtonStyle} title={`Send discount passenger to queue from ${destination.destination_name}`} aria-label={`Send discount passenger to queue from ${destination.destination_name}`}>
+                          {busyAction === discountSendQueueKey ? '...' : <Send size={16} aria-hidden="true" />}
+                        </button> : <span aria-hidden="true" />}
                       </div> : null}
                     </div>
                   </> : <div aria-hidden="true" style={{ minHeight: '72px' }} />}
-                  <div className="numeric" style={{ minWidth: 0, paddingTop: '8px', borderTop: '1px solid var(--border)', fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {entry.passenger_count} passengers - P{Number(entry.total_fare).toFixed(2)}
+                  <div className="destination-footer">
+                    {queueCount > 0 && !isFinalized ? <button type="button" onClick={() => handlePullFromQueue(destination)} disabled={busyAction !== ''} className="queue-chip" title={pullLabel} aria-label={pullLabel}>{busyAction === pullFromQueueKey ? 'Pulling...' : `Pull ${queueCount}`}</button> : null}
+                    {entry.passenger_count > 0 ? <span className="numeric destination-subtotal">Total P{Number(entry.total_fare).toFixed(2)}</span> : null}
                   </div>
                 </div>
               )
@@ -872,26 +875,37 @@ function TravelPassPage() {
                 </div>
             </details>
           ) : null}
-          <div className="card" style={{ position: 'sticky', bottom: 0, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginTop: '12px', padding: '12px 16px' }}>
-            <div className="numeric">
-              <div><strong>Running tally:</strong> {totals.passengerCount} passengers, {totals.totalFare.toFixed(2)} total fare{vehicleAtCapacity ? <span className="badge badge--danger" style={{ marginLeft: '8px' }}>At capacity ({totals.passengerCount}/{vehicleCapacity})</span> : null}{vehicleOverCapacity ? <span className="badge badge--danger" style={{ marginLeft: '8px' }}>Over capacity ({totals.passengerCount}/{vehicleCapacity})</span> : null}</div>
+          <div className="card tally-bar">
+            <div style={{ minWidth: 0 }}>
+              <div className="numeric tally-bar__totals">
+                <span><span className="tally-bar__figure">{totals.passengerCount}</span> {totals.passengerCount === 1 ? 'passenger' : 'passengers'}</span>
+                <span><span className="tally-bar__figure">{totals.totalFare.toFixed(2)}</span> total fare</span>
+                {vehicleAtCapacity ? <span className="badge badge--danger badge--lg">At capacity ({totals.passengerCount}/{vehicleCapacity})</span> : null}
+                {vehicleOverCapacity ? <span className="badge badge--danger badge--lg">Over capacity ({totals.passengerCount}/{vehicleCapacity})</span> : null}
+              </div>
               {destinationCapacityStatuses.length ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }} aria-label="Destination capacity warnings">
                 {destinationCapacityStatuses.map(({ destination, count, capacityLimit, isOverCapacity }) => <span key={destination.id} className={`badge ${isOverCapacity ? 'badge--danger' : 'badge--pending'}`}>{destination.destination_name} {count}/{capacityLimit}</span>)}
+              </div> : null}
+              {!isFinalized ? <div className={`tally-bar__armed${armedDestination ? ' tally-bar__armed--on' : ''}`} role="status">
+                <Crosshair size={16} aria-hidden="true" />
+                {armedDestination
+                  ? <span>Next tap: <strong>{armedDestination.destination_name}</strong> <span className="numeric">P{armedDestination.base_fare}</span></span>
+                  : <span>No destination armed for card taps</span>}
               </div> : null}
             </div>
             {!isFinalized ? (showFinalizeForm ? <form onSubmit={handleFinalize} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <label htmlFor="departureTime">Departure time</label>
               <input id="departureTime" type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} className="input" required />
               <button type="submit" disabled={busyAction === 'finalize'} className="btn-primary">{busyAction === 'finalize' ? 'Finalizing...' : 'Confirm Finalize'}</button>
-            </form> : <div style={{ display: 'flex', gap: '8px', whiteSpace: 'nowrap' }}>
+            </form> : <div className="tally-bar__actions">
               <button type="button" onClick={() => {
                 const currentTime = new Date()
                 const hours = String(currentTime.getHours()).padStart(2, '0')
                 const minutes = String(currentTime.getMinutes()).padStart(2, '0')
                 setDepartureTime(`${hours}:${minutes}`)
                 setShowFinalizeForm(true)
-              }} className="btn-primary">Finalize Travel Pass</button>
-              <button type="button" onClick={handleCancel} disabled={busyAction !== ''} className="btn-secondary">{busyAction === 'cancel' ? 'Canceling...' : 'Cancel Travel Pass'}</button>
+              }} className="btn-secondary">Finalize Travel Pass</button>
+              <button type="button" onClick={handleCancel} disabled={busyAction !== ''} className="btn-danger-outline">{busyAction === 'cancel' ? 'Canceling...' : 'Cancel Travel Pass'}</button>
             </div>) : null}
           </div>
         </section>

@@ -62,6 +62,7 @@ function TravelPassPage() {
   const [departureTime, setDepartureTime] = useState('')
   const [receiptId, setReceiptId] = useState(null)
   const [latestBoarding, setLatestBoarding] = useState(null)
+  const [latestQueuePayment, setLatestQueuePayment] = useState(null)
   const [queueTerminalId, setQueueTerminalId] = useState('')
   const [queueDestinations, setQueueDestinations] = useState([])
   const [queueDestinationId, setQueueDestinationId] = useState('')
@@ -339,9 +340,33 @@ function TravelPassPage() {
       })
       setQueueDestinationId('')
       setQueuePassengerType('regular')
-      setReceiptId(response.data.id)
+      setLatestQueuePayment({
+        tapLogId: response.data.id,
+        destinationName: response.data.destination_name,
+        fareType: response.data.fare_type,
+        fareCharged: response.data.fare_charged,
+        cancelled: false,
+      })
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not add this passenger to the queue.')
+    } finally {
+      setBusyAction('')
+    }
+  }
+
+  async function handleCancelQueuePayment() {
+    if (!latestQueuePayment || latestQueuePayment.cancelled) return
+
+    const actionKey = `cancel-queue-${latestQueuePayment.tapLogId}`
+    setError('')
+    setBusyAction(actionKey)
+    try {
+      await api.post('tap-log/queue/cancel/', { tap_log_id: latestQueuePayment.tapLogId })
+      setLatestQueuePayment((currentPayment) => (
+        currentPayment ? { ...currentPayment, cancelled: true } : null
+      ))
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || 'Could not cancel this queue payment.')
     } finally {
       setBusyAction('')
     }
@@ -794,6 +819,21 @@ function TravelPassPage() {
           <button type="button" onClick={() => setLatestBoarding(null)} className="btn-secondary" style={{ padding: '2px 7px', lineHeight: 1 }} aria-label="Dismiss boarding confirmation">x</button>
         </div>
         <button type="button" onClick={() => setReceiptId(latestBoarding.tapLogId)} className="btn-primary" style={{ marginTop: '12px', width: '100%' }}>Print Boarding Confirmation</button>
+      </aside> : null}
+      {latestQueuePayment ? <aside style={{ position: 'fixed', left: '24px', bottom: '24px', zIndex: 3, width: 'min(320px, calc(100vw - 48px))', padding: '14px', background: 'var(--surface)', border: '1px solid var(--success)', borderRadius: 'var(--radius)', boxShadow: '0 12px 28px rgba(0, 0, 0, 0.28)' }} role="status">
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+          <div>
+            <strong>{latestQueuePayment.cancelled ? 'Queue payment cancelled' : 'Queue payment recorded'}</strong>
+            <div style={{ marginTop: '4px', fontSize: '0.9rem' }}>{latestQueuePayment.destinationName}</div>
+            <div className="numeric" style={{ marginTop: '2px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{latestQueuePayment.fareType === 'discount' ? 'Discount' : 'Regular'} · {latestQueuePayment.fareCharged}</div>
+            <div className="numeric" style={{ marginTop: '2px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Confirmation #{latestQueuePayment.tapLogId}</div>
+          </div>
+          <button type="button" onClick={() => setLatestQueuePayment(null)} className="btn-secondary" style={{ padding: '2px 7px', lineHeight: 1 }} aria-label="Dismiss queue payment confirmation">x</button>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+          <button type="button" onClick={() => setReceiptId(latestQueuePayment.tapLogId)} className="btn-primary" style={{ flex: 1 }}>Print</button>
+          <button type="button" onClick={handleCancelQueuePayment} disabled={latestQueuePayment.cancelled || busyAction !== ''} className="btn-secondary" style={{ flex: 1 }}>{latestQueuePayment.cancelled ? 'Cancelled' : busyAction === `cancel-queue-${latestQueuePayment.tapLogId}` ? 'Canceling...' : 'Cancel'}</button>
+        </div>
       </aside> : null}
       <ReceiptModal tapLogId={receiptId} onClose={() => setReceiptId(null)} />
     </div>

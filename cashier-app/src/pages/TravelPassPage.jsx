@@ -61,6 +61,11 @@ function TravelPassPage() {
   const [departureTime, setDepartureTime] = useState('')
   const [receiptId, setReceiptId] = useState(null)
   const [latestBoarding, setLatestBoarding] = useState(null)
+  const [queueTerminalId, setQueueTerminalId] = useState('')
+  const [queueDestinations, setQueueDestinations] = useState([])
+  const [queueDestinationId, setQueueDestinationId] = useState('')
+  const [queuePassengerType, setQueuePassengerType] = useState('regular')
+  const [isLoadingQueueDestinations, setIsLoadingQueueDestinations] = useState(false)
   const [error, setError] = useState('')
   const latestRfidTapId = useRef(null)
 
@@ -161,6 +166,41 @@ function TravelPassPage() {
   }, [pageState, manifest?.id, manifest?.vehicle, manifest?.departure_terminal, vehicles])
 
   useEffect(() => {
+    if (pageState !== 3 || !queueTerminalId) {
+      setQueueDestinations([])
+      return undefined
+    }
+
+    let isMounted = true
+
+    async function fetchQueueDestinations() {
+      setIsLoadingQueueDestinations(true)
+      try {
+        const response = await api.get('destinations/', {
+          params: { active_only: true, departure_terminal: queueTerminalId },
+        })
+        if (isMounted) {
+          setQueueDestinations(getListData(response.data))
+        }
+      } catch (requestError) {
+        if (isMounted) {
+          setError(requestError.response?.data?.detail || 'Could not load queue destinations.')
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingQueueDestinations(false)
+        }
+      }
+    }
+
+    fetchQueueDestinations()
+
+    return () => {
+      isMounted = false
+    }
+  }, [pageState, queueTerminalId])
+
+  useEffect(() => {
     if (pageState !== 2 || !manifest) {
       return
     }
@@ -251,6 +291,46 @@ function TravelPassPage() {
       selectManifest(response.data)
     } catch (requestError) {
       setError(extractErrorMessage(requestError, 'Could not create Travel Pass.'))
+    } finally {
+      setBusyAction('')
+    }
+  }
+
+  function openQueue() {
+    setError('')
+    setQueueDestinationId('')
+    setQueuePassengerType('regular')
+    setPageState(3)
+  }
+
+  function handleQueueTerminalChange(value) {
+    setQueueTerminalId(value)
+    setQueueDestinationId('')
+    setQueuePassengerType('regular')
+  }
+
+  function handleQueueDestinationChange(value) {
+    const destination = queueDestinations.find((item) => String(item.id) === value)
+    setQueueDestinationId(value)
+    if (destination?.discount_exempt) {
+      setQueuePassengerType('regular')
+    }
+  }
+
+  async function handleQueuePayment(event) {
+    event.preventDefault()
+    setError('')
+    setBusyAction('queue-pay')
+    try {
+      const response = await api.post('tap-log/queue/', {
+        destination: Number(queueDestinationId),
+        passenger_type: queuePassengerType,
+      })
+      setQueueDestinationId('')
+      setQueuePassengerType('regular')
+      setReceiptId(response.data.id)
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || 'Could not add this passenger to the queue.')
     } finally {
       setBusyAction('')
     }
@@ -425,6 +505,7 @@ function TravelPassPage() {
   const selectedPassLabel = selectedPassIndex === 0 ? 'Primary' : `Next Vehicle (#${selectedPassIndex + 1})`
 
   const selectedVehicle = vehicles.find((vehicle) => vehicle.id === Number(manifest?.vehicle || vehicleId))
+  const selectedQueueDestination = queueDestinations.find((destination) => destination.id === Number(queueDestinationId))
   const vehicleCapacity = selectedVehicle?.passenger_capacity
   const vehicleAtCapacity = vehicleCapacity != null && vehicleCapacity > 0 && totals.passengerCount === vehicleCapacity
   const vehicleOverCapacity = vehicleCapacity != null && vehicleCapacity > 0 && totals.passengerCount > vehicleCapacity
@@ -469,9 +550,14 @@ function TravelPassPage() {
               </button>
             )
           })}
-          <button type="button" onClick={() => setPageState(1)} className="btn-primary">
-            Start New Travel Pass
-          </button>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            <button type="button" onClick={() => setPageState(1)} className="btn-primary">
+              Start New Travel Pass
+            </button>
+            <button type="button" onClick={openQueue} className="btn-secondary">
+              Add to Queue
+            </button>
+          </div>
         </section>
       ) : null}
 
@@ -505,6 +591,36 @@ function TravelPassPage() {
           </div>
           <button type="submit" disabled={busyAction === 'create'} className="btn-primary">{busyAction === 'create' ? 'Creating...' : 'Start Travel Pass'}</button>
           <button type="button" onClick={() => setPageState(0)} className="btn-secondary" style={{ marginLeft: '8px' }}>Cancel</button>
+        </form>
+      ) : null}
+
+      {pageState === 3 ? (
+        <form onSubmit={handleQueuePayment} className="card" style={{ maxWidth: '560px' }}>
+          <h2 style={{ marginTop: 0 }}>Add to Queue</h2>
+          <div style={{ marginBottom: '12px' }}>
+            <label htmlFor="queueTerminal">Departure Terminal</label>
+            <select id="queueTerminal" value={queueTerminalId} onChange={(event) => handleQueueTerminalChange(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required disabled={isLoadingTerminals || busyAction === 'queue-pay'}>
+              <option value="">{isLoadingTerminals ? 'Loading terminals...' : 'Select a departure terminal'}</option>
+              {terminals.map((terminal) => <option key={terminal.id} value={terminal.id}>{terminal.name}</option>)}
+            </select>
+          </div>
+          <div style={{ marginBottom: '12px' }}>
+            <label htmlFor="queueDestination">Destination</label>
+            <select id="queueDestination" value={queueDestinationId} onChange={(event) => handleQueueDestinationChange(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required disabled={!queueTerminalId || isLoadingQueueDestinations || busyAction === 'queue-pay'}>
+              <option value="">{isLoadingQueueDestinations ? 'Loading destinations...' : queueTerminalId ? 'Select a destination' : 'Select a departure terminal first'}</option>
+              {queueDestinations.map((destination) => <option key={destination.id} value={destination.id}>{destination.destination_name} - {destination.base_fare}</option>)}
+            </select>
+            {queueTerminalId && !isLoadingQueueDestinations && queueDestinations.length === 0 ? <p style={{ marginBottom: 0, color: 'var(--text-secondary)' }}>No destinations are available for this departure terminal.</p> : null}
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label htmlFor="queuePassengerType">Fare Type</label>
+            <select id="queuePassengerType" value={queuePassengerType} onChange={(event) => setQueuePassengerType(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} disabled={!queueDestinationId || busyAction === 'queue-pay'}>
+              <option value="regular">Regular</option>
+              {!selectedQueueDestination?.discount_exempt ? <option value="discount">Discount</option> : null}
+            </select>
+          </div>
+          <button type="submit" disabled={!queueDestinationId || busyAction === 'queue-pay'} className="btn-primary">{busyAction === 'queue-pay' ? 'Processing...' : 'Pay'}</button>
+          <button type="button" onClick={() => { setError(''); setPageState(0) }} disabled={busyAction === 'queue-pay'} className="btn-secondary" style={{ marginLeft: '8px' }}>Back to Travel Passes</button>
         </form>
       ) : null}
 

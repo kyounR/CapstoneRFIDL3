@@ -72,7 +72,7 @@ function RfidReaderStatus() {
 
     async function sendCommand(command) {
       const writer = writerRef.current
-      if (!writer) {
+      if (!writer || !command) {
         return
       }
       try {
@@ -98,10 +98,14 @@ function RfidReaderStatus() {
       if (tap.success) {
         return 'OK'
       }
-      if (/insufficient|balance/i.test(tap.message)) {
-        return 'LOW'
+      switch (tap.code) {
+        case 'insufficient_balance':
+          return 'LOW'
+        case 'cooldown':
+          return null
+        default:
+          return 'DENY'
       }
-      return 'DENY'
     }
 
     function submitTap(uid) {
@@ -113,6 +117,7 @@ function RfidReaderStatus() {
             uid,
             passenger_name: response.data.passenger_name || '',
             success: response.data.success === true,
+            code: response.data.code || '',
             message: response.data.message || response.data.error || response.data.reason || '',
             fare_charged: response.data.fare_charged ?? response.data.applied_fare ?? null,
             destination_name: response.data.destination_name || '',
@@ -130,6 +135,7 @@ function RfidReaderStatus() {
               uid,
               passenger_name: response.data.passenger_name || '',
               success: false,
+              code: response.data.code || '',
               message: response.data.message || response.data.error || 'Tap failed.',
               fare_charged: null,
               destination_name: response.data.destination_name || '',

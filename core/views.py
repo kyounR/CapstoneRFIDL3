@@ -478,7 +478,10 @@ def topup_view(request):
     with transaction.atomic():
         card = Card.objects.select_for_update().filter(uid=card_uid).first()
         if card is None:
-            return Response({'error': 'Card not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {'error': 'Card not found.', 'code': 'card_not_found'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
         if card.status != Card.Status.ACTIVE:
             return Response(
                 {'error': 'Card is not active.'},
@@ -680,6 +683,7 @@ def tap_view(request):
             return Response(
                 {
                     'error': 'Card is not active.',
+                    'code': 'card_inactive',
                     'passenger_name': card.passenger.full_name if card.passenger else '',
                 },
                 status=status.HTTP_400_BAD_REQUEST,
@@ -704,6 +708,7 @@ def tap_view(request):
                 {
                     'success': False,
                     'error': cooldown_message,
+                    'code': 'cooldown',
                     'remaining_balance': card.balance,
                     'passenger_name': card.passenger.full_name if card.passenger else '',
                 },
@@ -729,6 +734,7 @@ def tap_view(request):
             return Response(
                 {
                     'error': no_destination_message,
+                    'code': 'no_destination',
                     'passenger_name': card.passenger.full_name if card.passenger else '',
                 },
                 status=status.HTTP_400_BAD_REQUEST,
@@ -750,6 +756,7 @@ def tap_view(request):
             return Response(
                 {
                     'error': no_manifest_message,
+                    'code': 'no_travel_pass',
                     'passenger_name': card.passenger.full_name if card.passenger else '',
                 },
                 status=status.HTTP_400_BAD_REQUEST,
@@ -771,6 +778,7 @@ def tap_view(request):
             return Response(
                 {
                     'error': no_manifest_message,
+                    'code': 'no_travel_pass',
                     'passenger_name': card.passenger.full_name if card.passenger else '',
                 },
                 status=status.HTTP_400_BAD_REQUEST,
@@ -788,7 +796,10 @@ def tap_view(request):
                 remaining_balance=card.balance,
                 source='rfid',
             )
-            return Response({'error': mismatch_message}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': mismatch_message, 'code': 'line_mismatch'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         passenger = card.passenger
         passenger_discount_type: Optional[str] = None if passenger is None else passenger.discount_type
@@ -838,6 +849,7 @@ def tap_view(request):
                 {
                     'success': False,
                     'error': 'Insufficient balance.',
+                    'code': 'insufficient_balance',
                     'required_fare': fare,
                     'remaining_balance': card.balance,
                     'fare_type': fare_type,

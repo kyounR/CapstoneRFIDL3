@@ -260,6 +260,7 @@ function TravelPassPage() {
       return
     }
 
+    setQueueEntries([])
     refreshQueueEntries()
   }, [pageState, queueTerminalId])
 
@@ -788,12 +789,12 @@ function TravelPassPage() {
               )
             })}
           </div> : null}
-          <section className="card" style={{ marginTop: '12px', maxWidth: '560px' }}>
+          <section className="card" style={{ marginTop: '12px' }}>
             <h2 style={{ marginTop: 0 }}>Pending Queue Entries</h2>
             {!queueTerminalId ? <p style={{ marginBottom: 0, color: 'var(--text-secondary)' }}>Select a departure terminal to view pending queue entries.</p> : null}
-            {queueTerminalId && isLoadingQueueEntries ? <p style={{ marginBottom: 0 }}>Loading pending queue entries...</p> : null}
+            {queueTerminalId && isLoadingQueueEntries && queueEntries.length === 0 ? <p style={{ marginBottom: 0 }}>Loading pending queue entries...</p> : null}
             {queueTerminalId && !isLoadingQueueEntries && queueEntries.length === 0 ? <p style={{ marginBottom: 0, color: 'var(--text-secondary)' }}>No pending queue entries for this departure terminal.</p> : null}
-            {queueTerminalId && !isLoadingQueueEntries && queueEntries.length > 0 ? <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {queueTerminalId && queueEntries.length > 0 ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px', maxHeight: '190px', overflowY: 'auto', overscrollBehavior: 'contain' }}>
               {queueEntries.map((entry) => (
                 <div key={entry.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '8px 12px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius)' }}>
                   <div style={{ minWidth: 0 }}>

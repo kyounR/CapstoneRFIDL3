@@ -230,7 +230,7 @@ function EntityManager({ endpoint, title, fields, getSubmitWarning, filterFields
             ))}
           </div>
           <div style={{ overflowX: 'auto' }}>
-          <table className="table">
+          <table className="table entity-manager-table">
             <thead><tr>{tableFields.map((field) => <th key={field.key}>{field.label}</th>)}{hasActiveField ? <th>Status</th> : null}<th>Actions</th></tr></thead>
             <tbody>
               {visibleRecords.length ? visibleRecords.map((record) => (
@@ -238,8 +238,10 @@ function EntityManager({ endpoint, title, fields, getSubmitWarning, filterFields
                   {tableFields.map((field) => <td key={field.key} className={field.type === 'number' ? 'numeric' : undefined}>{renderTableValue(record, field)}</td>)}
                   {hasActiveField ? <td><span className={`badge ${record.is_active ? 'badge--success' : 'badge--danger'}`}><span className={`status-dot ${record.is_active ? 'status-dot--success' : 'status-dot--danger'}`} style={{ marginRight: '6px' }} />{record.is_active ? 'Active' : 'Inactive'}</span></td> : null}
                   <td>
-                    <button type="button" onClick={() => openEditForm(record)} className="btn-secondary">Edit</button>
-                    {hasActiveField ? <button type="button" onClick={() => handleToggleActive(record)} className="btn-secondary" style={{ marginLeft: '8px' }}>{record.is_active ? 'Deactivate' : 'Activate'}</button> : null}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
+                      <button type="button" onClick={() => openEditForm(record)} className="btn-secondary">Edit</button>
+                      {hasActiveField ? <button type="button" onClick={() => handleToggleActive(record)} className="btn-secondary">{record.is_active ? 'Deactivate' : 'Activate'}</button> : null}
+                    </div>
                   </td>
                 </tr>
               )) : <tr><td colSpan={fields.length + (hasActiveField ? 1 : 0) + 1}>{normalizedSearchText ? 'No matching records found.' : 'No records found.'}</td></tr>}

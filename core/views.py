@@ -2549,7 +2549,7 @@ def manifest_entry_pull_from_queue_view(request):
         if manifest.is_finalized or manifest.is_cancelled:
             return Response({'error': 'Cannot pull passengers into a closed Travel Pass.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        tap_log = TapLog.objects.select_for_update().select_related('destination').filter(
+        tap_log = TapLog.objects.select_for_update(of=('self',)).select_related('destination').filter(
             manifest_trip__isnull=True,
             success=True,
             is_correction=False,
@@ -2616,11 +2616,41 @@ def manifest_entry_queue_counts_view(request):
     return Response({row['destination_id']: row['count'] for row in queue_counts}, status=status.HTTP_200_OK)
 
 
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def tap_log_queue_view(request):
     if not _has_cashier_or_admin_role(request):
-        return _role_forbidden_response('add passengers to the queue')
+        return _role_forbidden_response('access the queue')
+
+    if request.method == 'GET':
+        departure_terminal_id = request.query_params.get('departure_terminal')
+        if not departure_terminal_id:
+            return Response(
+                {'error': 'departure_terminal is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        queue_entries = TapLog.objects.filter(
+            manifest_trip__isnull=True,
+            success=True,
+            is_correction=False,
+            queue_cancelled=False,
+            destination__departure_terminal_id=departure_terminal_id,
+        ).select_related('destination').order_by('timestamp')
+        return Response(
+            [
+                {
+                    'id': tap_log.id,
+                    'destination_id': tap_log.destination_id,
+                    'destination_name': tap_log.destination.destination_name,
+                    'fare_type': tap_log.fare_type,
+                    'fare_charged': tap_log.fare_charged,
+                    'timestamp': tap_log.timestamp,
+                }
+                for tap_log in queue_entries
+            ],
+            status=status.HTTP_200_OK,
+        )
 
     destination_id = request.data.get('destination')
     passenger_type = request.data.get('passenger_type')
@@ -2668,6 +2698,53 @@ def tap_log_queue_view(request):
         },
         status=status.HTTP_201_CREATED,
     )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def tap_log_queue_cancel_view(request):
+    if not _has_cashier_or_admin_role(request):
+        return _role_forbidden_response('cancel queue entries')
+
+    tap_log_id = request.data.get('tap_log_id')
+    if not tap_log_id:
+        return Response({'error': 'tap_log_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    with transaction.atomic():
+        tap_log = TapLog.objects.select_for_update(of=('self',)).select_related('destination').filter(
+            id=tap_log_id,
+            manifest_trip__isnull=True,
+            success=True,
+            is_correction=False,
+            queue_cancelled=False,
+        ).first()
+        if tap_log is None:
+            return Response(
+                {'error': 'Pending queue entry not found.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        tap_log.queue_cancelled = True
+        tap_log.queue_cancelled_at = timezone.now()
+        tap_log.queue_cancelled_by = request.user
+        tap_log.save(update_fields=['queue_cancelled', 'queue_cancelled_at', 'queue_cancelled_by'])
+        TapLog.objects.create(
+            source=TapLog.Source.MANUAL,
+            cashier=request.user,
+            card=None,
+            card_uid='',
+            passenger_name='',
+            destination=tap_log.destination,
+            manifest_trip=None,
+            fare_type=tap_log.fare_type,
+            success=True,
+            is_correction=True,
+            fare_charged=-tap_log.fare_charged,
+            remaining_balance=None,
+            message=f'Queue cancellation: refunded cash for {tap_log.destination.destination_name}.',
+        )
+
+    return Response({'success': True}, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

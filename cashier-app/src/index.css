@@ -648,3 +648,5 @@ button.destination-arm--armed:hover:not(:disabled) {
   gap: 32px;
   white-space: nowrap;
 }
+
+.tally-minus:disabled { opacity: 0.35; cursor: default; }

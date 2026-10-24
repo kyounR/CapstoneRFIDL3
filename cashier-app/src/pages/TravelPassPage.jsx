@@ -35,6 +35,17 @@ function entriesByDestination(entries = []) {
   }, {})
 }
 
+function formatRelativeTime(timestamp) {
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - new Date(timestamp).getTime()) / 1000))
+  if (elapsedSeconds < 60) return 'Just now'
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60)
+  if (elapsedMinutes < 60) return `${elapsedMinutes} min ago`
+  const elapsedHours = Math.floor(elapsedMinutes / 60)
+  if (elapsedHours < 24) return `${elapsedHours} hr ago`
+  const elapsedDays = Math.floor(elapsedHours / 24)
+  return `${elapsedDays} day${elapsedDays === 1 ? '' : 's'} ago`
+}
+
 function TravelPassPage() {
   const confirm = useConfirm()
   const [pageState, setPageState] = useState(0)
@@ -68,8 +79,29 @@ function TravelPassPage() {
   const [queueDestinationId, setQueueDestinationId] = useState('')
   const [queuePassengerType, setQueuePassengerType] = useState('regular')
   const [isLoadingQueueDestinations, setIsLoadingQueueDestinations] = useState(false)
+  const [queueEntries, setQueueEntries] = useState([])
+  const [isLoadingQueueEntries, setIsLoadingQueueEntries] = useState(false)
   const [error, setError] = useState('')
   const latestRfidTapId = useRef(null)
+
+  async function refreshQueueEntries(departureTerminalId = queueTerminalId) {
+    if (!departureTerminalId) {
+      setQueueEntries([])
+      return
+    }
+
+    setIsLoadingQueueEntries(true)
+    try {
+      const response = await api.get('tap-log/queue/', {
+        params: { departure_terminal: departureTerminalId },
+      })
+      setQueueEntries(getListData(response.data))
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || 'Could not load pending queue entries.')
+    } finally {
+      setIsLoadingQueueEntries(false)
+    }
+  }
 
   async function fetchActivePasses() {
     setIsLoadingPicker(true)
@@ -200,6 +232,15 @@ function TravelPassPage() {
     return () => {
       isMounted = false
     }
+  }, [pageState, queueTerminalId])
+
+  useEffect(() => {
+    if (pageState !== 3 || !queueTerminalId) {
+      setQueueEntries([])
+      return
+    }
+
+    refreshQueueEntries()
   }, [pageState, queueTerminalId])
 
   useEffect(() => {
@@ -347,6 +388,7 @@ function TravelPassPage() {
         fareCharged: response.data.fare_charged,
         cancelled: false,
       })
+      await refreshQueueEntries()
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not add this passenger to the queue.')
     } finally {
@@ -365,6 +407,25 @@ function TravelPassPage() {
       setLatestQueuePayment((currentPayment) => (
         currentPayment ? { ...currentPayment, cancelled: true } : null
       ))
+      await refreshQueueEntries()
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || 'Could not cancel this queue payment.')
+    } finally {
+      setBusyAction('')
+    }
+  }
+
+  async function handleCancelQueueEntry(tapLogId) {
+    const actionKey = `cancel-queue-${tapLogId}`
+    setError('')
+    setBusyAction(actionKey)
+    try {
+      await api.post('tap-log/queue/cancel/', { tap_log_id: tapLogId })
+      setQueueEntries((currentEntries) => currentEntries.filter((entry) => entry.id !== tapLogId))
+      setLatestQueuePayment((currentPayment) => (
+        currentPayment?.tapLogId === tapLogId ? { ...currentPayment, cancelled: true } : currentPayment
+      ))
+      await refreshQueueEntries()
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not cancel this queue payment.')
     } finally {
@@ -666,33 +727,52 @@ function TravelPassPage() {
       ) : null}
 
       {pageState === 3 ? (
-        <form onSubmit={handleQueuePayment} className="card" style={{ maxWidth: '560px' }}>
-          <h2 style={{ marginTop: 0 }}>Add to Queue</h2>
-          <div style={{ marginBottom: '12px' }}>
-            <label htmlFor="queueTerminal">Departure Terminal</label>
-            <select id="queueTerminal" value={queueTerminalId} onChange={(event) => handleQueueTerminalChange(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required disabled={isLoadingTerminals || busyAction === 'queue-pay'}>
-              <option value="">{isLoadingTerminals ? 'Loading terminals...' : 'Select a departure terminal'}</option>
-              {terminals.map((terminal) => <option key={terminal.id} value={terminal.id}>{terminal.name}</option>)}
-            </select>
-          </div>
-          <div style={{ marginBottom: '12px' }}>
-            <label htmlFor="queueDestination">Destination</label>
-            <select id="queueDestination" value={queueDestinationId} onChange={(event) => handleQueueDestinationChange(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required disabled={!queueTerminalId || isLoadingQueueDestinations || busyAction === 'queue-pay'}>
-              <option value="">{isLoadingQueueDestinations ? 'Loading destinations...' : queueTerminalId ? 'Select a destination' : 'Select a departure terminal first'}</option>
-              {queueDestinations.map((destination) => <option key={destination.id} value={destination.id}>{destination.destination_name} - {destination.base_fare}</option>)}
-            </select>
-            {queueTerminalId && !isLoadingQueueDestinations && queueDestinations.length === 0 ? <p style={{ marginBottom: 0, color: 'var(--text-secondary)' }}>No destinations are available for this departure terminal.</p> : null}
-          </div>
-          <div style={{ marginBottom: '16px' }}>
-            <label htmlFor="queuePassengerType">Fare Type</label>
-            <select id="queuePassengerType" value={queuePassengerType} onChange={(event) => setQueuePassengerType(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} disabled={!queueDestinationId || busyAction === 'queue-pay'}>
-              <option value="regular">Regular</option>
-              {!selectedQueueDestination?.discount_exempt ? <option value="discount">Discount</option> : null}
-            </select>
-          </div>
-          <button type="submit" disabled={!queueDestinationId || busyAction === 'queue-pay'} className="btn-primary">{busyAction === 'queue-pay' ? 'Processing...' : 'Pay'}</button>
-          <button type="button" onClick={() => { setError(''); setPageState(0) }} disabled={busyAction === 'queue-pay'} className="btn-secondary" style={{ marginLeft: '8px' }}>Back to Travel Passes</button>
-        </form>
+        <section style={{ maxWidth: '560px' }}>
+          <form onSubmit={handleQueuePayment} className="card">
+            <h2 style={{ marginTop: 0 }}>Add to Queue</h2>
+            <div style={{ marginBottom: '12px' }}>
+              <label htmlFor="queueTerminal">Departure Terminal</label>
+              <select id="queueTerminal" value={queueTerminalId} onChange={(event) => handleQueueTerminalChange(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required disabled={isLoadingTerminals || busyAction === 'queue-pay'}>
+                <option value="">{isLoadingTerminals ? 'Loading terminals...' : 'Select a departure terminal'}</option>
+                {terminals.map((terminal) => <option key={terminal.id} value={terminal.id}>{terminal.name}</option>)}
+              </select>
+            </div>
+            <div style={{ marginBottom: '12px' }}>
+              <label htmlFor="queueDestination">Destination</label>
+              <select id="queueDestination" value={queueDestinationId} onChange={(event) => handleQueueDestinationChange(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} required disabled={!queueTerminalId || isLoadingQueueDestinations || busyAction === 'queue-pay'}>
+                <option value="">{isLoadingQueueDestinations ? 'Loading destinations...' : queueTerminalId ? 'Select a destination' : 'Select a departure terminal first'}</option>
+                {queueDestinations.map((destination) => <option key={destination.id} value={destination.id}>{destination.destination_name} - {destination.base_fare}</option>)}
+              </select>
+              {queueTerminalId && !isLoadingQueueDestinations && queueDestinations.length === 0 ? <p style={{ marginBottom: 0, color: 'var(--text-secondary)' }}>No destinations are available for this departure terminal.</p> : null}
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label htmlFor="queuePassengerType">Fare Type</label>
+              <select id="queuePassengerType" value={queuePassengerType} onChange={(event) => setQueuePassengerType(event.target.value)} className="input" style={{ display: 'block', width: '100%', marginTop: '4px' }} disabled={!queueDestinationId || busyAction === 'queue-pay'}>
+                <option value="regular">Regular</option>
+                {!selectedQueueDestination?.discount_exempt ? <option value="discount">Discount</option> : null}
+              </select>
+            </div>
+            <button type="submit" disabled={!queueDestinationId || busyAction === 'queue-pay'} className="btn-primary">{busyAction === 'queue-pay' ? 'Processing...' : 'Pay'}</button>
+            <button type="button" onClick={() => { setError(''); setPageState(0) }} disabled={busyAction === 'queue-pay'} className="btn-secondary" style={{ marginLeft: '8px' }}>Back to Travel Passes</button>
+          </form>
+          <section className="card" style={{ marginTop: '12px' }}>
+            <h2 style={{ marginTop: 0 }}>Pending Queue Entries</h2>
+            {!queueTerminalId ? <p style={{ marginBottom: 0, color: 'var(--text-secondary)' }}>Select a departure terminal to view pending queue entries.</p> : null}
+            {queueTerminalId && isLoadingQueueEntries ? <p style={{ marginBottom: 0 }}>Loading pending queue entries...</p> : null}
+            {queueTerminalId && !isLoadingQueueEntries && queueEntries.length === 0 ? <p style={{ marginBottom: 0, color: 'var(--text-secondary)' }}>No pending queue entries for this departure terminal.</p> : null}
+            {queueTerminalId && !isLoadingQueueEntries && queueEntries.length > 0 ? <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {queueEntries.map((entry) => (
+                <div key={entry.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '8px 12px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius)' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <strong>{entry.destination_name}</strong>
+                    <div className="numeric" style={{ marginTop: '2px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{entry.fare_type === 'discount' ? 'Discount' : 'Regular'} · {entry.fare_charged} · {formatRelativeTime(entry.timestamp)}</div>
+                  </div>
+                  <button type="button" onClick={() => handleCancelQueueEntry(entry.id)} disabled={busyAction !== ''} className="btn-secondary" style={{ flexShrink: 0 }}>{busyAction === `cancel-queue-${entry.id}` ? 'Canceling...' : 'Cancel'}</button>
+                </div>
+              ))}
+            </div> : null}
+          </section>
+        </section>
       ) : null}
 
       {pageState === 2 && manifest ? (

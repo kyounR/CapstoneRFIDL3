@@ -612,6 +612,15 @@ class TapLog(models.Model):
 		blank=True,
 		related_name='refunded_tap_logs',
 	)
+	queue_cancelled = models.BooleanField(default=False)
+	queue_cancelled_at = models.DateTimeField(null=True, blank=True)
+	queue_cancelled_by = models.ForeignKey(
+		settings.AUTH_USER_MODEL,
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name='queue_cancelled_tap_logs',
+	)
 	source = models.CharField(max_length=20, choices=Source.choices, default=Source.RFID)
 	cashier = models.ForeignKey(
 		settings.AUTH_USER_MODEL,

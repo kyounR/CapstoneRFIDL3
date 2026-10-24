@@ -16,6 +16,7 @@ function RfidReaderStatus() {
   const disconnectReaderRef = useRef(null)
   const panelCollapseTimeoutRef = useRef(null)
   const copiedTimeoutRef = useRef(null)
+  const writerRef = useRef(null)
 
   useEffect(() => {
     let isMounted = true
@@ -54,6 +55,7 @@ function RfidReaderStatus() {
       if (portRef.current === port) {
         portRef.current = null
       }
+      releaseWriter()
       await closePort(port)
       setConnectionState(false)
       if (explicitlyDisconnected) {
@@ -68,11 +70,45 @@ function RfidReaderStatus() {
       }
     }
 
+    async function sendCommand(command) {
+      const writer = writerRef.current
+      if (!writer) {
+        return
+      }
+      try {
+        await writer.write(new TextEncoder().encode(`${command}\n`))
+      } catch (writeError) {
+        console.error('Could not send command to RFID reader:', writeError)
+      }
+    }
+
+    function releaseWriter() {
+      const writer = writerRef.current
+      writerRef.current = null
+      if (writer) {
+        try {
+          writer.releaseLock()
+        } catch {
+          // Already released or the port is gone.
+        }
+      }
+    }
+
+    function commandForTap(tap) {
+      if (tap.success) {
+        return 'OK'
+      }
+      if (/insufficient|balance/i.test(tap.message)) {
+        return 'LOW'
+      }
+      return 'DENY'
+    }
+
     function submitTap(uid) {
       api.post('tap/', { card_uid: uid })
         .then((response) => {
           console.log('RFID tap response:', response.status, response.data)
-          setLastTap({
+          const tap = {
             tapLogId: response.data.id,
             uid,
             passenger_name: response.data.passenger_name || '',
@@ -81,13 +117,15 @@ function RfidReaderStatus() {
             fare_charged: response.data.fare_charged ?? response.data.applied_fare ?? null,
             destination_name: response.data.destination_name || '',
             timestamp: new Date().toISOString(),
-          })
+          }
+          setLastTap(tap)
+          void sendCommand(commandForTap(tap))
         })
         .catch((requestError) => {
           const response = requestError.response
           console.error('RFID tap request failed:', response?.status, response?.data || requestError.message)
           if (response) {
-            setLastTap({
+            const tap = {
               tapLogId: response.data.id,
               uid,
               passenger_name: response.data.passenger_name || '',
@@ -96,7 +134,12 @@ function RfidReaderStatus() {
               fare_charged: null,
               destination_name: response.data.destination_name || '',
               timestamp: new Date().toISOString(),
-            })
+            }
+            setLastTap(tap)
+            void sendCommand(commandForTap(tap))
+          } else {
+            // No response at all (server down, network error).
+            void sendCommand('DENY')
           }
         })
     }
@@ -147,6 +190,7 @@ function RfidReaderStatus() {
         }
         if (portRef.current === port) {
           portRef.current = null
+          releaseWriter()
           await closePort(port)
           setConnectionState(false)
         }
@@ -164,6 +208,9 @@ function RfidReaderStatus() {
           return
         }
         portRef.current = port
+        if (port.writable) {
+          writerRef.current = port.writable.getWriter()
+        }
         startReadLoop(port)
       } catch (connectionError) {
         console.error('Could not connect RFID reader:', connectionError)

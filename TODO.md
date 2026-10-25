@@ -3,7 +3,6 @@
 ## 🚀 Active & Pending Tasks
 - [ ] Add unit tests
 - [ ] Granularity to CALTRANSCO management report *(Pending UAT & client feedback)*
-- [ ] General UI pass for every tab
 - [ ] **(MAJOR)** Official government-compliant receipt implementation
 - [ ] Fix alignment of tables in admin dashboard
 

@@ -348,7 +348,7 @@ function RfidReaderStatus() {
       </div>
       {lastTap ? (
         <aside
-          style={{ position: 'fixed', left: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 10, display: 'flex', alignItems: 'stretch', fontFamily: 'var(--font-body)' }}
+          style={{ position: 'fixed', right: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 10, display: 'flex', flexDirection: 'row-reverse', alignItems: 'stretch', fontFamily: 'var(--font-body)' }}
           onMouseEnter={expandTapPanel}
           onMouseLeave={collapseTapPanelSoon}
         >
@@ -362,7 +362,7 @@ function RfidReaderStatus() {
             aria-label={isTapPanelExpanded ? 'Collapse last RFID tap' : 'Show last RFID tap'}
             style={{ width: '10px', minWidth: '10px', height: '120px', padding: 0, border: 0, borderRadius: 0, background: 'var(--accent)', cursor: 'pointer' }}
           />
-          {isTapPanelExpanded ? <div className="card" style={{ width: '260px', padding: '14px', margin: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}>
+          {isTapPanelExpanded ? <div className="card" style={{ width: '260px', padding: '14px', margin: 0, borderTopRightRadius: 0, borderBottomRightRadius: 0 }}>
             <strong>Last RFID tap</strong>
             <p style={{ margin: '10px 0 4px' }}>{lastTap.passenger_name || 'Unregistered card'}</p>
             <p className="numeric" style={{ margin: '0 0 10px', color: 'var(--text-secondary)' }}>{lastTap.uid}</p>

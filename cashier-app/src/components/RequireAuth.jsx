@@ -1,3 +1,19 @@
+import { useEffect, useState } from 'react'
+import {
+  Activity,
+  Banknote,
+  BarChart3,
+  FileText,
+  Home,
+  LayoutDashboard,
+  LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Receipt,
+  Settings,
+  Ticket,
+  Wallet,
+} from 'lucide-react'
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import CalPassWordmark from './CalPassWordmark'
 import RfidReaderStatus from './RfidReaderStatus'
@@ -9,6 +25,13 @@ function RequireAuth() {
   const role = localStorage.getItem('userRole')
   const username = localStorage.getItem('username')
   const fullName = localStorage.getItem('fullName')
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
+    () => localStorage.getItem('sidebarCollapsed') === 'true',
+  )
+
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', String(isSidebarCollapsed))
+  }, [isSidebarCollapsed])
 
   if (!token) {
     return <Navigate to="/login" replace />
@@ -27,44 +50,169 @@ function RequireAuth() {
   }
 
   const navItems = [
-    { label: 'Home', path: '/home' },
-    { label: 'Top-up', path: '/topup' },
-    { label: 'Travel Pass', path: '/travel-pass' },
-    { label: 'Remittance', path: '/remittance' },
-    { label: 'Summary', path: '/summary' },
-    { label: 'Tap Feed', path: '/tap-feed' },
-    { label: 'Transaction History', path: '/transaction-history' },
+    { label: 'Home', path: '/home', icon: Home },
+    { label: 'Top-up', path: '/topup', icon: Wallet },
+    { label: 'Travel Pass', path: '/travel-pass', icon: Ticket },
+    { label: 'Remittance', path: '/remittance', icon: Banknote },
+    { label: 'Summary', path: '/summary', icon: BarChart3 },
+    { label: 'Tap Feed', path: '/tap-feed', icon: Activity },
+    { label: 'Transaction History', path: '/transaction-history', icon: Receipt },
+  ]
+
+  const adminNavItems = [
+    { label: 'Admin Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+    { label: 'Manage', path: '/admin/manage', icon: Settings },
+    { label: 'Reports', path: '/admin/reports', icon: FileText },
   ]
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(`${path}/`)
+  const sidebarWidth = isSidebarCollapsed ? '88px' : '264px'
+
+  function renderNavItem(item) {
+    const active = isActive(item.path)
+    const Icon = item.icon
+
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        title={item.label}
+        aria-label={item.label}
+        aria-current={active ? 'page' : undefined}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+          gap: '12px',
+          minHeight: '44px',
+          padding: isSidebarCollapsed ? '10px' : '10px 12px',
+          borderRadius: 'var(--radius)',
+          background: active ? 'var(--surface-hover)' : 'transparent',
+          color: active ? 'var(--accent)' : 'var(--text-primary)',
+          fontWeight: active ? 600 : 400,
+          textDecoration: 'none',
+        }}
+      >
+        <Icon size={20} aria-hidden="true" />
+        {!isSidebarCollapsed ? <span>{item.label}</span> : null}
+      </Link>
+    )
+  }
 
   return (
-    <>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', padding: '12px 16px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)', fontFamily: 'var(--font-body)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0 }}>
-          <CalPassWordmark compact />
-          <span>Logged in as {fullName || username} ({role})</span>
-        </div>
-        <RfidReaderStatus />
-        <nav aria-label="Primary navigation" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {navItems.map((item) => (
-            <Link key={item.path} to={item.path} style={{ color: isActive(item.path) ? 'var(--accent)' : 'var(--text-primary)', fontWeight: isActive(item.path) ? 600 : 400, textDecoration: isActive(item.path) ? 'underline' : 'none' }}>
-              {item.label}
-            </Link>
-          ))}
-          {role === 'admin' ? <>
-            <span aria-hidden="true" style={{ color: 'var(--border)' }}>|</span>
-            <Link to="/admin/dashboard" style={{ color: isActive('/admin/dashboard') ? 'var(--accent)' : 'var(--text-primary)', fontWeight: isActive('/admin/dashboard') ? 600 : 400, textDecoration: isActive('/admin/dashboard') ? 'underline' : 'none' }}>Admin Dashboard</Link>
-            <Link to="/admin/manage" style={{ color: isActive('/admin/manage') ? 'var(--accent)' : 'var(--text-primary)', fontWeight: isActive('/admin/manage') ? 600 : 400, textDecoration: isActive('/admin/manage') ? 'underline' : 'none' }}>Manage</Link>
-            <Link to="/admin/reports" style={{ color: isActive('/admin/reports') ? 'var(--accent)' : 'var(--text-primary)', fontWeight: isActive('/admin/reports') ? 600 : 400, textDecoration: isActive('/admin/reports') ? 'underline' : 'none' }}>Reports</Link>
-          </> : null}
-          <button type="button" onClick={handleLogout} className="btn-secondary">
-            Log out
+    <div style={{ display: 'flex', alignItems: 'stretch', minHeight: '100vh' }}>
+      <aside
+        aria-label="Sidebar"
+        style={{
+          display: 'flex',
+          flex: `0 0 ${sidebarWidth}`,
+          flexDirection: 'column',
+          gap: '16px',
+          minHeight: '100vh',
+          padding: isSidebarCollapsed ? '16px 8px' : '16px',
+          overflowX: 'hidden',
+          background: 'var(--bg-elevated)',
+          borderRight: '1px solid var(--border)',
+          fontFamily: 'var(--font-body)',
+          transition: 'flex-basis 180ms ease, padding 180ms ease',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: isSidebarCollapsed ? 'column' : 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px',
+          }}
+        >
+          <div
+            style={{
+              transform: isSidebarCollapsed ? 'scale(0.78)' : 'none',
+              transformOrigin: 'left center',
+            }}
+          >
+            <CalPassWordmark compact />
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsSidebarCollapsed((collapsed) => !collapsed)}
+            aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px' }}
+          >
+            {isSidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           </button>
+        </div>
+
+        {!isSidebarCollapsed ? (
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+            Logged in as {fullName || username} ({role})
+          </div>
+        ) : null}
+
+        <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
+          <RfidReaderStatus />
+        </div>
+
+        <div style={{ borderTop: '1px solid var(--border)' }} />
+
+        <nav aria-label="Primary navigation" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {navItems.map(renderNavItem)}
         </nav>
-      </header>
-      <Outlet />
-    </>
+
+        {role === 'admin' ? (
+          <>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                borderTop: '1px solid var(--border)',
+                paddingTop: '14px',
+                color: 'var(--text-secondary)',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {!isSidebarCollapsed ? 'Admin' : null}
+            </div>
+            <nav aria-label="Admin navigation" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {adminNavItems.map(renderNavItem)}
+            </nav>
+          </>
+        ) : null}
+
+        <div style={{ flex: 1 }} />
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          title="Log out"
+          aria-label="Log out"
+          className="btn-secondary"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+            gap: '12px',
+            padding: isSidebarCollapsed ? '10px' : '10px 12px',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <LogOut size={20} aria-hidden="true" />
+          {!isSidebarCollapsed ? <span>Log out</span> : null}
+        </button>
+      </aside>
+
+      <main style={{ flex: 1, minWidth: 0, height: '100vh', overflowY: 'auto' }}>
+        <Outlet />
+      </main>
+    </div>
   )
 }
 

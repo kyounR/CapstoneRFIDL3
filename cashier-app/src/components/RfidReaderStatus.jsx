@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import { Nfc } from 'lucide-react'
 import api from '../api/client'
 import ReceiptModal from './ReceiptModal'
 
-function RfidReaderStatus() {
+function RfidReaderStatus({ collapsed = false }) {
   const [isSupported, setIsSupported] = useState(null)
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
@@ -335,17 +336,57 @@ function RfidReaderStatus() {
     setIsTapPanelExpanded((expanded) => !expanded)
   }
 
-  if (isSupported === false) {
-    return <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>RFID reader requires Chrome or Edge</span>
-  }
+  const readerLabel = isSupported === false
+    ? 'RFID reader requires Chrome or Edge'
+    : isConnecting
+      ? 'Reader: Connecting...'
+      : isConnected
+        ? 'Reader: Connected -- click to disconnect'
+        : 'Reader: Not connected -- click to connect'
+  const statusClass = `status-dot ${isConnected ? 'status-dot--success' : 'status-dot--pending'}`
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
-        <span className={`status-dot ${isConnected ? 'status-dot--success' : 'status-dot--pending'}`} />
-        <span className={`badge ${isConnected ? 'badge--success' : 'badge--pending'}`}>Reader: {isConnected ? 'Connected' : 'Not connected'}</span>
-        {!isConnected ? <button type="button" onClick={handleConnect} disabled={isConnecting || isSupported !== true} className="btn-secondary">{isConnecting ? 'Connecting...' : 'Connect Reader'}</button> : <button type="button" onClick={() => void disconnectReaderRef.current?.()} className="btn-secondary">Disconnect Reader</button>}
-      </div>
+      {collapsed ? (
+        <button
+          type="button"
+          onClick={isConnected ? () => void disconnectReaderRef.current?.() : handleConnect}
+          disabled={!isConnected && (isConnecting || isSupported !== true)}
+          title={readerLabel}
+          aria-label={readerLabel}
+          className="btn-secondary"
+          style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '10px' }}
+        >
+          <Nfc size={20} aria-hidden="true" />
+          <span className={statusClass} aria-hidden="true" style={{ position: 'absolute', top: '6px', right: '6px' }} />
+        </button>
+      ) : (
+        <section aria-label="Reader" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            <Nfc size={20} aria-hidden="true" />
+            <span>Reader</span>
+          </div>
+          {isSupported === false ? (
+            <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>RFID reader requires Chrome or Edge</span>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className={statusClass} />
+                <span>{isConnected ? 'Connected' : 'Not connected'}</span>
+              </div>
+              <button
+                type="button"
+                onClick={isConnected ? () => void disconnectReaderRef.current?.() : handleConnect}
+                disabled={!isConnected && (isConnecting || isSupported !== true)}
+                className="btn-secondary"
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '10px 12px' }}
+              >
+                {isConnected ? 'Disconnect Reader' : isConnecting ? 'Connecting...' : 'Connect Reader'}
+              </button>
+            </>
+          )}
+        </section>
+      )}
       {lastTap ? (
         <aside
           style={{ position: 'fixed', right: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 10, display: 'flex', flexDirection: 'row-reverse', alignItems: 'stretch', fontFamily: 'var(--font-body)' }}

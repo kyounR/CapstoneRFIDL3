@@ -126,14 +126,7 @@ function RequireAuth() {
             gap: '8px',
           }}
         >
-          <div
-            style={{
-              transform: isSidebarCollapsed ? 'scale(0.78)' : 'none',
-              transformOrigin: 'left center',
-            }}
-          >
-            <CalPassWordmark compact />
-          </div>
+          <CalPassWordmark compact iconOnly={isSidebarCollapsed} />
           <button
             type="button"
             onClick={() => setIsSidebarCollapsed((collapsed) => !collapsed)}
@@ -152,9 +145,7 @@ function RequireAuth() {
           </div>
         ) : null}
 
-        <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
-          <RfidReaderStatus />
-        </div>
+        <RfidReaderStatus collapsed={isSidebarCollapsed} />
 
         <div style={{ borderTop: '1px solid var(--border)' }} />
 

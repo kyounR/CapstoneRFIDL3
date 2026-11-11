@@ -1,4 +1,4 @@
-function CalPassWordmark({ compact = false }) {
+function CalPassWordmark({ compact = false, iconOnly = false }) {
   const iconSize = compact ? 22 : 30
   const wordmarkSize = compact ? '1.05rem' : '1.75rem'
 
@@ -17,7 +17,7 @@ function CalPassWordmark({ compact = false }) {
         <circle cx="7" cy="17" r="2.5" fill="var(--accent)" />
         <circle cx="23" cy="17" r="2.5" fill="var(--accent)" />
       </svg>
-      <span style={{ fontFamily: 'var(--font-display)', fontSize: wordmarkSize, fontWeight: 600, lineHeight: 1 }}>CalPass</span>
+      {!iconOnly ? <span style={{ fontFamily: 'var(--font-display)', fontSize: wordmarkSize, fontWeight: 600, lineHeight: 1 }}>CalPass</span> : null}
     </div>
   )
 }
